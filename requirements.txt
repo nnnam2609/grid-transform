@@ -1,0 +1,9 @@
+matplotlib>=3.8
+numpy>=1.26
+pillow>=10.0
+roifile>=2024.3
+scipy>=1.13
+shapely>=2.0
+jupyter>=1.0
+nbconvert>=7.0
+ipykernel>=6.0
