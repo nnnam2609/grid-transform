@@ -12,7 +12,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from create_speaker_grid import (
+    DEFAULT_VTNL_DIR,
     PROJECT_DIR,
+    TONGUE_COLOR,
     VT_SEG_DIR,
     load_frame_npy,
     load_frame_vtnl,
@@ -41,6 +43,7 @@ DEFAULT_ARTICULATORS = (
     "incisior-hard-palate",
     "soft-palate-midline",
     "soft-palate",
+    "tongue",
     "mandible-incisior",
     "pharynx",
 )
@@ -108,12 +111,14 @@ def compute_articulator_errors(moved_contours: dict, target_contours: dict):
     return errors
 
 
-def plot_contours(ax, contours: dict, names, color, *, lw=2.0, alpha=0.9, label_prefix=None):
+def plot_contours(ax, contours: dict, names, color, *, lw=2.0, alpha=0.9, label_prefix=None, linestyle="-"):
     """Draw a selected contour set on an axes."""
     handles = []
     for name in names:
         contour = np.asarray(contours[name], dtype=float)
-        handle, = ax.plot(contour[:, 0], contour[:, 1], color=color, lw=lw, alpha=alpha)
+        line_color = TONGUE_COLOR if name == "tongue" else color
+        line_style = "--" if name == "tongue" and "Moved source" in (label_prefix or "") else linestyle
+        handle, = ax.plot(contour[:, 0], contour[:, 1], color=line_color, lw=lw, alpha=alpha, linestyle=line_style)
         handles.append((handle, f"{label_prefix}{name}" if label_prefix else name))
     return handles
 
@@ -190,6 +195,7 @@ def build_parser():
     parser.add_argument("--target-speaker", default="1640_s10_0654", help="VTNL target speaker/image name.")
     parser.add_argument("--source-frame", type=int, default=143020, help="nnUNet source frame number.")
     parser.add_argument("--case", default="2008-003^01-1791/test", help="nnUNet case relative path.")
+    parser.add_argument("--vtnl-dir", type=Path, default=DEFAULT_VTNL_DIR, help="Folder containing VTNL images and ROI zip files.")
     parser.add_argument(
         "--articulators",
         help="Comma-separated articulator list. Default uses the common moving articulators.",
@@ -206,7 +212,7 @@ def build_parser():
 def main():
     args = build_parser().parse_args()
 
-    target_image, target_contours = load_frame_vtnl(args.target_speaker, PROJECT_DIR / "VTNL")
+    target_image, target_contours = load_frame_vtnl(args.target_speaker, args.vtnl_dir)
     source_image, source_contours = load_frame_npy(
         args.source_frame,
         VT_SEG_DIR / "data_80" / args.case,

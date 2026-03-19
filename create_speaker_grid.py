@@ -18,6 +18,8 @@ from roifile import ImagejRoi
 
 PROJECT_DIR = Path(__file__).resolve().parent
 VT_SEG_DIR = PROJECT_DIR / "vocal-tract-seg"
+DEFAULT_VTNL_DIR = PROJECT_DIR / "VTNL" / "iadi_replace_merge"
+TONGUE_COLOR = "#ff006e"
 if str(VT_SEG_DIR) not in sys.path:
     sys.path.insert(0, str(VT_SEG_DIR))
 
@@ -38,6 +40,7 @@ VIS_STYLE_PRESETS = {
         "l6_color": "#06d6a0",
         "interp_color": "#20c997",
         "mandible_color": "#f4a261",
+        "tongue_color": TONGUE_COLOR,
     },
     "source": {
         "horiz_color": "#3a86ff",
@@ -52,8 +55,20 @@ VIS_STYLE_PRESETS = {
         "l6_color": "#80ed99",
         "interp_color": "#3a86ff",
         "mandible_color": "#e76f51",
+        "tongue_color": TONGUE_COLOR,
     },
 }
+
+
+VTNL_CONTOUR_NAME_MAP = {
+    "incisor-hard-palate": "incisior-hard-palate",
+    "mandible-incisor": "mandible-incisior",
+}
+
+
+def normalize_vtnl_contour_name(label: str) -> str:
+    """Map VTNL/iADI contour labels to the canonical names used in the repo."""
+    return VTNL_CONTOUR_NAME_MAP.get(label, label)
 
 
 def load_frame_npy(frame_number: int, data_dir: Path, contours_dir: Path):
@@ -100,6 +115,7 @@ def load_frame_vtnl(image_name: str, vtnl_dir: Path):
             if coords is None or len(coords) == 0:
                 continue
             label = Path(name).stem.replace(f"{image_name}_", "")
+            label = normalize_vtnl_contour_name(label)
             contours[label] = np.array(coords, dtype=float)
 
     if not contours:
@@ -136,7 +152,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--vtnl-dir",
         type=Path,
-        default=PROJECT_DIR / "VTNL",
+        default=DEFAULT_VTNL_DIR,
         help="Folder containing VTNL images and ROI zip files.",
     )
     parser.add_argument(

@@ -78,6 +78,8 @@ DEFAULT_VIS_STYLE = {
     'contour_alpha': 0.2,
     'mandible_color': 'orange',
     'mandible_alpha': 0.5,
+    'tongue_color': '#ff006e',
+    'tongue_alpha': 0.9,
     'horiz_color': 'c',
     'vert_color': 'y',
     'vt_color': 'g',
@@ -686,6 +688,19 @@ def visualize_grid(
         ax.plot(mc[:, 0], mc[:, 1], color=style_cfg['mandible_color'], lw=2,
                 alpha=style_cfg['mandible_alpha'],
                 label='Mandible-incisior')
+
+    # Highlight tongue explicitly when available.
+    if 'tongue' in grid.contours:
+        tongue = grid.contours['tongue']
+        ax.plot(
+            tongue[:, 0],
+            tongue[:, 1],
+            color=style_cfg['tongue_color'],
+            lw=2.2,
+            alpha=style_cfg['tongue_alpha'],
+            label='Tongue',
+            zorder=13,
+        )
 
     # Horizontal grid lines (cyan)
     n_h = grid.n_horiz

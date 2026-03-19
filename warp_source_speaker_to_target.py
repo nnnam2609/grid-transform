@@ -14,7 +14,9 @@ from PIL import Image
 from scipy.ndimage import map_coordinates
 
 from create_speaker_grid import (
+    DEFAULT_VTNL_DIR,
     PROJECT_DIR,
+    TONGUE_COLOR,
     VT_SEG_DIR,
     load_frame_npy,
     load_frame_vtnl,
@@ -39,6 +41,7 @@ DEFAULT_ARTICULATORS = (
     "incisior-hard-palate",
     "soft-palate-midline",
     "soft-palate",
+    "tongue",
     "mandible-incisior",
     "pharynx",
 )
@@ -137,11 +140,29 @@ def format_frame(ax, image, title):
     ax.set_ylim(h_img, 0)
 
 
+def plot_articulator_set(ax, contours, articulators, base_color, moved=False):
+    """Draw articulator overlays, with tongue highlighted consistently."""
+    for name in articulators:
+        pts = np.asarray(contours[name], dtype=float)
+        if name == "tongue":
+            ax.plot(
+                pts[:, 0],
+                pts[:, 1],
+                "--" if moved else "-",
+                color=TONGUE_COLOR,
+                lw=2.2,
+                alpha=0.95,
+            )
+        else:
+            ax.plot(pts[:, 0], pts[:, 1], color=base_color, lw=1.8, alpha=0.85)
+
+
 def save_comparison_figure(
     target_image,
     source_image,
     warped_source_image,
     target_contours,
+    source_contours,
     warped_source_contours,
     articulators,
     output_path,
@@ -152,26 +173,35 @@ def save_comparison_figure(
 
     ax = axes[0]
     format_frame(ax, target_image, "Target speaker")
+    plot_articulator_set(ax, target_contours, articulators, TARGET_COLOR, moved=False)
 
     ax = axes[1]
     format_frame(ax, source_image, "Source speaker")
+    plot_articulator_set(ax, source_contours, articulators, SOURCE_COLOR, moved=False)
 
     ax = axes[2]
     format_frame(ax, warped_source_image, "Warped source speaker\nin target space")
+    plot_articulator_set(ax, warped_source_contours, articulators, WARPED_COLOR, moved=True)
 
     ax = axes[3]
     format_frame(ax, target_image, "Warped source vs target articulators")
     for name in articulators:
         target_pts = np.asarray(target_contours[name], dtype=float)
         moved_pts = np.asarray(warped_source_contours[name], dtype=float)
-        ax.plot(target_pts[:, 0], target_pts[:, 1], color=TARGET_COLOR, lw=2.0, alpha=0.95)
-        ax.plot(moved_pts[:, 0], moved_pts[:, 1], color=WARPED_COLOR, lw=2.0, alpha=0.90)
+        if name == "tongue":
+            ax.plot(target_pts[:, 0], target_pts[:, 1], color=TONGUE_COLOR, lw=2.4, alpha=0.95)
+            ax.plot(moved_pts[:, 0], moved_pts[:, 1], "--", color=TONGUE_COLOR, lw=2.0, alpha=0.90)
+        else:
+            ax.plot(target_pts[:, 0], target_pts[:, 1], color=TARGET_COLOR, lw=2.0, alpha=0.95)
+            ax.plot(moved_pts[:, 0], moved_pts[:, 1], color=WARPED_COLOR, lw=2.0, alpha=0.90)
     ax.legend(
         [
             plt.Line2D([0], [0], color=TARGET_COLOR, lw=2.5),
             plt.Line2D([0], [0], color=WARPED_COLOR, lw=2.5),
+            plt.Line2D([0], [0], color=TONGUE_COLOR, lw=2.5),
+            plt.Line2D([0], [0], color=TONGUE_COLOR, lw=2.5, linestyle="--"),
         ],
-        ["Target articulators", "Warped source articulators"],
+        ["Target articulators", "Warped source articulators", "Target tongue", "Warped source tongue"],
         loc="upper right",
         framealpha=0.92,
         fontsize=10,
@@ -190,6 +220,7 @@ def build_parser():
     parser.add_argument("--target-speaker", default="1640_s10_0654", help="VTNL target speaker/image name.")
     parser.add_argument("--source-frame", type=int, default=143020, help="nnUNet source frame number.")
     parser.add_argument("--case", default="2008-003^01-1791/test", help="nnUNet case relative path.")
+    parser.add_argument("--vtnl-dir", type=Path, default=DEFAULT_VTNL_DIR, help="Folder containing VTNL images and ROI zip files.")
     parser.add_argument(
         "--articulators",
         help="Comma-separated articulators for overlay visualization.",
@@ -218,7 +249,7 @@ def build_parser():
 def main():
     args = build_parser().parse_args()
 
-    target_image, target_contours = load_frame_vtnl(args.target_speaker, PROJECT_DIR / "VTNL")
+    target_image, target_contours = load_frame_vtnl(args.target_speaker, args.vtnl_dir)
     source_image, source_contours = load_frame_npy(
         args.source_frame,
         VT_SEG_DIR / "data_80" / args.case,
@@ -253,6 +284,7 @@ def main():
         source_image,
         warped_source_arr,
         target_contours,
+        source_contours,
         warped_source_contours,
         articulators,
         args.figure_output,

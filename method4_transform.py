@@ -12,7 +12,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from create_speaker_grid import (
+    DEFAULT_VTNL_DIR,
     PROJECT_DIR,
+    TONGUE_COLOR,
     VT_SEG_DIR,
     load_frame_npy,
     load_frame_vtnl,
@@ -414,6 +416,34 @@ def format_target_frame(ax, image, title):
     ax.set_ylim(h_img, 0)
 
 
+def draw_tongue_overlay(ax, target_contours, source_contours, mapping_fn):
+    """Overlay target and mapped source tongue on the final Method 4 view."""
+    if "tongue" not in target_contours or "tongue" not in source_contours:
+        return
+
+    target_tongue = np.asarray(target_contours["tongue"], dtype=float)
+    moved_source_tongue = np.asarray(mapping_fn(np.asarray(source_contours["tongue"], dtype=float)), dtype=float)
+    ax.plot(
+        target_tongue[:, 0],
+        target_tongue[:, 1],
+        color=TONGUE_COLOR,
+        lw=2.4,
+        alpha=0.95,
+        zorder=18,
+        label="Target tongue",
+    )
+    ax.plot(
+        moved_source_tongue[:, 0],
+        moved_source_tongue[:, 1],
+        "--",
+        color=TONGUE_COLOR,
+        lw=2.0,
+        alpha=0.95,
+        zorder=18,
+        label="Mapped source tongue",
+    )
+
+
 def run_method4(target_grid, source_grid, output_dir: Path):
     """Run the axis-first affine + TPS pipeline and save explanatory figures."""
     lm_tgt = extract_true_landmarks(target_grid)
@@ -549,6 +579,8 @@ def run_method4(target_grid, source_grid, output_dir: Path):
     draw_grid_single_color(ax, target_grid.horiz_lines, target_grid.vert_lines, TARGET_COLOR, alpha=0.95, lw_major=3.0, lw_minor=1.1)
     draw_grid_single_color(ax, final_horiz, final_vert, SOURCE_COLOR, alpha=0.88, lw_major=2.8, lw_minor=0.9)
     draw_grid_line_labels(ax, target_grid.horiz_lines, target_grid.vert_lines, TARGET_COLOR, alpha=0.82)
+    draw_tongue_overlay(ax, target_grid.contours, source_grid.contours, apply_two_step)
+    ax.legend(loc="upper right", fontsize=9, framealpha=0.92)
 
     ax = axes[5]
     ax.axis("off")
@@ -630,6 +662,7 @@ def build_parser():
     parser.add_argument("--target-speaker", default="1640_s10_0654", help="VTNL target speaker/image name.")
     parser.add_argument("--source-frame", type=int, default=143020, help="nnUNet source frame number.")
     parser.add_argument("--case", default="2008-003^01-1791/test", help="nnUNet case relative path.")
+    parser.add_argument("--vtnl-dir", type=Path, default=DEFAULT_VTNL_DIR, help="Folder containing VTNL images and ROI zip files.")
     parser.add_argument("--output-dir", type=Path, default=PROJECT_DIR / "outputs", help="Where to save the figures.")
     return parser
 
@@ -637,7 +670,7 @@ def build_parser():
 def main():
     args = build_parser().parse_args()
 
-    target_image, target_contours = load_frame_vtnl(args.target_speaker, PROJECT_DIR / "VTNL")
+    target_image, target_contours = load_frame_vtnl(args.target_speaker, args.vtnl_dir)
     source_image, source_contours = load_frame_npy(
         args.source_frame,
         VT_SEG_DIR / "data_80" / args.case,
