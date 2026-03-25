@@ -3,3 +3,23 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+
+.ipynb_checkpoints/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local-only workspace files
+AGENTS.md
+logs/
+scripts/windows/
+
+# Local reference material
+docs/references/*.pdf
+
+# Generated artifacts
+outputs/
+experiments/report/figures/
+experiments/report/generated/
+experiments/p4_s10_video_sample/output/
+experiments/p4_s10_video_sample/output_full/

@@ -1,121 +1,139 @@
 # Grid Transform
 
-Lightweight experiments for building a vocal-tract grid, aligning two speakers with `Affine + TPS`, and warping articulators or the full source speaker into target space.
+Research utilities for building vocal-tract grids, aligning speakers with `Affine + TPS`, and testing transfer hypotheses across VTNL references, segmentation targets, and ArtSpeech sessions.
 
-## What This Repo Contains
+The repo is organized for reproducible experiments rather than a packaged library. Reusable logic lives in `grid_transform/`, and the canonical command surface lives in `scripts/run/`.
 
-- `create_speaker_grid.py`
-  - Build and visualize the anatomical grid for one speaker.
-- `method4_transform.py`
-  - Two-step alignment:
-    - Step 1: affine on axis landmarks
-    - Step 2: TPS refinement
-- `move_target_articulators.py`
-  - Move shared articulator contours between speakers for comparison.
-- `warp_source_speaker_to_target.py`
-  - Warp the full source speaker image into target space.
+## What This Repo Covers
 
-## Main Idea
+- Build a landmark-driven grid for a VTNL reference or segmentation target.
+- Estimate a two-step `Affine + TPS` transform between a source speaker and a target frame.
+- Move articulators or warp the full source image into target space.
+- Generate report figures and a PDF summary.
+- Project VTNL annotations onto ArtSpeech videos when per-frame ArtSpeech contours are unavailable.
+- Warp a full ArtSpeech session into a target frame under a fixed-session annotation assumption.
+- Inspect within-speaker and cross-speaker vowel variability from ArtSpeech sessions.
 
-1. Build anatomical grids for the target and source speakers.
-2. Fit an affine transform on the main horizontal and vertical landmark axes.
-3. Refine the alignment with TPS on the post-affine landmarks.
-4. Apply the final transform to grid lines, articulators, or the whole source image.
+## Repo Layout
 
-## How The Grid Is Built
+- `grid_transform/`
+  Shared Python modules, path config, notebook bootstrap, and app entrypoints.
+- `scripts/run/`
+  Official wrappers for the main workflows.
+- `notebooks/`
+  Exploration notebooks. Notebook outputs are intentionally not treated as versioned results.
+- `experiments/`
+  Report generation and side experiment code.
+- `docs/`
+  Public-facing documentation, data notes, and README assets.
+- `VTNL/`
+  Lightweight bundled VTNL reference images and ROI zips used by the default examples.
+- `vocal-tract-seg/`
+  Lightweight bundled target-frame sample data used by the default examples.
 
-The grid is anatomical, not just evenly spaced image lines.
+Root scripts such as `create_speaker_grid.py` remain available as compatibility shims, but `scripts/run/` is the primary interface.
 
-1. Find the main landmark curves.
-   - `incisior-hard-palate` gives the front and top vocal-tract contour.
-   - `soft-palate-midline` gives the posterior top contour.
-   - `c1..c6` give the cervical spine centers.
-   - `mandible-incisior` gives the lower jaw landmarks.
-   - `pharynx` is used to locate the posterior intersection point.
-
-2. Build the top reference path of the tract.
-   - `I1..I5` are sampled along the hard-palate contour.
-   - `I6` is the first point of `soft-palate-midline`.
-   - `I7` is the selected soft-palate anchor used to stabilize the posterior top axis.
-   - `C1` is the first cervical center.
-   - The top path is then assembled as `I1 -> ... -> I5 -> I6 -> I7 -> C1`.
-
-3. Build the lower and posterior anchors.
-   - `M1` is the highest point on `mandible-incisior`.
-   - `L6` is the lowest point on `mandible-incisior`.
-   - `C1..C6` are the centroids of the spine contours.
-   - `P1` is the pharynx intersection on the posterior segment near `I7 -> C1`.
-
-4. Turn the anatomical paths into a grid.
-   - Horizontal line `H1` follows the top vocal-tract path.
-   - `H2` starts at `M1` and ends at `C2`.
-   - `H3..H5` are interpolated between the jaw side and the spine.
-   - `H6` goes from `L6` to `C6`.
-   - Vertical lines `V1..V9` are built by connecting corresponding samples across all horizontal lines.
-
-## Landmark Summary
-
-- `I1..I5`
-  - Equally spaced anchors on the hard-palate contour from anterior to posterior.
-- `I6`
-  - Start of the soft-palate midline.
-- `I7`
-  - Posterior soft-palate anchor used to control the bend before the path reaches `C1`.
-- `C1..C6`
-  - Cervical vertebra centroids defining the spine axis.
-- `M1`
-  - Upper jaw-side anchor from `mandible-incisior`.
-- `L6`
-  - Lower jaw-side anchor from `mandible-incisior`.
-- `P1`
-  - Posterior intersection with the pharynx used for alignment diagnostics and posterior geometry.
-
-## Why These Landmarks Matter
-
-- The `I` points stabilize the top vocal-tract shape.
-- The `C` points stabilize the posterior spine axis.
-- `M1` and `L6` stabilize the jaw-side boundary.
-- `P1` helps connect the posterior tract geometry to the pharyngeal wall.
-
-Together, these landmarks make the grid anatomically meaningful enough to compare two speakers and to drive the affine-plus-TPS transform.
-
-## Quick Run
+## Installation
 
 ```powershell
+python -m venv .venv
 .\.venv\Scripts\pip install -r requirements.txt
-.\.venv\Scripts\python create_speaker_grid.py --source vtnl --speaker 1640_s10_0654
-.\.venv\Scripts\python method4_transform.py
-.\.venv\Scripts\python move_target_articulators.py
-.\.venv\Scripts\python warp_source_speaker_to_target.py
 ```
 
-## Visual Results
+## Data Expectations
 
-### Target Grid
+The base grid-transform examples run against the bundled sample/reference data in `VTNL/` and `vocal-tract-seg/`.
 
-![Target grid](outputs/1640_s10_0654_target_grid_i6_straight_i7.png)
+ArtSpeech session utilities require a separate external dataset root. The expected structure is described in [`docs/DATA.md`](docs/DATA.md). In short, the code expects an ArtSpeech-style speaker layout with:
 
-### Source Grid
+- `DCM_2D/<session>/` for frame-level DICOM data
+- `OTHER/<session>/` for `wav`, `textgrid`, and `trs` session metadata
 
-![Source grid](outputs/143020_source_grid_i6_straight_i7.png)
+Large external datasets are not redistributed in this repository.
 
-### Method 4: Two-Step Alignment
+## Quick Start
 
-![Method 4 two grids](outputs/method4_axis_affine_two_grids_only.png)
+### Core Grid Transform Pipeline
 
-![Method 4 step by step](outputs/method4_axis_affine_step_by_step.png)
+```powershell
+.\.venv\Scripts\python .\scripts\run\run_create_speaker_grid.py --source vtnl --speaker 1640_s10_0654
+.\.venv\Scripts\python .\scripts\run\run_method4_transform.py
+.\.venv\Scripts\python .\scripts\run\run_move_target_articulators.py
+.\.venv\Scripts\python .\scripts\run\run_warp_source_speaker_to_target.py
+```
 
-### Source Articulators Moved Into Target Space
+### Report Generation
 
-![Moved articulators](outputs/source_moved_to_target_articulators.png)
+```powershell
+.\.venv\Scripts\python .\scripts\run\run_generate_report_assets.py
+.\.venv\Scripts\python .\scripts\run\run_convert_to_pdf.py
+.\scripts\run\build_report.ps1
+```
 
-### Full Source Speaker Warped Into Target Space
+### ArtSpeech Session Utilities
 
-![Warped source comparison](outputs/source_speaker_warped_to_target_comparison.png)
+```powershell
+.\.venv\Scripts\python .\scripts\run\run_build_artspeech_session_video.py --speaker P7 --session S10 --dataset-root <ARTSPEECH_ROOT>
+.\.venv\Scripts\python .\scripts\run\run_project_vtnl_reference_to_artspeech_video.py --target-speaker 1640_s10_0654 --artspeech-speaker P7 --session S10 --dataset-root <ARTSPEECH_ROOT>
+.\.venv\Scripts\python .\scripts\run\run_warp_artspeech_session_to_target_video.py --annotation-speaker 1640_s10_0654 --artspeech-speaker P7 --session S10 --target-frame 143020 --dataset-root <ARTSPEECH_ROOT> --output-mode both
+```
 
-## Notes
+### Vowel Variability Utilities
 
-- Current default setup uses:
-  - Target: `1640_s10_0654` from `VTNL/`
-  - Source: frame `143020` from `vocal-tract-seg/`
-- The code is organized for fast experimentation, visualization, and comparison rather than packaging.
+```powershell
+.\.venv\Scripts\python .\scripts\run\run_extract_all_speakers_vowel_variants.py --dataset-root <ARTSPEECH_ROOT> --samples-per-vowel 10
+.\.venv\Scripts\python .\scripts\run\run_extract_speaker_vowel_variants.py --speaker P7 --dataset-root <ARTSPEECH_ROOT> --samples-per-vowel 10
+.\.venv\Scripts\python .\scripts\run\run_analyze_aligned_speaker_vowel_variants.py --speaker P7 --samples-per-vowel 10
+```
+
+## Results Gallery
+
+### Default Target Grid
+
+![Target grid](docs/assets/github/target-grid.png)
+
+### Default Source Grid
+
+![Source grid](docs/assets/github/source-grid.png)
+
+### Two-Step `Affine + TPS` Alignment
+
+![Two-step alignment](docs/assets/github/two-step-alignment.png)
+
+### Articulators Moved Into Target Space
+
+![Moved articulators](docs/assets/github/moved-articulators.png)
+
+### Full Source Image Warped Into Target Space
+
+![Warped source comparison](docs/assets/github/warped-source-comparison.png)
+
+### Same-Speaker Vowel Variants
+
+![P7 vowel contact sheet](docs/assets/github/p7-a-contact-sheet.png)
+
+### Same-Speaker Vowel Prototype vs Outliers After Alignment
+
+![P7 aligned vowel ranking](docs/assets/github/p7-a-prototype-vs-outliers.png)
+
+## Reproducibility Notes
+
+- Generated outputs live under `outputs/` and are treated as disposable rerun artifacts.
+- `docs/assets/github/` contains the curated static images used by this README; it is the only tracked results-like asset folder.
+- The ArtSpeech projection workflow uses a fixed image-space resize from a VTNL reference; it is not a contour-derived per-frame warp.
+- The full-session ArtSpeech warp also assumes a fixed-session geometry for the source session; it does not estimate new ArtSpeech contours frame by frame.
+- Notebooks are exploratory and intentionally kept secondary to the reusable Python modules and wrapper scripts.
+
+## Limitations
+
+- The repo currently assumes specific landmark conventions such as `I1..I7`, `C1..C6`, `M1`, `L6`, and `P1`.
+- Several workflows are designed around the bundled example pair: VTNL `1640_s10_0654` and segmentation frame `143020`.
+- ArtSpeech analyses rely on external aligned labels and on fixed-session assumptions when full contour annotations are unavailable.
+
+## Release Checklist
+
+See [`docs/release_checklist.md`](docs/release_checklist.md) for a short pre-publish checklist.
+
+## License
+
+This repository is released under the [`MIT License`](LICENSE).
