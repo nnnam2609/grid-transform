@@ -70,6 +70,50 @@ class GridData:
     palate_end_idx: int = 0        # index of I5 on the resampled H1
     h1_dev_ratio: float = 0.0     # max perpendicular deviation / chord length
     h1_max_clamp: float = 0.0     # fraction of points that were clamped (0 = pure midline)
+    hard_errors: List[str] = field(default_factory=list)
+    warnings: List[str] = field(default_factory=list)
+    contour_point_counts: Dict[str, int] = field(default_factory=dict)
+
+
+@dataclass
+class GridContourValidation:
+    """Preflight contour validation shared by build and diagnostics."""
+
+    hard_errors: List[str] = field(default_factory=list)
+    warnings: List[str] = field(default_factory=list)
+    point_counts: Dict[str, int] = field(default_factory=dict)
+
+
+class GridValidationError(ValueError):
+    """Raised when required contours are missing for grid construction."""
+    pass
+
+
+REQUIRED_GRID_CONTOURS = (
+    "incisior-hard-palate",
+    "mandible-incisior",
+    "c1",
+    "c2",
+    "c3",
+    "c4",
+    "c5",
+    "c6",
+)
+OPTIONAL_GRID_CONTOURS = (
+    "pharynx",
+    "tongue",
+)
+SPARSE_CORE_THRESHOLDS = {
+    "incisior-hard-palate": 10,
+    "mandible-incisior": 10,
+    "soft-palate-midline": 8,
+    "c1": 8,
+    "c2": 8,
+    "c3": 8,
+    "c4": 8,
+    "c5": 8,
+    "c6": 8,
+}
 
 
 DEFAULT_VIS_STYLE = {
@@ -109,6 +153,44 @@ DEFAULT_VIS_STYLE = {
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+def contour_point_counts(contours: Dict[str, np.ndarray]) -> Dict[str, int]:
+    """Return point counts for each available contour."""
+    counts: Dict[str, int] = {}
+    for name, points in contours.items():
+        if points is None:
+            counts[name] = 0
+            continue
+        counts[name] = int(len(np.asarray(points, dtype=float)))
+    return counts
+
+
+def validate_grid_contours(contours: Dict[str, np.ndarray]) -> GridContourValidation:
+    """Validate contour availability before attempting to build a grid."""
+    point_counts = contour_point_counts(contours)
+    hard_errors: List[str] = []
+    warnings: List[str] = []
+
+    missing_required = [name for name in REQUIRED_GRID_CONTOURS if point_counts.get(name, 0) <= 0]
+    if missing_required:
+        hard_errors.append(
+            "missing_required_contour: missing required contours "
+            + ", ".join(missing_required)
+        )
+
+    for name, threshold in SPARSE_CORE_THRESHOLDS.items():
+        count = point_counts.get(name, 0)
+        if 0 < count < threshold:
+            warnings.append(
+                f"sparse_core_contour: {name} has only {count} points (< {threshold})"
+            )
+
+    return GridContourValidation(
+        hard_errors=hard_errors,
+        warnings=warnings,
+        point_counts=point_counts,
+    )
+
+
 def _resample(pts: np.ndarray, n: int = 400) -> np.ndarray:
     """Resample a polyline to *n* equally-spaced points by arc-length."""
     pts = np.asarray(pts, dtype=float)
@@ -436,6 +518,50 @@ def _extend_to_c1(smooth_path, c1, contours):
     return full, P1
 
 
+def _clamp_path_to_chord(
+    path: np.ndarray,
+    start_pt: np.ndarray,
+    end_pt: np.ndarray,
+    max_dev_ratio: float,
+) -> Tuple[np.ndarray, float, float]:
+    """Clamp a path's perpendicular deviation from the start->end chord."""
+    pts = np.asarray(path, dtype=float)
+    start = np.asarray(start_pt, dtype=float)
+    end = np.asarray(end_pt, dtype=float)
+    if len(pts) == 0:
+        return np.vstack([start, end]), 0.0, 0.0
+
+    chord = end - start
+    chord_len = float(np.linalg.norm(chord))
+    if chord_len < 1e-8:
+        return np.tile(start, (len(pts), 1)), 0.0, 0.0
+
+    unit = chord / chord_len
+    normal = np.array([-unit[1], unit[0]], dtype=float)
+    rel = pts - start[None, :]
+
+    along = rel @ unit
+    along = np.clip(along, 0.0, chord_len)
+    along = np.maximum.accumulate(along)
+
+    perp = rel @ normal
+    max_dev = max(float(max_dev_ratio), 0.0) * chord_len
+    if max_dev <= 0.0:
+        clamped_perp = np.zeros_like(perp)
+        clamped_mask = np.abs(perp) > 1e-8
+    else:
+        clamped_perp = np.clip(perp, -max_dev, max_dev)
+        clamped_mask = np.abs(perp) > max_dev
+
+    clamped = start[None, :] + along[:, None] * unit[None, :] + clamped_perp[:, None] * normal[None, :]
+    clamped[0] = start
+    clamped[-1] = end
+
+    max_dev_ratio_observed = float(np.max(np.abs(perp)) / chord_len) if len(perp) else 0.0
+    clamp_fraction = float(np.count_nonzero(clamped_mask) / max(len(clamped_mask), 1))
+    return clamped, max_dev_ratio_observed, clamp_fraction
+
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -477,6 +603,12 @@ def build_grid(
     g.contours = contours
     g.frame_number = frame_number
     g.n_vert = n_vert
+    validation = validate_grid_contours(contours)
+    g.contour_point_counts = dict(validation.point_counts)
+    g.hard_errors = list(validation.hard_errors)
+    g.warnings = list(validation.warnings)
+    if validation.hard_errors:
+        raise GridValidationError("; ".join(validation.hard_errors))
 
     # --- Cervical centres ---
     cc = _find_cervical_centers(contours)
@@ -506,6 +638,7 @@ def build_grid(
             vt_seed = np.vstack([vt_seed, soft_palate_path])
 
     # Build the H1 / VT path as I1 -> ... -> I6 -> I7 -> C1 when possible.
+    vt_full = None
     if I_points and c1 is not None:
         P1_i7 = None
         vt_parts = []
@@ -530,6 +663,9 @@ def build_grid(
         g.P1_point = P1_i7
     else:
         g.vt_curve = _resample(vt_seed, NP) if vt_seed is not None else None
+
+    if g.P1_point is None:
+        g.warnings.append("missing_P1: no pharynx intersection found for the H1 tail")
 
     # --- M1 & L6 ---
     M1 = _find_M1(contours)
@@ -582,18 +718,33 @@ def build_grid(
             #   chord, but is pulled back when it strays too far.
 
             I5 = np.asarray(g.I_points['I5'], dtype=float)
-
-            i5_idx = int(np.argmin(
-                np.linalg.norm(vt - I5[None, :], axis=1)))
-            h1 = _resample(vt.copy(), NP)
+            h1_source = np.asarray(vt_full if vt_full is not None else vt, dtype=float)
+            i5_idx = int(np.argmin(np.linalg.norm(h1_source - I5[None, :], axis=1)))
+            palate_part = h1_source[:i5_idx + 1].copy()
+            tail_part = h1_source[i5_idx:].copy()
+            if len(palate_part) == 0:
+                palate_part = I5.reshape(1, 2)
+            if len(tail_part) == 0:
+                tail_part = np.vstack([I5, R])
+            tail_blended, h1_dev_ratio, h1_max_clamp = _clamp_path_to_chord(
+                tail_part,
+                I5,
+                R,
+                max_dev_ratio,
+            )
+            if np.linalg.norm(palate_part[-1] - tail_blended[0]) < 1e-6:
+                h1_source = np.vstack([palate_part, tail_blended[1:]])
+            else:
+                h1_source = np.vstack([palate_part, tail_blended])
+            h1 = _resample(h1_source, NP)
             h1[0] = L    # exact L1 (= I1)
             h1[-1] = R   # exact C1
 
             # Store H1 metadata.
             g.palate_end_idx = int(np.argmin(
                 np.linalg.norm(h1 - I5[None, :], axis=1)))
-            g.h1_dev_ratio = 0.0
-            g.h1_max_clamp = 0.0
+            g.h1_dev_ratio = h1_dev_ratio
+            g.h1_max_clamp = h1_max_clamp
 
             g.horiz_lines.append(h1)
         else:

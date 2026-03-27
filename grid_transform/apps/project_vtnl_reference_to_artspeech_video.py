@@ -50,7 +50,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--target-speaker",
         "--vtnl-speaker",
         dest="target_speaker",
-        default="1640_s10_0654",
+        default="1640_s10_0829",
         help="VTNL annotation/reference speaker image name.",
     )
     parser.add_argument("--vtnl-dir", type=Path, default=DEFAULT_VTNL_DIR, help="Folder containing VTNL images and ROI zip files.")

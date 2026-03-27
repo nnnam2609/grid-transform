@@ -23,8 +23,8 @@ The zip contains ImageJ ROI contours keyed by articulator name.
 
 Examples:
 
-- `1640_s10_0654.png`
-- `1640_s10_0654.zip`
+- `1640_s10_0829.png`
+- `1640_s10_0829.zip`
 
 ### `vocal-tract-seg/`
 

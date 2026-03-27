@@ -36,7 +36,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Compare one VTNL reference speaker with labeled snapshots from an ArtSpeech session."
     )
-    parser.add_argument("--vtnl-speaker", default="1640_s10_0654", help="VTNL speaker/image name.")
+    parser.add_argument("--vtnl-speaker", default="1640_s10_0829", help="VTNL speaker/image name.")
     parser.add_argument("--vtnl-dir", type=Path, default=DEFAULT_VTNL_DIR, help="Folder containing VTNL images and ROI zips.")
     parser.add_argument("--artspeech-speaker", default="P7", help="ArtSpeech speaker id, for example P7.")
     parser.add_argument("--session", default="S10", help="ArtSpeech session id, for example S10.")

@@ -9,7 +9,7 @@ Frame mapping used:
 - 1628_s10_0943: 1628/S10/0944
 - 1635_s10_0898: 1635/S10/0899
 - 1638_s10_1167: 1638/S10/1166
-- 1640_s10_0654: 1640/S10/0828
+- 1640_s10_0829: 1640/S10/0829
 - 1659_s10_0654: 1659/S10/1337
 
 VTNL frames without exact contour labels in iadi:
@@ -19,7 +19,7 @@ VTNL frames without exact contour labels in iadi:
 - 1628_s10_0943: exact_npy=yes, exact_roi_labels=0
 - 1635_s10_0898: exact_npy=yes, exact_roi_labels=0
 - 1638_s10_1167: exact_npy=yes, exact_roi_labels=0
-- 1640_s10_0654: exact_npy=no, exact_roi_labels=0
+- 1640_s10_0829: exact_npy=no, exact_roi_labels=0
 - 1659_s10_0654: exact_npy=no, exact_roi_labels=0
 
 Not merged:

@@ -63,7 +63,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--speaker",
-        help="VTNL speaker/image name, for example 1640_s10_0654.",
+        help="VTNL speaker/image name, for example 1640_s10_0829.",
     )
     parser.add_argument(
         "--frame",

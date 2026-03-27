@@ -56,7 +56,7 @@ Large external datasets are not redistributed in this repository.
 ### Core Grid Transform Pipeline
 
 ```powershell
-.\.venv\Scripts\python .\scripts\run\run_create_speaker_grid.py --source vtnl --speaker 1640_s10_0654
+.\.venv\Scripts\python .\scripts\run\run_create_speaker_grid.py --source vtnl --speaker 1640_s10_0829
 .\.venv\Scripts\python .\scripts\run\run_method4_transform.py
 .\.venv\Scripts\python .\scripts\run\run_move_target_articulators.py
 .\.venv\Scripts\python .\scripts\run\run_warp_source_speaker_to_target.py
@@ -74,8 +74,8 @@ Large external datasets are not redistributed in this repository.
 
 ```powershell
 .\.venv\Scripts\python .\scripts\run\run_build_artspeech_session_video.py --speaker P7 --session S10 --dataset-root <ARTSPEECH_ROOT>
-.\.venv\Scripts\python .\scripts\run\run_project_vtnl_reference_to_artspeech_video.py --target-speaker 1640_s10_0654 --artspeech-speaker P7 --session S10 --dataset-root <ARTSPEECH_ROOT>
-.\.venv\Scripts\python .\scripts\run\run_warp_artspeech_session_to_target_video.py --annotation-speaker 1640_s10_0654 --artspeech-speaker P7 --session S10 --target-frame 143020 --dataset-root <ARTSPEECH_ROOT> --output-mode both
+.\.venv\Scripts\python .\scripts\run\run_project_vtnl_reference_to_artspeech_video.py --target-speaker 1640_s10_0829 --artspeech-speaker P7 --session S10 --dataset-root <ARTSPEECH_ROOT>
+.\.venv\Scripts\python .\scripts\run\run_warp_artspeech_session_to_target_video.py --annotation-speaker 1640_s10_0829 --artspeech-speaker P7 --session S10 --target-frame 143020 --dataset-root <ARTSPEECH_ROOT> --output-mode both
 ```
 
 ### Vowel Variability Utilities
@@ -127,7 +127,7 @@ Large external datasets are not redistributed in this repository.
 ## Limitations
 
 - The repo currently assumes specific landmark conventions such as `I1..I7`, `C1..C6`, `M1`, `L6`, and `P1`.
-- Several workflows are designed around the bundled example pair: VTNL `1640_s10_0654` and segmentation frame `143020`.
+- Several workflows are designed around the bundled example pair: VTNL `1640_s10_0829` and segmentation frame `143020`.
 - ArtSpeech analyses rely on external aligned labels and on fixed-session assumptions when full contour annotations are unavailable.
 
 ## Release Checklist

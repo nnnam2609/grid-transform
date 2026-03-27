@@ -31,7 +31,7 @@ def build_parser():
     parser = argparse.ArgumentParser(
         description="Move source articulators into target space with the same affine + TPS pipeline.",
     )
-    parser.add_argument("--target-speaker", default="1640_s10_0654", help="VTNL target speaker/image name.")
+    parser.add_argument("--target-speaker", default="1640_s10_0829", help="VTNL target speaker/image name.")
     parser.add_argument("--source-frame", type=int, default=143020, help="nnUNet source frame number.")
     parser.add_argument("--case", default="2008-003^01-1791/test", help="nnUNet case relative path.")
     parser.add_argument("--vtnl-dir", type=Path, default=DEFAULT_VTNL_DIR, help="Folder containing VTNL images and ROI zip files.")
