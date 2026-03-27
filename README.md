@@ -11,6 +11,7 @@ The repo is organized for reproducible experiments rather than a packaged librar
 - Move articulators or warp the full source image into target space.
 - Generate report figures and a PDF summary.
 - Project VTNL annotations onto ArtSpeech videos when per-frame ArtSpeech contours are unavailable.
+- Interactively edit a projected source annotation on an ArtSpeech frame, save it, and reuse it for fixed-annotation session warping.
 - Warp a full ArtSpeech session into a target frame under a fixed-session annotation assumption.
 - Inspect within-speaker and cross-speaker vowel variability from ArtSpeech sessions.
 
@@ -76,6 +77,61 @@ Large external datasets are not redistributed in this repository.
 .\.venv\Scripts\python .\scripts\run\run_build_artspeech_session_video.py --speaker P7 --session S10 --dataset-root <ARTSPEECH_ROOT>
 .\.venv\Scripts\python .\scripts\run\run_project_vtnl_reference_to_artspeech_video.py --target-speaker 1640_s10_0829 --artspeech-speaker P7 --session S10 --dataset-root <ARTSPEECH_ROOT>
 .\.venv\Scripts\python .\scripts\run\run_warp_artspeech_session_to_target_video.py --annotation-speaker 1640_s10_0829 --artspeech-speaker P7 --session S10 --target-frame 143020 --dataset-root <ARTSPEECH_ROOT> --output-mode both
+```
+
+### Interactive Source Annotation Editor
+
+The source-annotation editor opens a local `cv2` window, projects a VTNL reference contour set onto the best-matching ArtSpeech frame, lets you drag contour handles, then saves the edited annotation for reuse in the session warp pipeline.
+
+Default example for the current bundled workflow:
+
+```powershell
+.\.venv\Scripts\python .\scripts\run\run_edit_source_annotation.py --artspeech-speaker P7 --session S2 --reference-speaker 1640_s10_0829 --target-frame 143020 --dataset-root <ARTSPEECH_ROOT>
+```
+
+Interactive controls:
+
+- Drag handles in the top-left source panel to adjust the projected annotation.
+- Press `s` to save the edited annotation and preview images only.
+- Press `v` to save the edited annotation and immediately render the warped session outputs.
+- Press `r` to reset back to the initial projected annotation.
+- Press `q` or `Esc` to close the editor.
+
+Default save location:
+
+```text
+outputs/source_annotation_edits/p7_s2_frame_0829/
+```
+
+Saved files:
+
+- `edited_annotation.json`: canonical contour coordinates plus source/target metadata.
+- `source_full_head_annotation.png`: source frame with the editable contour overlay.
+- `source_grid_annotation.png`: source grid rebuilt from the current annotation.
+- `source_to_target_preview.png`: fixed-frame warped preview in target space.
+- `editor_overview.png`: 4-panel snapshot matching the editor layout.
+- `save_summary.json`: summary of the saved assets and any triggered sequence render.
+- `sequence_warp/`: created when rendering is requested; contains warped/review videos, preview PNGs, and `warp_summary.json`.
+
+Useful options:
+
+- `--source-frame <N>`: override the auto-selected best-match ArtSpeech frame.
+- `--output-dir <PATH>`: write the saved annotation bundle somewhere other than the default `outputs/source_annotation_edits/...` folder.
+- `--output-mode both|warped|review`: choose which session-render outputs to create when `v` is used.
+- `--max-output-frames <N>`: render only the first `N` frames for a quick smoke test.
+- `--no-gui`: run the same initialization/save flow without opening the interactive window.
+- `--skip-video-on-save`: only meaningful with `--no-gui`; save the annotation bundle without rendering the session warp.
+
+Headless save-only example:
+
+```powershell
+.\.venv\Scripts\python .\scripts\run\run_edit_source_annotation.py --artspeech-speaker P7 --session S2 --reference-speaker 1640_s10_0829 --target-frame 143020 --dataset-root <ARTSPEECH_ROOT> --no-gui --skip-video-on-save
+```
+
+Reuse a saved edited annotation in the warp pipeline:
+
+```powershell
+.\.venv\Scripts\python .\scripts\run\run_warp_artspeech_session_to_target_video.py --artspeech-speaker P7 --session S2 --target-frame 143020 --source-annotation-json outputs\source_annotation_edits\p7_s2_frame_0829\edited_annotation.json --dataset-root <ARTSPEECH_ROOT> --output-mode both
 ```
 
 ### Vowel Variability Utilities

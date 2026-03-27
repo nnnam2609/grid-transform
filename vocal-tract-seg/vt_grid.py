@@ -803,6 +803,7 @@ def visualize_grid(
     -------
     matplotlib.figure.Figure
     """
+    created_axes = ax is None
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize)
     else:
@@ -878,7 +879,8 @@ def visualize_grid(
         _draw_landmarks(ax, grid, show_labels, style_cfg)
 
     ax.legend(loc='upper right', fontsize=12, framealpha=0.92)
-    plt.tight_layout()
+    if created_axes:
+        plt.tight_layout()
     return fig
 
 

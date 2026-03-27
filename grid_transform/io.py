@@ -13,11 +13,54 @@ VTNL_CONTOUR_NAME_MAP = {
     "incisor-hard-palate": "incisior-hard-palate",
     "mandible-incisor": "mandible-incisior",
 }
+KNOWN_VTNL_CONTOUR_NAMES = {
+    "c1",
+    "c2",
+    "c3",
+    "c4",
+    "c5",
+    "c6",
+    "incisor-hard-palate",
+    "incisior-hard-palate",
+    "mandible-incisor",
+    "mandible-incisior",
+    "pharynx",
+    "soft-palate",
+    "soft-palate-midline",
+    "tongue",
+}
 
 
 def normalize_vtnl_contour_name(label: str) -> str:
     """Map VTNL/iADI contour labels to the canonical names used in the repo."""
     return VTNL_CONTOUR_NAME_MAP.get(label, label)
+
+
+def extract_vtnl_contour_name(stem: str, image_name: str) -> str:
+    """Recover a canonical contour label even if the ROI stem carries a stale prefix."""
+    candidate = stem
+    if stem.startswith(f"{image_name}_"):
+        candidate = stem[len(image_name) + 1 :]
+
+    normalized = normalize_vtnl_contour_name(candidate)
+    if normalized in KNOWN_VTNL_CONTOUR_NAMES:
+        return normalized
+
+    fallback = stem.rsplit("_", 1)[-1]
+    fallback_normalized = normalize_vtnl_contour_name(fallback)
+    if fallback_normalized in KNOWN_VTNL_CONTOUR_NAMES:
+        return fallback_normalized
+
+    return normalized
+
+
+def candidate_vtnl_dirs(vtnl_dir: Path) -> list[Path]:
+    """Search the requested VTNL folder first, then its parent as a compatibility fallback."""
+    candidates = [vtnl_dir]
+    parent = vtnl_dir.parent
+    if parent != vtnl_dir and parent.exists():
+        candidates.append(parent)
+    return candidates
 
 
 def load_frame_npy(frame_number: int, data_dir: PathLike[str] | str, contours_dir: PathLike[str] | str):
@@ -44,16 +87,21 @@ def load_frame_npy(frame_number: int, data_dir: PathLike[str] | str, contours_di
 def load_frame_vtnl(image_name: str, vtnl_dir: PathLike[str] | str):
     vtnl_dir = Path(vtnl_dir)
     image = None
-    for ext in (".png", ".tif", ".tiff"):
-        image_path = vtnl_dir / f"{image_name}{ext}"
-        if image_path.is_file():
-            image = Image.open(image_path).convert("L")
+    resolved_dir = None
+    for candidate_dir in candidate_vtnl_dirs(vtnl_dir):
+        for ext in (".png", ".tif", ".tiff"):
+            image_path = candidate_dir / f"{image_name}{ext}"
+            if image_path.is_file():
+                image = Image.open(image_path).convert("L")
+                resolved_dir = candidate_dir
+                break
+        if image is not None:
             break
 
     if image is None:
         raise FileNotFoundError(f"No VTNL image found for {image_name} in {vtnl_dir}")
 
-    zip_path = vtnl_dir / f"{image_name}.zip"
+    zip_path = (resolved_dir or vtnl_dir) / f"{image_name}.zip"
     if not zip_path.is_file():
         raise FileNotFoundError(f"ROI zip not found: {zip_path}")
 
@@ -66,7 +114,7 @@ def load_frame_vtnl(image_name: str, vtnl_dir: PathLike[str] | str):
             coords = roi.coordinates()
             if coords is None or len(coords) == 0:
                 continue
-            label = Path(name).stem.replace(f"{image_name}_", "")
+            label = extract_vtnl_contour_name(Path(name).stem, image_name)
             contours[normalize_vtnl_contour_name(label)] = np.array(coords, dtype=float)
 
     if not contours:
