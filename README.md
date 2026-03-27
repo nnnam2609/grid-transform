@@ -134,6 +134,31 @@ Reuse a saved edited annotation in the warp pipeline:
 .\.venv\Scripts\python .\scripts\run\run_warp_artspeech_session_to_target_video.py --artspeech-speaker P7 --session S2 --target-frame 143020 --source-annotation-json outputs\source_annotation_edits\p7_s2_frame_0829\edited_annotation.json --dataset-root <ARTSPEECH_ROOT> --output-mode both
 ```
 
+Current tracked example from the saved `P7/S2` annotation bundle:
+
+- Source frame: `829`
+- Source time: `16.5533s`
+- Reference VTNL frame: `1640_s10_0829`
+- Target frame: `143020`
+- Match correlation before manual edit: `0.9866`
+
+Editor overview and saved annotation outputs:
+
+<p>
+  <img src="docs/assets/github/p7-s2-editor-overview.png" alt="P7 S2 editor overview" width="49%" />
+  <img src="docs/assets/github/p7-s2-source-full-head-annotation.png" alt="P7 S2 source full head annotation" width="49%" />
+</p>
+<p>
+  <img src="docs/assets/github/p7-s2-source-grid-annotation.png" alt="P7 S2 source grid annotation" width="49%" />
+  <img src="docs/assets/github/p7-s2-source-to-target-preview.png" alt="P7 S2 source to target preview" width="49%" />
+</p>
+
+Sequence warp preview from the saved annotation:
+
+![P7 S2 sequence review preview](docs/assets/github/p7-s2-sequence-review-preview.png)
+
+Review video: [P7_S2_warped_to_143020_review.mp4](docs/assets/github/p7-s2-warped-to-143020-review.mp4)
+
 ### Vowel Variability Utilities
 
 ```powershell
