@@ -5,6 +5,7 @@ roifile>=2024.3
 scipy>=1.13
 shapely>=2.0
 opencv-python>=4.10
+streamlit>=1.49
 jupyter>=1.0
 nbconvert>=7.0
 ipykernel>=6.0

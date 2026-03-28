@@ -16,6 +16,17 @@ from grid_transform.warp import warp_image_to_target_space
 
 
 DEFAULT_SOURCE_ANNOTATION_ROOT = DEFAULT_OUTPUT_DIR / "source_annotation_edits"
+GRID_CONTROL_REQUIRED_CONTOURS = (
+    "incisior-hard-palate",
+    "mandible-incisior",
+    "c1",
+    "c2",
+    "c3",
+    "c4",
+    "c5",
+    "c6",
+)
+GRID_CONSTRAINT_GROUPS = ("none", "velum", "pharynx")
 LONG_CONTOUR_HANDLE_COUNTS = {
     "pharynx": 32,
     "soft-palate-midline": 24,
@@ -189,13 +200,76 @@ def deserialize_contours(contours_payload: dict[str, object]) -> dict[str, np.nd
     return contours
 
 
+def normalize_grid_controls(
+    contours: dict[str, np.ndarray],
+    grid_controls: dict[str, object] | None = None,
+) -> dict[str, dict[str, object]]:
+    grid_controls = dict(grid_controls or {})
+    include_payload = dict(grid_controls.get("include_in_grid", {}))
+    constraint_payload = dict(grid_controls.get("constraint_group", {}))
+
+    include_in_grid: dict[str, bool] = {}
+    constraint_group: dict[str, str] = {}
+    for name in sorted(contours):
+        include = bool(include_payload.get(name, True))
+        if name in GRID_CONTROL_REQUIRED_CONTOURS:
+            include = True
+        include_in_grid[name] = include
+
+        raw_group = str(constraint_payload.get(name, "none")).strip().lower()
+        group = raw_group if raw_group in GRID_CONSTRAINT_GROUPS else "none"
+        if not include:
+            group = "none"
+        constraint_group[name] = group
+
+    return {
+        "include_in_grid": include_in_grid,
+        "constraint_group": constraint_group,
+    }
+
+
+def controls_to_grid_contours(
+    contours: dict[str, np.ndarray],
+    grid_controls: dict[str, object] | None = None,
+) -> dict[str, np.ndarray]:
+    controls = normalize_grid_controls(contours, grid_controls)
+    return {
+        name: np.asarray(points, dtype=float)
+        for name, points in contours.items()
+        if controls["include_in_grid"].get(name, True) or name in GRID_CONTROL_REQUIRED_CONTOURS
+    }
+
+
+def controls_to_grid_constraints(
+    contours: dict[str, np.ndarray],
+    grid_controls: dict[str, object] | None = None,
+) -> dict[str, list[np.ndarray]]:
+    controls = normalize_grid_controls(contours, grid_controls)
+    constraints = {
+        "velum_paths": [],
+        "pharynx_paths": [],
+    }
+    for name, points in contours.items():
+        if not controls["include_in_grid"].get(name, True):
+            continue
+        group = controls["constraint_group"].get(name, "none")
+        if group == "velum":
+            constraints["velum_paths"].append(np.asarray(points, dtype=float))
+        elif group == "pharynx":
+            constraints["pharynx_paths"].append(np.asarray(points, dtype=float))
+    return constraints
+
+
 def save_source_annotation_json(
     path: Path,
     metadata: dict[str, object],
     contours: dict[str, np.ndarray],
 ) -> dict[str, object]:
+    payload_metadata = dict(metadata)
+    if "grid_controls" in payload_metadata:
+        payload_metadata["grid_controls"] = normalize_grid_controls(contours, payload_metadata.get("grid_controls"))
     payload = {
-        "metadata": metadata,
+        "metadata": payload_metadata,
         "contours": serialize_contours(contours),
     }
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -208,6 +282,7 @@ def load_source_annotation_json(path: Path | str) -> dict[str, object]:
     payload = json.loads(path.read_text(encoding="utf-8"))
     metadata = dict(payload.get("metadata", {}))
     contours = deserialize_contours(payload.get("contours", {}))
+    metadata["grid_controls"] = normalize_grid_controls(contours, metadata.get("grid_controls"))
     return {
         "path": path,
         "metadata": metadata,

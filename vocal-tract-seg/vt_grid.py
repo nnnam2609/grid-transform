@@ -223,7 +223,14 @@ def _point_to_line_distance(pt: np.ndarray, line_start: np.ndarray, line_end: np
 
 def _find_pharynx_intersection(start_pt, end_pt, contours: dict) -> Optional[np.ndarray]:
     """Return the pharynx intersection on the segment start_pt -> end_pt."""
-    if 'pharynx' not in contours or contours['pharynx'] is None:
+    contour_paths = []
+    if 'pharynx' in contours and contours['pharynx'] is not None:
+        contour_paths.append(np.asarray(contours['pharynx'], dtype=float))
+    return _find_intersection_across_paths(start_pt, end_pt, contour_paths)
+
+
+def _find_intersection_across_paths(start_pt, end_pt, paths: List[np.ndarray]) -> Optional[np.ndarray]:
+    if not paths:
         return None
 
     try:
@@ -232,25 +239,60 @@ def _find_pharynx_intersection(start_pt, end_pt, contours: dict) -> Optional[np.
         start_pt = np.asarray(start_pt, dtype=float)
         end_pt = np.asarray(end_pt, dtype=float)
         seg = LineString([tuple(start_pt), tuple(end_pt)])
-        inter = seg.intersection(LineString(contours['pharynx']))
-        if inter.is_empty:
-            return None
-        if inter.geom_type == 'Point':
-            return np.array([inter.x, inter.y], dtype=float)
-        if inter.geom_type == 'MultiPoint':
-            pts = [np.array([p.x, p.y], dtype=float) for p in inter.geoms]
-            return pts[int(np.argmin([np.linalg.norm(p - start_pt) for p in pts]))]
-        if inter.geom_type == 'GeometryCollection':
-            pts = []
-            for geom in inter.geoms:
-                if geom.geom_type == 'Point':
-                    pts.append(np.array([geom.x, geom.y], dtype=float))
-            if pts:
-                return pts[int(np.argmin([np.linalg.norm(p - start_pt) for p in pts]))]
+        candidates = []
+        for path in paths:
+            if path is None or len(path) == 0:
+                continue
+            inter = seg.intersection(LineString(path))
+            if inter.is_empty:
+                continue
+            if inter.geom_type == 'Point':
+                candidates.append(np.array([inter.x, inter.y], dtype=float))
+            elif inter.geom_type == 'MultiPoint':
+                candidates.extend(np.array([p.x, p.y], dtype=float) for p in inter.geoms)
+            elif inter.geom_type == 'GeometryCollection':
+                for geom in inter.geoms:
+                    if geom.geom_type == 'Point':
+                        candidates.append(np.array([geom.x, geom.y], dtype=float))
+        if candidates:
+            return candidates[int(np.argmin([np.linalg.norm(p - start_pt) for p in candidates]))]
     except Exception:
         return None
 
     return None
+
+
+def _normalize_grid_constraints(grid_constraints) -> dict:
+    if not isinstance(grid_constraints, dict):
+        return {"velum_paths": [], "pharynx_paths": []}
+    result = {"velum_paths": [], "pharynx_paths": []}
+    for key in ("velum_paths", "pharynx_paths"):
+        values = grid_constraints.get(key, [])
+        if not isinstance(values, (list, tuple)):
+            continue
+        for value in values:
+            try:
+                path = np.asarray(value, dtype=float)
+            except (TypeError, ValueError):
+                continue
+            if path.ndim == 2 and path.shape[1] == 2 and len(path) > 0:
+                result[key].append(path)
+    return result
+
+
+def _nearest_distance_to_paths(point: np.ndarray, paths: List[np.ndarray]) -> Optional[float]:
+    if not paths:
+        return None
+    pt = np.asarray(point, dtype=float)
+    distances = []
+    for path in paths:
+        pts = np.asarray(path, dtype=float)
+        if pts.ndim != 2 or pts.shape[1] != 2 or len(pts) == 0:
+            continue
+        distances.append(float(np.min(np.linalg.norm(pts - pt[None, :], axis=1))))
+    if not distances:
+        return None
+    return min(distances)
 
 
 def _find_cervical_centers(contours: dict) -> dict:
@@ -329,8 +371,10 @@ def _find_soft_palate_points(
     middle_weight: float = 0.35,
     gradient_weight: float = 0.45,
     overlap_weight: float = 0.0,
+    constraint_weight: float = 0.35,
     middle_target: float = 0.55,
     overlap_sigma: float = 0.10,
+    constraint_paths: Optional[List[np.ndarray]] = None,
     search_start: float = 0.35,
     search_end: float = 0.80,
 ) -> Tuple[Optional[dict], Optional[np.ndarray]]:
@@ -437,6 +481,12 @@ def _find_soft_palate_points(
     else:
         overlap_u = middle_target
 
+    if c1 is not None:
+        constraint_scale = max(float(np.linalg.norm(np.asarray(c1, dtype=float) - I6)), 1.0)
+    else:
+        constraint_scale = max(float(np.linalg.norm(work_path[-1] - work_path[0])), 1.0)
+    constraint_sigma = max(0.15 * constraint_scale, 1e-6)
+
     best_idx = lo
     best_score = -np.inf
     for idx in range(lo, hi + 1):
@@ -444,10 +494,16 @@ def _find_soft_palate_points(
         near_overlap = 0.0
         if overlap_weight > 0.0:
             near_overlap = float(np.exp(-0.5 * ((float(u_new[idx]) - overlap_u) / max(overlap_sigma, 1e-8)) ** 2))
+        near_constraint = 0.0
+        if constraint_paths:
+            distance = _nearest_distance_to_paths(smooth_path[idx], constraint_paths)
+            if distance is not None:
+                near_constraint = float(np.exp(-0.5 * (distance / constraint_sigma) ** 2))
         score = (
             middle_weight * middle_score
             + gradient_weight * float(grad_score[idx])
             + overlap_weight * near_overlap
+            + constraint_weight * near_constraint
         )
         if score > best_score:
             best_score = score
@@ -562,6 +618,41 @@ def _clamp_path_to_chord(
     return clamped, max_dev_ratio_observed, clamp_fraction
 
 
+def _clamp_path_via_waypoint(
+    path: np.ndarray,
+    start_pt: np.ndarray,
+    waypoint: Optional[np.ndarray],
+    end_pt: np.ndarray,
+    split_hint_idx: Optional[int],
+    max_dev_ratio: float,
+) -> Tuple[np.ndarray, float, float]:
+    if waypoint is None or split_hint_idx is None:
+        return _clamp_path_to_chord(path, start_pt, end_pt, max_dev_ratio)
+
+    pts = np.asarray(path, dtype=float)
+    split_idx = int(np.clip(split_hint_idx, 1, max(len(pts) - 1, 1)))
+    if len(pts) < 2 or split_idx <= 0 or split_idx >= len(pts):
+        return _clamp_path_to_chord(path, start_pt, end_pt, max_dev_ratio)
+
+    waypoint_pt = np.asarray(waypoint, dtype=float)
+    first_source = np.vstack([pts[:split_idx + 1], waypoint_pt])
+    second_source = np.vstack([waypoint_pt, pts[split_idx:]])
+    first_clamped, first_ratio, first_fraction = _clamp_path_to_chord(
+        first_source,
+        start_pt,
+        waypoint_pt,
+        max_dev_ratio,
+    )
+    second_clamped, second_ratio, second_fraction = _clamp_path_to_chord(
+        second_source,
+        waypoint_pt,
+        end_pt,
+        max_dev_ratio,
+    )
+    combined = np.vstack([first_clamped, second_clamped[1:]])
+    return combined, max(first_ratio, second_ratio), 0.5 * (first_fraction + second_fraction)
+
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -573,6 +664,7 @@ def build_grid(
     n_points: int = 250,
     frame_number: int = 0,
     max_dev_ratio: float = 0.25,
+    grid_constraints: dict | None = None,
 ) -> GridData:
     """
     Build an anatomically-anchored curvilinear grid.
@@ -603,6 +695,9 @@ def build_grid(
     g.contours = contours
     g.frame_number = frame_number
     g.n_vert = n_vert
+    constraint_cfg = _normalize_grid_constraints(grid_constraints)
+    velum_constraint_paths = constraint_cfg["velum_paths"]
+    pharynx_constraint_paths = constraint_cfg["pharynx_paths"]
     validation = validate_grid_contours(contours)
     g.contour_point_counts = dict(validation.point_counts)
     g.hard_errors = list(validation.hard_errors)
@@ -624,7 +719,11 @@ def build_grid(
     g.I1 = np.asarray(I_points['I1'], dtype=float) if I_points else None
 
     c1 = np.array(cc['c1'], dtype=float) if 'c1' in cc else None
-    soft_palate_points, soft_palate_path = _find_soft_palate_points(contours, c1=c1)
+    soft_palate_points, soft_palate_path = _find_soft_palate_points(
+        contours,
+        c1=c1,
+        constraint_paths=velum_constraint_paths,
+    )
     if I_points and soft_palate_points:
         I_points = dict(I_points)
         I_points.update(soft_palate_points)
@@ -655,7 +754,9 @@ def build_grid(
             else:
                 vt_parts.append(soft_part)
 
-            P1_i7 = _find_pharynx_intersection(i7, c1, contours)
+            P1_i7 = _find_intersection_across_paths(i7, c1, pharynx_constraint_paths)
+            if P1_i7 is None:
+                P1_i7 = _find_pharynx_intersection(i7, c1, contours)
 
         vt_parts.append(np.asarray(c1, dtype=float).reshape(1, 2))
         vt_full = np.vstack([part for part in vt_parts if len(part) > 0])
@@ -726,10 +827,15 @@ def build_grid(
                 palate_part = I5.reshape(1, 2)
             if len(tail_part) == 0:
                 tail_part = np.vstack([I5, R])
-            tail_blended, h1_dev_ratio, h1_max_clamp = _clamp_path_to_chord(
+            split_hint_idx = None
+            if g.P1_point is not None and 'I7' in g.I_points:
+                split_hint_idx = int(np.argmin(np.linalg.norm(tail_part - g.I_points['I7'][None, :], axis=1)))
+            tail_blended, h1_dev_ratio, h1_max_clamp = _clamp_path_via_waypoint(
                 tail_part,
                 I5,
+                g.P1_point,
                 R,
+                split_hint_idx,
                 max_dev_ratio,
             )
             if np.linalg.norm(palate_part[-1] - tail_blended[0]) < 1e-6:

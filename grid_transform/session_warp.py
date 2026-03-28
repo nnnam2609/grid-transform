@@ -29,7 +29,11 @@ from grid_transform.config import (
     VT_SEG_DATA_ROOT,
 )
 from grid_transform.io import load_frame_npy, load_frame_vtnl
-from grid_transform.source_annotation import load_source_annotation_json
+from grid_transform.source_annotation import (
+    controls_to_grid_constraints,
+    controls_to_grid_contours,
+    load_source_annotation_json,
+)
 from grid_transform.transfer import (
     DEFAULT_ARTICULATORS,
     build_two_step_transform,
@@ -434,10 +438,18 @@ def _prepare_saved_source_annotation(
         session_data.frame_max,
     )
     source_contours = payload["contours"]
+    grid_controls = metadata.get("grid_controls")
     target_shape = tuple(int(value) for value in np.asarray(target_image).shape[:2])
     articulators = resolve_articulators(target_contours, source_contours)
 
-    source_grid = build_grid(source_frame, source_contours, n_vert=9, n_points=250, frame_number=source_frame_index1)
+    source_grid = build_grid(
+        source_frame,
+        controls_to_grid_contours(source_contours, grid_controls),
+        n_vert=9,
+        n_points=250,
+        frame_number=source_frame_index1,
+        grid_constraints=controls_to_grid_constraints(source_contours, grid_controls),
+    )
     target_grid = build_grid(target_image, target_contours, n_vert=9, n_points=250, frame_number=target_frame)
     forward_transform = build_two_step_transform(source_grid, target_grid)
     inverse_transform = build_two_step_transform(target_grid, source_grid)
