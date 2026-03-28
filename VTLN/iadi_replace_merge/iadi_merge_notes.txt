@@ -1,6 +1,6 @@
-IADI -> VTNL replace+merge check
+IADI -> VTLN replace+merge check
 
-Output dir: /srv/storage/talc2@talc-data2.nancy.grid5000.fr/multispeech/calcul/users/nhanguyen/grid transform/VTNL/iadi_replace_merge
+Output dir: /srv/storage/talc2@talc-data2.nancy.grid5000.fr/multispeech/calcul/users/nhanguyen/grid transform/VTLN/iadi_replace_merge
 
 Frame mapping used:
 - 1612_s10_0654: 1612/S10/0655
@@ -12,7 +12,7 @@ Frame mapping used:
 - 1640_s10_0829: 1640/S10/0829
 - 1659_s10_0654: 1659/S10/1337
 
-VTNL frames without exact contour labels in iadi:
+VTLN frames without exact contour labels in iadi:
 - 1612_s10_0654: exact_npy=yes, exact_roi_labels=0
 - 1617_s10_0822: exact_npy=yes, exact_roi_labels=0
 - 1618_s10_0757: exact_npy=yes, exact_roi_labels=0

@@ -8,7 +8,7 @@ ROOT_DIR = Path(__file__).resolve().parents[2]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-from grid_transform.apps.evaluate_vtnl_grid_quality import main
+from grid_transform.apps.compare_vtln_to_artspeech_session import main
 
 
 if __name__ == "__main__":

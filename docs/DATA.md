@@ -2,7 +2,7 @@
 
 This repository mixes three data tiers:
 
-1. lightweight bundled reference data in `VTNL/`
+1. lightweight bundled reference data in `VTLN/`
 2. lightweight bundled target-frame sample data in `vocal-tract-seg/`
 3. larger external ArtSpeech session data used by the video and vowel-analysis utilities
 
@@ -10,9 +10,9 @@ The goal of this note is to document the **path contract** expected by the code,
 
 ## What Is Bundled In This Repo
 
-### `VTNL/`
+### `VTLN/`
 
-The repo bundles a small set of VTNL-style reference images and ROI zips used by the default examples.
+The repo bundles a small set of VTLN-style reference images and ROI zips used by the default examples.
 
 Expected file pattern:
 
@@ -66,7 +66,7 @@ The ArtSpeech workflows in this repo do not require the full dataset to be copie
 
 ## Supported File Types
 
-### VTNL reference loading
+### VTLN reference loading
 
 - grayscale image: `.png`, `.tif`, or `.tiff`
 - contours: `.zip` containing ImageJ `.roi` files
@@ -102,7 +102,7 @@ Phone labels are expected to follow the same style as the token inventory used b
 ## Which Workflows Need Which Data
 
 - Core grid transform pipeline:
-  works with the bundled `VTNL/` and `vocal-tract-seg/` examples by default.
+  works with the bundled `VTLN/` and `vocal-tract-seg/` examples by default.
 - Report generation:
   uses the same bundled sample/reference data unless you override paths in the scripts.
 - ArtSpeech session video, projection, warp, and vowel-variability workflows:

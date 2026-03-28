@@ -12,12 +12,12 @@ import numpy as np
 
 from grid_transform.config import (
     DEFAULT_OUTPUT_DIR,
-    DEFAULT_VTNL_DIR,
+    DEFAULT_VTLN_DIR,
     TONGUE_COLOR,
     VT_SEG_CONTOURS_ROOT,
     VT_SEG_DATA_ROOT,
 )
-from grid_transform.io import load_frame_npy, load_frame_vtnl
+from grid_transform.io import load_frame_npy, load_frame_vtln
 from grid_transform.transfer import build_two_step_transform, smooth_transformed_contours, transform_contours
 from grid_transform.apps.method4_transform import format_target_frame, resample_polyline
 from grid_transform.vt import build_grid
@@ -410,7 +410,7 @@ def write_summary(path: Path, speakers: dict[str, dict], ms: dict, transformed: 
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-def load_speakers(case: str, source_frame: int, vtnl_dir: Path, include_nnunet: bool):
+def load_speakers(case: str, source_frame: int, vtln_dir: Path, include_nnunet: bool):
     """Load the speaker set and keep only speakers that contain tongue."""
     speakers = {}
     excluded_no_tongue = []
@@ -426,16 +426,16 @@ def load_speakers(case: str, source_frame: int, vtnl_dir: Path, include_nnunet: 
         else:
             excluded_no_tongue.append("nnUNet_A")
 
-    for zip_path in sorted(vtnl_dir.glob("*.zip")):
+    for zip_path in sorted(vtln_dir.glob("*.zip")):
         speaker_id = zip_path.stem
-        image, contours = load_frame_vtnl(speaker_id, vtnl_dir)
+        image, contours = load_frame_vtln(speaker_id, vtln_dir)
         if "tongue" not in contours:
             excluded_no_tongue.append(speaker_id)
             continue
-        speakers[speaker_id] = {"image": image, "contours": contours, "source": "VTNL"}
+        speakers[speaker_id] = {"image": image, "contours": contours, "source": "VTLN"}
 
     for speaker_id, speaker in speakers.items():
-        speaker["grid"] = build_grid(speaker["image"], speaker["contours"], n_vert=9, n_points=250, frame_number=0 if speaker["source"] == "VTNL" else source_frame)
+        speaker["grid"] = build_grid(speaker["image"], speaker["contours"], n_vert=9, n_points=250, frame_number=0 if speaker["source"] == "VTLN" else source_frame)
 
     return speakers, excluded_no_tongue
 
@@ -444,8 +444,8 @@ def build_parser():
     parser = argparse.ArgumentParser(description="Compute notebook-style and grid-transformed average/median speakers with tongue included.")
     parser.add_argument("--source-frame", type=int, default=DEFAULT_SOURCE_FRAME, help="nnUNet source frame to include as nnUNet_A.")
     parser.add_argument("--case", default=DEFAULT_CASE, help="nnUNet case relative path.")
-    parser.add_argument("--vtnl-dir", type=Path, default=DEFAULT_VTNL_DIR, help="Folder containing VTNL images and ROI zip files.")
-    parser.add_argument("--exclude-nnunet", action="store_true", help="Use only VTNL speakers.")
+    parser.add_argument("--vtln-dir", type=Path, default=DEFAULT_VTLN_DIR, help="Folder containing VTLN images and ROI zip files.")
+    parser.add_argument("--exclude-nnunet", action="store_true", help="Use only VTLN speakers.")
     parser.add_argument(
         "--reference-speaker",
         default="auto",
@@ -462,7 +462,7 @@ def main(argv: list[str] | None = None):
     speakers, excluded_no_tongue = load_speakers(
         case=args.case,
         source_frame=args.source_frame,
-        vtnl_dir=args.vtnl_dir,
+        vtln_dir=args.vtln_dir,
         include_nnunet=not args.exclude_nnunet,
     )
     if len(speakers) < 2:

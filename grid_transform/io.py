@@ -9,11 +9,11 @@ from PIL import Image
 from roifile import ImagejRoi
 
 
-VTNL_CONTOUR_NAME_MAP = {
+VTLN_CONTOUR_NAME_MAP = {
     "incisor-hard-palate": "incisior-hard-palate",
     "mandible-incisor": "mandible-incisior",
 }
-KNOWN_VTNL_CONTOUR_NAMES = {
+KNOWN_VTLN_CONTOUR_NAMES = {
     "c1",
     "c2",
     "c3",
@@ -31,34 +31,34 @@ KNOWN_VTNL_CONTOUR_NAMES = {
 }
 
 
-def normalize_vtnl_contour_name(label: str) -> str:
-    """Map VTNL/iADI contour labels to the canonical names used in the repo."""
-    return VTNL_CONTOUR_NAME_MAP.get(label, label)
+def normalize_vtln_contour_name(label: str) -> str:
+    """Map VTLN/iADI contour labels to the canonical names used in the repo."""
+    return VTLN_CONTOUR_NAME_MAP.get(label, label)
 
 
-def extract_vtnl_contour_name(stem: str, image_name: str) -> str:
+def extract_vtln_contour_name(stem: str, image_name: str) -> str:
     """Recover a canonical contour label even if the ROI stem carries a stale prefix."""
     candidate = stem
     if stem.startswith(f"{image_name}_"):
         candidate = stem[len(image_name) + 1 :]
 
-    normalized = normalize_vtnl_contour_name(candidate)
-    if normalized in KNOWN_VTNL_CONTOUR_NAMES:
+    normalized = normalize_vtln_contour_name(candidate)
+    if normalized in KNOWN_VTLN_CONTOUR_NAMES:
         return normalized
 
     fallback = stem.rsplit("_", 1)[-1]
-    fallback_normalized = normalize_vtnl_contour_name(fallback)
-    if fallback_normalized in KNOWN_VTNL_CONTOUR_NAMES:
+    fallback_normalized = normalize_vtln_contour_name(fallback)
+    if fallback_normalized in KNOWN_VTLN_CONTOUR_NAMES:
         return fallback_normalized
 
     return normalized
 
 
-def candidate_vtnl_dirs(vtnl_dir: Path) -> list[Path]:
-    """Search the requested VTNL folder first, then its parent as a compatibility fallback."""
-    candidates = [vtnl_dir]
-    parent = vtnl_dir.parent
-    if parent != vtnl_dir and parent.exists():
+def candidate_vtln_dirs(vtln_dir: Path) -> list[Path]:
+    """Search the requested VTLN folder first, then its parent as a compatibility fallback."""
+    candidates = [vtln_dir]
+    parent = vtln_dir.parent
+    if parent != vtln_dir and parent.exists():
         candidates.append(parent)
     return candidates
 
@@ -84,11 +84,11 @@ def load_frame_npy(frame_number: int, data_dir: PathLike[str] | str, contours_di
     return image, contours
 
 
-def load_frame_vtnl(image_name: str, vtnl_dir: PathLike[str] | str):
-    vtnl_dir = Path(vtnl_dir)
+def load_frame_vtln(image_name: str, vtln_dir: PathLike[str] | str):
+    vtln_dir = Path(vtln_dir)
     image = None
     resolved_dir = None
-    for candidate_dir in candidate_vtnl_dirs(vtnl_dir):
+    for candidate_dir in candidate_vtln_dirs(vtln_dir):
         for ext in (".png", ".tif", ".tiff"):
             image_path = candidate_dir / f"{image_name}{ext}"
             if image_path.is_file():
@@ -99,9 +99,9 @@ def load_frame_vtnl(image_name: str, vtnl_dir: PathLike[str] | str):
             break
 
     if image is None:
-        raise FileNotFoundError(f"No VTNL image found for {image_name} in {vtnl_dir}")
+        raise FileNotFoundError(f"No VTLN image found for {image_name} in {vtln_dir}")
 
-    zip_path = (resolved_dir or vtnl_dir) / f"{image_name}.zip"
+    zip_path = (resolved_dir or vtln_dir) / f"{image_name}.zip"
     if not zip_path.is_file():
         raise FileNotFoundError(f"ROI zip not found: {zip_path}")
 
@@ -114,8 +114,8 @@ def load_frame_vtnl(image_name: str, vtnl_dir: PathLike[str] | str):
             coords = roi.coordinates()
             if coords is None or len(coords) == 0:
                 continue
-            label = extract_vtnl_contour_name(Path(name).stem, image_name)
-            contours[normalize_vtnl_contour_name(label)] = np.array(coords, dtype=float)
+            label = extract_vtln_contour_name(Path(name).stem, image_name)
+            contours[normalize_vtln_contour_name(label)] = np.array(coords, dtype=float)
 
     if not contours:
         raise FileNotFoundError(f"No ROI contours found in {zip_path}")

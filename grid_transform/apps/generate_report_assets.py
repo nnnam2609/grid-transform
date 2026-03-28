@@ -17,7 +17,7 @@ from grid_transform.articulators import (
     save_comparison_figure as save_articulator_transfer_figure,
 )
 from grid_transform.config import (
-    DEFAULT_VTNL_DIR,
+    DEFAULT_VTLN_DIR,
     PROJECT_DIR,
     REPORT_FIGURES_DIR,
     REPORT_GENERATED_DIR,
@@ -25,7 +25,7 @@ from grid_transform.config import (
     VT_SEG_CONTOURS_ROOT,
     VT_SEG_DATA_ROOT,
 )
-from grid_transform.io import load_frame_npy, load_frame_vtnl
+from grid_transform.io import load_frame_npy, load_frame_vtln
 from grid_transform.transfer import build_two_step_transform, smooth_transformed_contours, transform_contours
 from grid_transform.vt import build_grid, visualize_grid
 from grid_transform.warp import (
@@ -103,10 +103,10 @@ class ReportArtifacts:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Generate dedicated figures and LaTeX values for the grid transformation report.")
-    parser.add_argument("--target-speaker", default=DEFAULT_TARGET_SPEAKER, help="VTNL target speaker/image name.")
+    parser.add_argument("--target-speaker", default=DEFAULT_TARGET_SPEAKER, help="VTLN target speaker/image name.")
     parser.add_argument("--source-frame", type=int, default=DEFAULT_SOURCE_FRAME, help="nnUNet source frame number.")
     parser.add_argument("--case", default=DEFAULT_CASE, help="nnUNet case relative path.")
-    parser.add_argument("--vtnl-dir", type=Path, default=DEFAULT_VTNL_DIR, help="Folder containing VTNL images and ROI zip files.")
+    parser.add_argument("--vtln-dir", type=Path, default=DEFAULT_VTLN_DIR, help="Folder containing VTLN images and ROI zip files.")
     parser.add_argument("--outdir", type=Path, default=REPORT_FIGURES_DIR, help="Where to save the generated report figures.")
     parser.add_argument("--generated-dir", type=Path, default=REPORT_GENERATED_DIR, help="Where to save generated LaTeX include files.")
     return parser
@@ -163,7 +163,7 @@ def save_figure(fig: plt.Figure, path: Path) -> None:
 
 
 def compute_report_artifacts(args: argparse.Namespace) -> ReportArtifacts:
-    target_image, target_contours = load_frame_vtnl(args.target_speaker, args.vtnl_dir)
+    target_image, target_contours = load_frame_vtln(args.target_speaker, args.vtln_dir)
     source_image, source_contours = load_frame_npy(
         args.source_frame,
         VT_SEG_DATA_ROOT / args.case,
@@ -466,13 +466,13 @@ def write_report_values(args: argparse.Namespace, artifacts: ReportArtifacts, ou
 
     tongue_rms = artifacts.articulator_errors.get("tongue")
     try:
-        vtnl_display = args.vtnl_dir.relative_to(PROJECT_DIR).as_posix()
+        vtln_display = args.vtln_dir.relative_to(PROJECT_DIR).as_posix()
     except ValueError:
-        vtnl_display = args.vtnl_dir.as_posix()
+        vtln_display = args.vtln_dir.as_posix()
     lines = [
         rf"\newcommand{{\TargetSpeakerName}}{{\texttt{{{tex_escape(args.target_speaker)}}}}}",
         rf"\newcommand{{\SourceFrameNumber}}{{{args.source_frame}}}",
-        rf"\newcommand{{\VTNLFolderName}}{{\path{{{vtnl_display}}}}}",
+        rf"\newcommand{{\VTLNFolderName}}{{\path{{{vtln_display}}}}}",
         rf"\newcommand{{\StepOneAnchorCount}}{{{len(artifacts.step1_anchor_labels)}}}",
         rf"\newcommand{{\StepTwoControlCount}}{{{len(artifacts.step2_ctrl_labels)}}}",
         rf"\newcommand{{\StepOneAnchorList}}{{{tex_code_list(artifacts.step1_anchor_labels)}}}",

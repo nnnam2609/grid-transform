@@ -7,13 +7,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from grid_transform.config import (
-    DEFAULT_VTNL_DIR,
+    DEFAULT_VTLN_DIR,
     DEFAULT_OUTPUT_DIR,
     TONGUE_COLOR,
     VT_SEG_CONTOURS_ROOT,
     VT_SEG_DATA_ROOT,
 )
-from grid_transform.io import load_frame_npy, load_frame_vtnl
+from grid_transform.io import load_frame_npy, load_frame_vtln
 from grid_transform.vt import build_grid, print_grid_summary
 
 
@@ -651,10 +651,10 @@ def run_method4(target_grid, source_grid, output_dir: Path):
 
 def build_parser():
     parser = argparse.ArgumentParser(description="Run Method 4 as a standalone script.")
-    parser.add_argument("--target-speaker", default="1640_s10_0829", help="VTNL target speaker/image name.")
+    parser.add_argument("--target-speaker", default="1640_s10_0829", help="VTLN target speaker/image name.")
     parser.add_argument("--source-frame", type=int, default=143020, help="nnUNet source frame number.")
     parser.add_argument("--case", default="2008-003^01-1791/test", help="nnUNet case relative path.")
-    parser.add_argument("--vtnl-dir", type=Path, default=DEFAULT_VTNL_DIR, help="Folder containing VTNL images and ROI zip files.")
+    parser.add_argument("--vtln-dir", type=Path, default=DEFAULT_VTLN_DIR, help="Folder containing VTLN images and ROI zip files.")
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR, help="Where to save the figures.")
     return parser
 
@@ -662,7 +662,7 @@ def build_parser():
 def main(argv: list[str] | None = None):
     args = build_parser().parse_args(argv)
 
-    target_image, target_contours = load_frame_vtnl(args.target_speaker, args.vtnl_dir)
+    target_image, target_contours = load_frame_vtln(args.target_speaker, args.vtln_dir)
     source_image, source_contours = load_frame_npy(
         args.source_frame,
         VT_SEG_DATA_ROOT / args.case,

@@ -23,7 +23,7 @@ from grid_transform.artspeech_video import (
     resolve_default_dataset_root,
 )
 from grid_transform.config import PROJECT_DIR, TONGUE_COLOR, VT_SEG_CONTOURS_ROOT, VT_SEG_DATA_ROOT
-from grid_transform.io import load_frame_npy, load_frame_vtnl
+from grid_transform.io import load_frame_npy, load_frame_vtln
 from grid_transform.session_warp import run_session_warp_to_target
 from grid_transform.source_annotation import (
     LONG_CONTOUR_HANDLE_COUNTS,
@@ -106,12 +106,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--artspeech-speaker", default="P7", help="ArtSpeech speaker id, for example P7.")
     parser.add_argument("--session", default="S2", help="ArtSpeech session id, for example S2.")
-    parser.add_argument("--reference-speaker", default="1640_s10_0829", help="VTNL reference speaker/image name.")
+    parser.add_argument("--reference-speaker", default="1640_s10_0829", help="VTLN reference speaker/image name.")
     parser.add_argument("--source-frame", type=int, help="Optional 1-based source frame override. Defaults to the best reference match.")
     parser.add_argument("--target-frame", type=int, default=143020, help="nnUNet target frame number.")
     parser.add_argument("--target-case", default="2008-003^01-1791/test", help="nnUNet target case relative path.")
     parser.add_argument("--dataset-root", type=Path, help="Optional explicit ArtSpeech dataset root.")
-    parser.add_argument("--vtnl-dir", type=Path, default=PROJECT_DIR / "VTNL", help="Folder containing VTNL images and ROI zip files.")
+    parser.add_argument("--vtln-dir", type=Path, default=PROJECT_DIR / "VTLN", help="Folder containing VTLN images and ROI zip files.")
     parser.add_argument("--output-dir", type=Path, help="Optional explicit output directory.")
     parser.add_argument("--output-mode", choices=("both", "warped", "review"), default="both", help="Which sequence outputs to render.")
     parser.add_argument("--max-output-frames", type=int, default=0, help="Optional debug limit for the sequence render triggered on save.")
@@ -159,7 +159,7 @@ class SourceAnnotationEditor:
         self.dataset_root = args.dataset_root or resolve_default_dataset_root(args.artspeech_speaker)
         self.session_data = load_session_data(self.dataset_root, args.artspeech_speaker, args.session)
 
-        self.reference_image, self.reference_contours = load_frame_vtnl(args.reference_speaker, args.vtnl_dir)
+        self.reference_image, self.reference_contours = load_frame_vtln(args.reference_speaker, args.vtln_dir)
         self.reference_shape = tuple(int(value) for value in np.asarray(self.reference_image).shape[:2])
         self.projected_reference_frame = projected_reference_frame(
             self.reference_image,
@@ -535,7 +535,7 @@ class SourceAnnotationEditor:
                 target_frame=self.args.target_frame,
                 target_case=self.args.target_case,
                 dataset_root=self.dataset_root,
-                vtnl_dir=self.args.vtnl_dir,
+                vtln_dir=self.args.vtln_dir,
                 output_dir=sequence_output_dir,
                 max_frames=max_output_frames,
                 output_mode=output_mode,
