@@ -8,7 +8,7 @@ import matplotlib
 
 matplotlib.use("Agg")
 
-from grid_transform.config import DEFAULT_VTNL_DIR
+from grid_transform.config import DEFAULT_VTLN_DIR
 from grid_transform.session_warp import run_session_warp_to_target
 
 
@@ -16,13 +16,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
             "Warp a full ArtSpeech session into one nnUNet target frame space using either "
-            "a fixed VTNL reference annotation or a saved edited source annotation."
+            "a fixed VTLN reference annotation or a saved edited source annotation."
         )
     )
     parser.add_argument(
         "--annotation-speaker",
         default="1640_s10_0829",
-        help="VTNL annotation/reference speaker image name.",
+        help="VTLN annotation/reference speaker image name.",
     )
     parser.add_argument(
         "--source-annotation-json",
@@ -42,7 +42,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         type=Path,
         help="Optional explicit ArtSpeech dataset root. Defaults to an auto-detected local path.",
     )
-    parser.add_argument("--vtnl-dir", type=Path, default=DEFAULT_VTNL_DIR, help="Folder containing VTNL images and ROI zip files.")
+    parser.add_argument("--vtln-dir", type=Path, default=DEFAULT_VTLN_DIR, help="Folder containing VTLN images and ROI zip files.")
     parser.add_argument(
         "--output-dir",
         type=Path,
@@ -73,7 +73,7 @@ def main(argv: list[str] | None = None) -> None:
         target_frame=args.target_frame,
         target_case=args.target_case,
         dataset_root=args.dataset_root,
-        vtnl_dir=args.vtnl_dir,
+        vtln_dir=args.vtln_dir,
         output_dir=args.output_dir,
         max_frames=args.max_frames,
         output_mode=args.output_mode,

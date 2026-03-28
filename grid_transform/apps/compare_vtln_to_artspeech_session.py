@@ -18,8 +18,8 @@ from grid_transform.artspeech_video import (
     normalized_session_frame,
     resolve_default_dataset_root,
 )
-from grid_transform.config import DEFAULT_OUTPUT_DIR, DEFAULT_VTNL_DIR, TONGUE_COLOR
-from grid_transform.io import load_frame_vtnl
+from grid_transform.config import DEFAULT_OUTPUT_DIR, DEFAULT_VTLN_DIR, TONGUE_COLOR
+from grid_transform.io import load_frame_vtln
 
 
 REFERENCE_CONTOUR_COLORS = {
@@ -34,10 +34,10 @@ REFERENCE_CONTOUR_COLORS = {
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Compare one VTNL reference speaker with labeled snapshots from an ArtSpeech session."
+        description="Compare one VTLN reference speaker with labeled snapshots from an ArtSpeech session."
     )
-    parser.add_argument("--vtnl-speaker", default="1640_s10_0829", help="VTNL speaker/image name.")
-    parser.add_argument("--vtnl-dir", type=Path, default=DEFAULT_VTNL_DIR, help="Folder containing VTNL images and ROI zips.")
+    parser.add_argument("--vtln-speaker", default="1640_s10_0829", help="VTLN speaker/image name.")
+    parser.add_argument("--vtln-dir", type=Path, default=DEFAULT_VTLN_DIR, help="Folder containing VTLN images and ROI zips.")
     parser.add_argument("--artspeech-speaker", default="P7", help="ArtSpeech speaker id, for example P7.")
     parser.add_argument("--session", default="S10", help="ArtSpeech session id, for example S10.")
     parser.add_argument(
@@ -49,7 +49,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--output",
         type=Path,
-        help="Output PNG path. Defaults to outputs/comparisons/<vtnl>_vs_<speaker>_<session>_labels.png.",
+        help="Output PNG path. Defaults to outputs/comparisons/<vtln>_vs_<speaker>_<session>_labels.png.",
     )
     parser.add_argument(
         "--metadata-output",
@@ -59,8 +59,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def default_output_path(vtnl_speaker: str, artspeech_speaker: str, session: str) -> Path:
-    return DEFAULT_OUTPUT_DIR / "comparisons" / f"{vtnl_speaker}_vs_{artspeech_speaker}_{session}_labels.png"
+def default_output_path(vtln_speaker: str, artspeech_speaker: str, session: str) -> Path:
+    return DEFAULT_OUTPUT_DIR / "comparisons" / f"{vtln_speaker}_vs_{artspeech_speaker}_{session}_labels.png"
 
 
 def wrap_sentence(text: str, width: int = 42) -> str:
@@ -76,7 +76,7 @@ def contour_anchor(points: np.ndarray) -> np.ndarray:
 
 def draw_reference_panel(ax, image, contours: dict[str, np.ndarray], speaker_name: str) -> None:
     ax.imshow(image, cmap="gray")
-    ax.set_title(f"VTNL reference\n{speaker_name}", fontsize=12, fontweight="bold")
+    ax.set_title(f"VTLN reference\n{speaker_name}", fontsize=12, fontweight="bold")
     ax.axis("off")
 
     for name, points in sorted(contours.items()):
@@ -127,14 +127,14 @@ def draw_snapshot_panel(ax, frame: np.ndarray, snapshot: LabelSnapshot, artspeec
 
 
 def build_metadata(
-    vtnl_speaker: str,
+    vtln_speaker: str,
     artspeech_speaker: str,
     session: str,
     dataset_root: Path,
     snapshots: list[LabelSnapshot],
 ) -> dict[str, object]:
     return {
-        "vtnl_speaker": vtnl_speaker,
+        "vtln_speaker": vtln_speaker,
         "artspeech_speaker": artspeech_speaker,
         "session": session,
         "dataset_root": str(dataset_root),
@@ -154,11 +154,11 @@ def build_metadata(
 def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
     dataset_root = args.dataset_root or resolve_default_dataset_root(args.artspeech_speaker)
-    output_path = args.output or default_output_path(args.vtnl_speaker, args.artspeech_speaker, args.session)
+    output_path = args.output or default_output_path(args.vtln_speaker, args.artspeech_speaker, args.session)
     metadata_path = args.metadata_output or output_path.with_suffix(".json")
 
-    print("[load] reading VTNL reference")
-    reference_image, reference_contours = load_frame_vtnl(args.vtnl_speaker, args.vtnl_dir)
+    print("[load] reading VTLN reference")
+    reference_image, reference_contours = load_frame_vtln(args.vtln_speaker, args.vtln_dir)
 
     print("[load] reading ArtSpeech session")
     session_data = load_session_data(dataset_root, args.artspeech_speaker, args.session)
@@ -172,7 +172,7 @@ def main(argv: list[str] | None = None) -> None:
     layout = fig.add_gridspec(nrows=max(nrows, 1), ncols=ncols + 1, width_ratios=[1.35, 1.0, 1.0, 1.0])
 
     reference_ax = fig.add_subplot(layout[:, 0])
-    draw_reference_panel(reference_ax, reference_image, reference_contours, args.vtnl_speaker)
+    draw_reference_panel(reference_ax, reference_image, reference_contours, args.vtln_speaker)
 
     snapshot_axes = []
     for idx in range(nrows * ncols):
@@ -188,7 +188,7 @@ def main(argv: list[str] | None = None) -> None:
         ax.axis("off")
 
     fig.suptitle(
-        f"VTNL {args.vtnl_speaker} vs labeled ArtSpeech snapshots ({args.artspeech_speaker}/{args.session})",
+        f"VTLN {args.vtln_speaker} vs labeled ArtSpeech snapshots ({args.artspeech_speaker}/{args.session})",
         fontsize=14,
         fontweight="bold",
         y=0.99,
@@ -197,7 +197,7 @@ def main(argv: list[str] | None = None) -> None:
     fig.savefig(output_path, dpi=220, bbox_inches="tight")
     plt.close(fig)
 
-    metadata = build_metadata(args.vtnl_speaker, args.artspeech_speaker, args.session, dataset_root, snapshots)
+    metadata = build_metadata(args.vtln_speaker, args.artspeech_speaker, args.session, dataset_root, snapshots)
     metadata_path.write_text(json.dumps(metadata, indent=2, ensure_ascii=False), encoding="utf-8")
     print(json.dumps({"comparison_figure": str(output_path), "metadata_json": str(metadata_path)}, indent=2, ensure_ascii=False))
 

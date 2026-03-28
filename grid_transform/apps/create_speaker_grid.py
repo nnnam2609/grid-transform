@@ -10,12 +10,12 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from grid_transform.config import (
     DEFAULT_OUTPUT_DIR,
-    DEFAULT_VTNL_DIR,
+    DEFAULT_VTLN_DIR,
     TONGUE_COLOR,
     VT_SEG_CONTOURS_ROOT,
     VT_SEG_DATA_ROOT,
 )
-from grid_transform.io import load_frame_npy, load_frame_vtnl
+from grid_transform.io import load_frame_npy, load_frame_vtln
 from grid_transform.vt import build_grid, print_grid_summary, visualize_grid
 
 
@@ -57,13 +57,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--source",
-        choices=("vtnl", "nnunet"),
+        choices=("vtln", "nnunet"),
         required=True,
         help="Input data source.",
     )
     parser.add_argument(
         "--speaker",
-        help="VTNL speaker/image name, for example 1640_s10_0829.",
+        help="VTLN speaker/image name, for example 1640_s10_0829.",
     )
     parser.add_argument(
         "--frame",
@@ -77,10 +77,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="nnUNet case path relative to vocal-tract-seg/data_80 and results/.../inference_contours.",
     )
     parser.add_argument(
-        "--vtnl-dir",
+        "--vtln-dir",
         type=Path,
-        default=DEFAULT_VTNL_DIR,
-        help="Folder containing VTNL images and ROI zip files.",
+        default=DEFAULT_VTLN_DIR,
+        help="Folder containing VTLN images and ROI zip files.",
     )
     parser.add_argument(
         "--data-root",
@@ -133,7 +133,7 @@ def resolve_output_path(args: argparse.Namespace) -> Path:
     if args.output is not None:
         return args.output
 
-    if args.source == "vtnl":
+    if args.source == "vtln":
         stem = args.speaker
     else:
         stem = f"{args.case.replace('/', '_')}_frame_{args.frame}"
@@ -144,18 +144,18 @@ def resolve_output_path(args: argparse.Namespace) -> Path:
 def resolve_speaker_role(args: argparse.Namespace) -> str:
     if args.speaker_role is not None:
         return args.speaker_role
-    return "target" if args.source == "vtnl" else "source"
+    return "target" if args.source == "vtln" else "source"
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
 
-    if args.source == "vtnl" and not args.speaker:
-        parser.error("--speaker is required when --source vtnl")
+    if args.source == "vtln" and not args.speaker:
+        parser.error("--speaker is required when --source vtln")
 
-    if args.source == "vtnl":
-        image, contours = load_frame_vtnl(args.speaker, args.vtnl_dir)
+    if args.source == "vtln":
+        image, contours = load_frame_vtln(args.speaker, args.vtln_dir)
         frame_number = 0
         title_name = args.speaker
     else:

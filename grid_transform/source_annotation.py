@@ -114,7 +114,7 @@ def compute_reference_session_match(
     ]
 
     payload: dict[str, object] = {
-        "vtnl_reference": reference_speaker,
+        "vtln_reference": reference_speaker,
         "artspeech_speaker": artspeech_speaker,
         "session": session,
         "frame_count": frame_count,
@@ -153,7 +153,7 @@ def load_or_compute_reference_session_match(
     if output_path.is_file():
         payload = json.loads(output_path.read_text(encoding="utf-8"))
         if (
-            payload.get("vtnl_reference") == reference_speaker
+            payload.get("vtln_reference") == reference_speaker
             and payload.get("artspeech_speaker") == artspeech_speaker
             and payload.get("session") == session
             and int(payload.get("frame_count", -1)) == int(session_data.images.shape[0])

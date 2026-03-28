@@ -15,12 +15,12 @@ import numpy as np
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-from grid_transform.config import DEFAULT_OUTPUT_DIR, DEFAULT_VTNL_DIR
-from grid_transform.io import load_frame_vtnl
+from grid_transform.config import DEFAULT_OUTPUT_DIR, DEFAULT_VTLN_DIR
+from grid_transform.io import load_frame_vtln
 from grid_transform.vt import GridValidationError, build_grid, validate_grid_contours, visualize_grid
 
 
-DEFAULT_OUTPUT_DIRNAME = DEFAULT_OUTPUT_DIR / "vtnl_grid_diagnostics"
+DEFAULT_OUTPUT_DIRNAME = DEFAULT_OUTPUT_DIR / "vtln_grid_diagnostics"
 ADJACENT_SPACING_WARNING_PX = 10.0
 H1_CLAMP_WARNING_RATIO = 0.20
 AUDIT_STYLE = {
@@ -95,15 +95,15 @@ class SpeakerAuditResult:
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Build and audit VTNL vocal-tract grids for every speaker in a folder, "
+            "Build and audit VTLN vocal-tract grids for every speaker in a folder, "
             "saving per-speaker overlays plus summary JSON/CSV/Markdown reports."
         )
     )
     parser.add_argument(
-        "--vtnl-dir",
+        "--vtln-dir",
         type=Path,
-        default=DEFAULT_VTNL_DIR,
-        help="Folder containing VTNL images and ROI zip files.",
+        default=DEFAULT_VTLN_DIR,
+        help="Folder containing VTLN images and ROI zip files.",
     )
     parser.add_argument(
         "--output-dir",
@@ -122,8 +122,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def discover_vtnl_speakers(vtnl_dir: Path) -> list[str]:
-    return sorted(path.stem for path in Path(vtnl_dir).glob("*.zip"))
+def discover_vtln_speakers(vtln_dir: Path) -> list[str]:
+    return sorted(path.stem for path in Path(vtln_dir).glob("*.zip"))
 
 
 def parse_issue_code(message: str) -> str:
@@ -303,7 +303,7 @@ def save_error_figure(
 def evaluate_speaker(
     speaker: str,
     *,
-    vtnl_dir: Path,
+    vtln_dir: Path,
     output_dir: Path,
     n_vert: int,
     n_points: int,
@@ -314,7 +314,7 @@ def evaluate_speaker(
     contours: dict[str, np.ndarray] | None = None
 
     try:
-        image, contours = load_frame_vtnl(speaker, vtnl_dir)
+        image, contours = load_frame_vtln(speaker, vtln_dir)
         validation = validate_grid_contours(contours)
         result = SpeakerAuditResult(
             speaker=speaker,
@@ -455,8 +455,8 @@ def save_contact_sheet(
 
 def build_summary_payload(args: argparse.Namespace, results: list[SpeakerAuditResult]) -> dict[str, Any]:
     return {
-        "workflow": "vtnl_grid_quality_audit",
-        "vtnl_dir": str(args.vtnl_dir),
+        "workflow": "vtln_grid_quality_audit",
+        "vtln_dir": str(args.vtln_dir),
         "output_dir": str(args.output_dir),
         "speaker_count": len(results),
         "ok_count": sum(result.status == "ok" for result in results),
@@ -539,9 +539,9 @@ def write_summary_csv(path: Path, results: list[SpeakerAuditResult]) -> None:
 
 def write_summary_md(path: Path, args: argparse.Namespace, results: list[SpeakerAuditResult]) -> None:
     lines = [
-        "# VTNL Grid Diagnostics",
+        "# VTLN Grid Diagnostics",
         "",
-        f"- VTNL dir: `{args.vtnl_dir}`",
+        f"- VTLN dir: `{args.vtln_dir}`",
         f"- Speakers scanned: {len(results)}",
         f"- OK: {sum(result.status == 'ok' for result in results)}",
         f"- Warning: {sum(result.status == 'warning' for result in results)}",
@@ -592,14 +592,14 @@ def main(argv: list[str] | None = None) -> int:
     args.output_dir.mkdir(parents=True, exist_ok=True)
     (args.output_dir / "speakers").mkdir(parents=True, exist_ok=True)
 
-    speakers = discover_vtnl_speakers(args.vtnl_dir)
+    speakers = discover_vtln_speakers(args.vtln_dir)
     if not speakers:
-        raise FileNotFoundError(f"No VTNL ROI zip files found in {args.vtnl_dir}")
+        raise FileNotFoundError(f"No VTLN ROI zip files found in {args.vtln_dir}")
 
     results = [
         evaluate_speaker(
             speaker,
-            vtnl_dir=args.vtnl_dir,
+            vtln_dir=args.vtln_dir,
             output_dir=args.output_dir,
             n_vert=args.n_vert,
             n_points=args.n_points,
@@ -622,13 +622,13 @@ def main(argv: list[str] | None = None) -> int:
     save_contact_sheet(
         ordered_results,
         args.output_dir / "all_speakers_contact_sheet.png",
-        title="VTNL Grid Audit: All Speakers",
+        title="VTLN Grid Audit: All Speakers",
         empty_message="No speakers found",
     )
     save_contact_sheet(
         issue_results,
         args.output_dir / "issues_contact_sheet.png",
-        title="VTNL Grid Audit: Issues Only",
+        title="VTLN Grid Audit: Issues Only",
         empty_message="No warnings or hard failures detected",
     )
 

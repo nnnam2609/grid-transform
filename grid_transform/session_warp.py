@@ -22,13 +22,13 @@ from grid_transform.artspeech_video import (
     resolve_default_dataset_root,
 )
 from grid_transform.config import (
-    DEFAULT_VTNL_DIR,
+    DEFAULT_VTLN_DIR,
     TONGUE_COLOR,
     VIDEO_OUTPUT_DIR,
     VT_SEG_CONTOURS_ROOT,
     VT_SEG_DATA_ROOT,
 )
-from grid_transform.io import load_frame_npy, load_frame_vtnl
+from grid_transform.io import load_frame_npy, load_frame_vtln
 from grid_transform.source_annotation import load_source_annotation_json
 from grid_transform.transfer import (
     DEFAULT_ARTICULATORS,
@@ -345,13 +345,13 @@ def _prepare_reference_annotation(
     annotation_speaker: str,
     artspeech_speaker: str,
     session: str,
-    vtnl_dir: Path,
+    vtln_dir: Path,
     session_data,
     target_image,
     target_contours: dict[str, np.ndarray],
     target_frame: int,
 ) -> PreparedSessionWarp:
-    annotation_image, annotation_contours = load_frame_vtnl(annotation_speaker, vtnl_dir)
+    annotation_image, annotation_contours = load_frame_vtln(annotation_speaker, vtln_dir)
     annotation_frame = as_grayscale_uint8(annotation_image)
 
     source_shape = tuple(int(value) for value in session_data.images.shape[1:])
@@ -371,7 +371,7 @@ def _prepare_reference_annotation(
     target_to_source_mapping = build_target_to_source_mapping(inverse_transform["apply_two_step"], resize_affine)
 
     return PreparedSessionWarp(
-        source_mode="vtnl_reference",
+        source_mode="vtln_reference",
         annotation_source=annotation_speaker,
         reference_speaker=annotation_speaker,
         source_annotation_json=None,
@@ -388,7 +388,7 @@ def _prepare_reference_annotation(
         forward_transform=forward_transform,
         review_raw_title=f"Raw {artspeech_speaker}/{session} frame + assumed {annotation_speaker} contours",
         review_overlay_legend=f"green: target {target_frame}\npink dashed: assumed {annotation_speaker}",
-        assumption_text=f"All {artspeech_speaker}/{session} frames use VTNL annotation from {annotation_speaker}",
+        assumption_text=f"All {artspeech_speaker}/{session} frames use VTLN annotation from {annotation_speaker}",
         annotation_reference_shape=tuple(int(value) for value in annotation_frame.shape[:2]),
     )
 
@@ -482,7 +482,7 @@ def prepare_session_warp(
     target_frame: int,
     target_case: str,
     dataset_root: Path | str | None,
-    vtnl_dir: Path,
+    vtln_dir: Path,
 ):
     dataset_root = Path(dataset_root) if dataset_root is not None else resolve_default_dataset_root(artspeech_speaker)
 
@@ -509,7 +509,7 @@ def prepare_session_warp(
             annotation_speaker=annotation_speaker,
             artspeech_speaker=artspeech_speaker,
             session=session,
-            vtnl_dir=vtnl_dir,
+            vtln_dir=vtln_dir,
             session_data=session_data,
             target_image=target_image,
             target_contours=target_contours,
@@ -528,7 +528,7 @@ def run_session_warp_to_target(
     target_frame: int = 143020,
     target_case: str = "2008-003^01-1791/test",
     dataset_root: Path | str | None = None,
-    vtnl_dir: Path = DEFAULT_VTNL_DIR,
+    vtln_dir: Path = DEFAULT_VTLN_DIR,
     output_dir: Path | str | None = None,
     max_frames: int = 0,
     output_mode: str = "both",
@@ -541,7 +541,7 @@ def run_session_warp_to_target(
         target_frame=target_frame,
         target_case=target_case,
         dataset_root=dataset_root,
-        vtnl_dir=vtnl_dir,
+        vtln_dir=vtln_dir,
     )
 
     if output_dir is None:

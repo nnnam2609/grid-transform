@@ -24,8 +24,8 @@ from grid_transform.artspeech_video import (
     normalize_frame,
     resolve_default_dataset_root,
 )
-from grid_transform.config import DEFAULT_VTNL_DIR, TONGUE_COLOR
-from grid_transform.io import load_frame_vtnl
+from grid_transform.config import DEFAULT_VTLN_DIR, TONGUE_COLOR
+from grid_transform.io import load_frame_vtln
 from grid_transform.warp import warp_image_to_target_space
 
 
@@ -42,18 +42,18 @@ REFERENCE_COLORS = {
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Project one VTNL annotation/reference speaker onto a full ArtSpeech session video "
+            "Project one VTLN annotation/reference speaker onto a full ArtSpeech session video "
             "using a static resize affine assumption."
         )
     )
     parser.add_argument(
         "--target-speaker",
-        "--vtnl-speaker",
+        "--vtln-speaker",
         dest="target_speaker",
         default="1640_s10_0829",
-        help="VTNL annotation/reference speaker image name.",
+        help="VTLN annotation/reference speaker image name.",
     )
-    parser.add_argument("--vtnl-dir", type=Path, default=DEFAULT_VTNL_DIR, help="Folder containing VTNL images and ROI zip files.")
+    parser.add_argument("--vtln-dir", type=Path, default=DEFAULT_VTLN_DIR, help="Folder containing VTLN images and ROI zip files.")
     parser.add_argument("--artspeech-speaker", default="P7", help="ArtSpeech speaker id, for example P7.")
     parser.add_argument("--session", default="S10", help="ArtSpeech session id, for example S10.")
     parser.add_argument(
@@ -106,7 +106,7 @@ def make_projection_figure(reference_frame: np.ndarray, waveform_time: np.ndarra
     overlay_artist = ax_overlay.imshow(reference_frame, cmap="gray", vmin=0, vmax=255)
 
     ax_raw.set_title("ArtSpeech frame", fontsize=12, fontweight="bold")
-    ax_reference.set_title("Projected VTNL reference", fontsize=12, fontweight="bold")
+    ax_reference.set_title("Projected VTLN reference", fontsize=12, fontweight="bold")
     ax_overlay.set_title("Reference contours on frame", fontsize=12, fontweight="bold")
 
     frame_text = ax_raw.text(0.02, 0.97, "", color="yellow", fontsize=11, va="top", transform=ax_raw.transAxes)
@@ -221,8 +221,8 @@ def main(argv: list[str] | None = None) -> None:
     output_dir = args.output_dir or default_projection_output_dir(args.target_speaker, args.artspeech_speaker, args.session)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    print("[load] reading VTNL reference")
-    reference_image, reference_contours = load_frame_vtnl(args.target_speaker, args.vtnl_dir)
+    print("[load] reading VTLN reference")
+    reference_image, reference_contours = load_frame_vtln(args.target_speaker, args.vtln_dir)
 
     print("[load] reading ArtSpeech session")
     session_data = load_session_data(dataset_root, args.artspeech_speaker, args.session)
@@ -306,12 +306,12 @@ def main(argv: list[str] | None = None) -> None:
     summary = {
         "workflow": "annotation_projection",
         "transform_mode": "static_affine_resize",
-        "assumption": f"ArtSpeech session uses VTNL annotation from {args.target_speaker}",
+        "assumption": f"ArtSpeech session uses VTLN annotation from {args.target_speaker}",
         "video_path": str(output_video),
         "dataset_root": str(dataset_root),
         "annotation_source": args.target_speaker,
         "target_speaker": args.target_speaker,
-        "vtnl_speaker": args.target_speaker,
+        "vtln_speaker": args.target_speaker,
         "artspeech_speaker": args.artspeech_speaker,
         "session": args.session,
         "frame_count": frame_count,
