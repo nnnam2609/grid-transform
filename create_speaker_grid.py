@@ -1,4 +1,4 @@
-from grid_transform.apps.create_speaker_grid import *  # noqa: F401,F403
+from grid_transform.apps.create_speaker_grid import main
 
 
 if __name__ == "__main__":
