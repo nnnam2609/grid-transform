@@ -9,7 +9,6 @@ The repo is organized for reproducible experiments rather than a packaged librar
 - Build a landmark-driven grid for a VTLN reference or segmentation target.
 - Estimate a two-step `Affine + TPS` transform between a source speaker and a target frame.
 - Move articulators or warp the full source image into target space.
-- Generate report figures and a PDF summary.
 - Project VTLN annotations onto ArtSpeech videos when per-frame ArtSpeech contours are unavailable.
 - Interactively edit a projected source annotation on an ArtSpeech frame, save it, and reuse it for fixed-annotation session warping.
 - Warp a full ArtSpeech session into a target frame under a fixed-session annotation assumption.
@@ -24,7 +23,7 @@ The repo is organized for reproducible experiments rather than a packaged librar
 - `notebooks/`
   Exploration notebooks. Notebook outputs are intentionally not treated as versioned results.
 - `experiments/`
-  Report generation and side experiment code.
+  Side experiment code and archived research helpers.
 - `docs/`
   Public-facing documentation, data notes, and README assets.
 - `VTLN/`
@@ -32,7 +31,7 @@ The repo is organized for reproducible experiments rather than a packaged librar
 - `vocal-tract-seg/`
   Lightweight bundled target-frame sample data used by the default examples.
 
-Root scripts such as `create_speaker_grid.py` remain available as compatibility shims, but `scripts/run/` is the primary interface.
+`scripts/run/` is the canonical interface. Root scripts such as `create_speaker_grid.py` remain available as convenience aliases for older commands.
 
 ## Installation
 
@@ -61,14 +60,6 @@ Large external datasets are not redistributed in this repository.
 .\.venv\Scripts\python .\scripts\run\run_method4_transform.py
 .\.venv\Scripts\python .\scripts\run\run_move_target_articulators.py
 .\.venv\Scripts\python .\scripts\run\run_warp_source_speaker_to_target.py
-```
-
-### Report Generation
-
-```powershell
-.\.venv\Scripts\python .\scripts\run\run_generate_report_assets.py
-.\.venv\Scripts\python .\scripts\run\run_convert_to_pdf.py
-.\scripts\run\build_report.ps1
 ```
 
 ### ArtSpeech Session Utilities
@@ -187,7 +178,7 @@ Review video: [P7_S2_warped_to_143020_review.mp4](docs/assets/github/p7-s2-warpe
 
 ### Full Source Image Warped Into Target Space
 
-![Warped source comparison](docs/assets/github/warped-source-comparison.png)
+![P7 warped source preview](docs/assets/github/p7-s2-source-to-target-preview.png)
 
 ### Same-Speaker Vowel Variants
 

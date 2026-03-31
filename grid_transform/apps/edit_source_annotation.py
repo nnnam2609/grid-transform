@@ -1,7 +1,12 @@
 from __future__ import annotations
 
 import argparse
+import ctypes
+import ctypes.wintypes
 import json
+import os
+import subprocess
+import sys
 from pathlib import Path
 
 import matplotlib
@@ -25,11 +30,13 @@ from grid_transform.artspeech_video import (
 from grid_transform.config import PROJECT_DIR, TONGUE_COLOR, VT_SEG_CONTOURS_ROOT, VT_SEG_DATA_ROOT
 from grid_transform.io import load_frame_npy, load_frame_vtln
 from grid_transform.session_warp import run_session_warp_to_target
+from grid_transform.session_warp_threaded import run_session_warp_to_target_threaded
 from grid_transform.source_annotation import (
     LONG_CONTOUR_HANDLE_COUNTS,
     default_match_output_path,
     default_source_annotation_output_dir,
     frame_correlation,
+    load_source_annotation_json,
     load_or_compute_reference_session_match,
     projected_reference_frame,
     project_reference_annotation_to_source,
@@ -53,6 +60,7 @@ FOOTER_HEIGHT = 78
 PANEL_BG = (24, 24, 24)
 FOOTER_BG = (16, 16, 16)
 TEXT_COLOR = (235, 235, 235)
+WINDOW_MARGIN = 36
 
 CONTOUR_COLORS = {
     "c1": "#457b9d",
@@ -115,7 +123,30 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--output-dir", type=Path, help="Optional explicit output directory.")
     parser.add_argument("--output-mode", choices=("both", "warped", "review"), default="both", help="Which sequence outputs to render.")
     parser.add_argument("--max-output-frames", type=int, default=0, help="Optional debug limit for the sequence render triggered on save.")
+    parser.add_argument(
+        "--render-workers",
+        type=int,
+        default=1,
+        help="Number of threaded workers used for video rendering. Use 1 to keep the original sequential exporter.",
+    )
+    parser.add_argument(
+        "--render-prefetch",
+        type=int,
+        default=0,
+        help="Optional number of in-flight frames for the threaded renderer. Use 0 for the default heuristic.",
+    )
+    parser.add_argument(
+        "--render-background",
+        action="store_true",
+        help="Save the annotation now and launch the video render as a detached background job.",
+    )
     parser.add_argument("--skip-video-on-save", action="store_true", help="Headless mode only: save without rendering the output sequence.")
+    parser.add_argument(
+        "--window-mode",
+        choices=("full-height", "fullscreen", "fixed"),
+        default="full-height",
+        help="Initial cv2 window mode. 'full-height' scales the canvas to the screen height, 'fullscreen' fills the screen, 'fixed' keeps the legacy size.",
+    )
     parser.add_argument("--no-gui", action="store_true", help="Run the same initialization and save flow without opening the interactive window.")
     return parser.parse_args(argv)
 
@@ -151,6 +182,42 @@ def clamp_point(point: np.ndarray, width: int, height: int) -> np.ndarray:
         ],
         dtype=float,
     )
+
+
+def screen_work_area() -> tuple[int, int] | None:
+    if os.name == "nt":
+        try:
+            user32 = ctypes.windll.user32
+            rect = ctypes.wintypes.RECT()
+            if user32.SystemParametersInfoW(0x0030, 0, ctypes.byref(rect), 0):
+                return int(rect.right - rect.left), int(rect.bottom - rect.top)
+            return int(user32.GetSystemMetrics(0)), int(user32.GetSystemMetrics(1))
+        except Exception:
+            pass
+
+    try:
+        import tkinter as tk
+
+        root = tk.Tk()
+        root.withdraw()
+        width = int(root.winfo_screenwidth())
+        height = int(root.winfo_screenheight())
+        root.destroy()
+        return width, height
+    except Exception:
+        return None
+
+
+def scaled_window_size(canvas_width: int, canvas_height: int, *, margin: int = WINDOW_MARGIN) -> tuple[int, int]:
+    available = screen_work_area()
+    if available is None:
+        return min(1600, canvas_width), min(1200, canvas_height)
+
+    available_width = max(640, int(available[0] - margin))
+    available_height = max(640, int(available[1] - margin))
+    scale = min(available_width / max(canvas_width, 1), available_height / max(canvas_height, 1))
+    scale = max(scale, 0.5)
+    return max(640, int(round(canvas_width * scale))), max(640, int(round(canvas_height * scale)))
 
 
 class SourceAnnotationEditor:
@@ -211,16 +278,23 @@ class SourceAnnotationEditor:
             frame_number=args.target_frame,
         )
 
-        self.original_contours = project_reference_annotation_to_source(
+        projected_reference_contours = project_reference_annotation_to_source(
             self.reference_contours,
             self.reference_shape,
             self.source_shape,
         )
+        self.loaded_saved_annotation = False
+        self.saved_annotation_note = ""
+        starting_contours = self._load_saved_contours_if_available() or projected_reference_contours
+        self.original_contours = {
+            name: np.asarray(points, dtype=float).copy()
+            for name, points in starting_contours.items()
+        }
         self.original_point_counts = {
             name: int(len(points))
             for name, points in self.original_contours.items()
         }
-        self.handle_points = self._build_handle_points(self.original_contours)
+        self.handle_points = self._build_handle_points(starting_contours)
 
         self.current_contours: dict[str, np.ndarray] = {}
         self.source_grid = None
@@ -232,7 +306,12 @@ class SourceAnnotationEditor:
 
         self.active_handle: tuple[str, int] | None = None
         self.active_handle_backup: np.ndarray | None = None
-        self.status_message = "Ready. Drag handles in the source panel. Keys: s save only, v save+render, r reset, q quit."
+        if self.loaded_saved_annotation:
+            self.status_message = "Loaded existing edited annotation. Keys: s save, v save+render, r reset, q next, x exit all."
+        elif self.saved_annotation_note:
+            self.status_message = f"{self.saved_annotation_note} Keys: s save, v save+render, r reset, q next, x exit all."
+        else:
+            self.status_message = "Ready. Drag handles in the source panel. Keys: s save, v save+render, r reset, q next, x exit all."
         self.panel_images: dict[str, np.ndarray] = {}
         self.canvas_image: np.ndarray | None = None
         self.source_panel_origin = (0, 0)
@@ -254,6 +333,71 @@ class SourceAnnotationEditor:
             "phoneme": phoneme_cursor.at(current_time),
             "sentence": sentence_cursor.at(current_time),
         }
+
+    def _show_baseline_overlay(self) -> bool:
+        return not self.loaded_saved_annotation
+
+    def _source_overlay_legend_text(self) -> str:
+        if self.loaded_saved_annotation:
+            return "color = latest saved annotation"
+        return "gray = baseline  |  color = current"
+
+    def _saved_annotation_matches_current_case(self, metadata: dict[str, object]) -> tuple[bool, str]:
+        mismatches: list[str] = []
+        if metadata.get("artspeech_speaker") and str(metadata["artspeech_speaker"]) != self.args.artspeech_speaker:
+            mismatches.append("speaker")
+        if metadata.get("session") and str(metadata["session"]) != self.args.session:
+            mismatches.append("session")
+        if metadata.get("source_frame") and int(metadata["source_frame"]) != self.source_frame_index1:
+            mismatches.append("frame")
+        saved_shape = metadata.get("source_shape")
+        if saved_shape:
+            saved_shape_tuple = tuple(int(value) for value in saved_shape[:2])
+            if saved_shape_tuple != self.source_shape:
+                mismatches.append("shape")
+        if mismatches:
+            return False, ", ".join(mismatches)
+        return True, ""
+
+    def _contours_fit_source_shape(self, contours: dict[str, np.ndarray]) -> tuple[bool, str]:
+        width = float(self.source_shape[1] - 1)
+        height = float(self.source_shape[0] - 1)
+        tolerance = 1.0
+        for name, points in contours.items():
+            pts = np.asarray(points, dtype=float)
+            if pts.size == 0:
+                continue
+            xmin = float(np.min(pts[:, 0]))
+            xmax = float(np.max(pts[:, 0]))
+            ymin = float(np.min(pts[:, 1]))
+            ymax = float(np.max(pts[:, 1]))
+            if xmin < -tolerance or ymin < -tolerance or xmax > width + tolerance or ymax > height + tolerance:
+                return False, name
+        return True, ""
+
+    def _load_saved_contours_if_available(self) -> dict[str, np.ndarray] | None:
+        if not self.annotation_json_path.is_file():
+            return None
+        try:
+            payload = load_source_annotation_json(self.annotation_json_path)
+        except Exception as exc:
+            self.saved_annotation_note = f"Existing edited annotation could not be loaded: {exc}"
+            return None
+
+        matches, reason = self._saved_annotation_matches_current_case(payload.get("metadata", {}))
+        if not matches:
+            self.saved_annotation_note = f"Ignored existing edited annotation ({reason} mismatch)."
+            return None
+
+        contours_fit, contour_name = self._contours_fit_source_shape(payload["contours"])
+        if not contours_fit:
+            self.saved_annotation_note = (
+                f"Ignored existing edited annotation (contour {contour_name} falls outside source frame)."
+            )
+            return None
+
+        self.loaded_saved_annotation = True
+        return payload["contours"]
 
     def _build_handle_points(self, contours: dict[str, np.ndarray]) -> dict[str, np.ndarray]:
         handles: dict[str, np.ndarray] = {}
@@ -375,6 +519,11 @@ class SourceAnnotationEditor:
         ax.set_xlim(0, self.source_shape[1])
         ax.set_ylim(self.source_shape[0], 0)
 
+        if self._show_baseline_overlay():
+            for name, points in sorted(self.original_contours.items()):
+                pts = np.asarray(points, dtype=float)
+                ax.plot(pts[:, 0], pts[:, 1], linestyle="--", color="white", linewidth=1.2, alpha=0.5)
+
         for name, points in sorted(self.current_contours.items()):
             pts = np.asarray(points, dtype=float)
             color = CONTOUR_COLORS.get(name, "#00b4d8")
@@ -389,6 +538,19 @@ class SourceAnnotationEditor:
                 color=CONTOUR_COLORS.get(name, "#ffffff"),
                 bbox=dict(boxstyle="round,pad=0.15", fc="white", alpha=0.74, ec="none"),
             )
+
+        ax.text(
+            0.02,
+            0.98,
+            self._source_overlay_legend_text(),
+            transform=ax.transAxes,
+            ha="left",
+            va="top",
+            fontsize=8.5,
+            family="monospace",
+            color="white",
+            bbox=dict(boxstyle="round,pad=0.25", fc="black", alpha=0.58, ec="none"),
+        )
 
         if show_handles:
             for name, handles in sorted(self.handle_points.items()):
@@ -500,8 +662,8 @@ class SourceAnnotationEditor:
 
         fig, axes = plt.subplots(2, 2, figsize=(16, 12))
         self.render_source_annotation(axes[0, 0], show_handles=False)
-        self.render_source_grid(axes[0, 1])
-        self.render_target_panel(axes[1, 0])
+        self.render_target_panel(axes[0, 1])
+        self.render_source_grid(axes[1, 0])
         self.render_warped_preview(axes[1, 1])
         fig.tight_layout()
         fig.savefig(overview_path, dpi=220, bbox_inches="tight")
@@ -527,19 +689,43 @@ class SourceAnnotationEditor:
 
         if render_video:
             sequence_output_dir = self.output_dir / "sequence_warp"
-            warp_summary = run_session_warp_to_target(
-                annotation_speaker=self.args.reference_speaker,
-                source_annotation_json=self.annotation_json_path,
-                artspeech_speaker=self.args.artspeech_speaker,
-                session=self.args.session,
-                target_frame=self.args.target_frame,
-                target_case=self.args.target_case,
-                dataset_root=self.dataset_root,
-                vtln_dir=self.args.vtln_dir,
-                output_dir=sequence_output_dir,
-                max_frames=max_output_frames,
-                output_mode=output_mode,
-            )
+            if self.args.render_background:
+                warp_summary = self._launch_background_render(
+                    sequence_output_dir=sequence_output_dir,
+                    max_output_frames=max_output_frames,
+                    output_mode=output_mode,
+                )
+            else:
+                if int(self.args.render_workers) > 1:
+                    warp_summary = run_session_warp_to_target_threaded(
+                        annotation_speaker=self.args.reference_speaker,
+                        source_annotation_json=self.annotation_json_path,
+                        artspeech_speaker=self.args.artspeech_speaker,
+                        session=self.args.session,
+                        target_frame=self.args.target_frame,
+                        target_case=self.args.target_case,
+                        dataset_root=self.dataset_root,
+                        vtln_dir=self.args.vtln_dir,
+                        output_dir=sequence_output_dir,
+                        max_frames=max_output_frames,
+                        output_mode=output_mode,
+                        workers=int(self.args.render_workers),
+                        prefetch=int(self.args.render_prefetch),
+                    )
+                else:
+                    warp_summary = run_session_warp_to_target(
+                        annotation_speaker=self.args.reference_speaker,
+                        source_annotation_json=self.annotation_json_path,
+                        artspeech_speaker=self.args.artspeech_speaker,
+                        session=self.args.session,
+                        target_frame=self.args.target_frame,
+                        target_case=self.args.target_case,
+                        dataset_root=self.dataset_root,
+                        vtln_dir=self.args.vtln_dir,
+                        output_dir=sequence_output_dir,
+                        max_frames=max_output_frames,
+                        output_mode=output_mode,
+                    )
             result["sequence_warp_summary"] = warp_summary
 
         summary_path = self.output_dir / "save_summary.json"
@@ -547,11 +733,107 @@ class SourceAnnotationEditor:
         result["save_summary_json"] = str(summary_path)
         return result
 
+    def _launch_background_render(
+        self,
+        *,
+        sequence_output_dir: Path,
+        max_output_frames: int,
+        output_mode: str,
+    ) -> dict[str, object]:
+        sequence_output_dir.mkdir(parents=True, exist_ok=True)
+        use_threaded = int(self.args.render_workers) > 1
+        module_name = (
+            "grid_transform.apps.warp_artspeech_session_to_target_video_threaded"
+            if use_threaded
+            else "grid_transform.apps.warp_artspeech_session_to_target_video"
+        )
+        command = [
+            sys.executable,
+            "-m",
+            module_name,
+            "--source-annotation-json",
+            str(self.annotation_json_path),
+            "--annotation-speaker",
+            self.args.reference_speaker,
+            "--artspeech-speaker",
+            self.args.artspeech_speaker,
+            "--session",
+            self.args.session,
+            "--target-frame",
+            str(self.args.target_frame),
+            "--target-case",
+            self.args.target_case,
+            "--dataset-root",
+            str(self.dataset_root),
+            "--vtln-dir",
+            str(self.args.vtln_dir),
+            "--output-dir",
+            str(sequence_output_dir),
+            "--max-frames",
+            str(max_output_frames),
+            "--output-mode",
+            output_mode,
+        ]
+        if use_threaded:
+            command.extend(
+                [
+                    "--workers",
+                    str(int(self.args.render_workers)),
+                    "--prefetch",
+                    str(int(self.args.render_prefetch)),
+                ]
+            )
+
+        log_path = sequence_output_dir / "background_render.log"
+        job_path = sequence_output_dir / "background_render_job.json"
+        popen_kwargs: dict[str, object] = {
+            "cwd": str(PROJECT_DIR),
+            "stdin": subprocess.DEVNULL,
+            "stdout": log_path.open("ab"),
+            "stderr": subprocess.STDOUT,
+        }
+        if os.name == "nt":
+            creationflags = 0
+            creationflags |= getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+            creationflags |= getattr(subprocess, "DETACHED_PROCESS", 0)
+            creationflags |= getattr(subprocess, "CREATE_NO_WINDOW", 0)
+            popen_kwargs["creationflags"] = creationflags
+        else:
+            popen_kwargs["start_new_session"] = True
+
+        process = subprocess.Popen(command, **popen_kwargs)
+        if hasattr(popen_kwargs["stdout"], "close"):
+            popen_kwargs["stdout"].close()
+
+        job_payload = {
+            "status": "started",
+            "mode": "background",
+            "pid": int(process.pid),
+            "module": module_name,
+            "command": command,
+            "log_path": str(log_path),
+            "output_dir": str(sequence_output_dir),
+            "render_workers": int(self.args.render_workers),
+            "render_prefetch": int(self.args.render_prefetch),
+        }
+        job_path.write_text(json.dumps(job_payload, indent=2, ensure_ascii=False), encoding="utf-8")
+        return {
+            "background_render": job_payload,
+            "job_json": str(job_path),
+        }
+
     def _render_source_panel_cv2(self, *, show_handles: bool) -> np.ndarray:
         image = cv2.cvtColor(
             cv2.resize(self.source_frame, (PANEL_SIZE, PANEL_SIZE), interpolation=cv2.INTER_NEAREST),
             cv2.COLOR_GRAY2BGR,
         )
+
+        if self._show_baseline_overlay():
+            for _name, points in sorted(self.original_contours.items()):
+                pts = np.asarray(points, dtype=float)
+                scaled = np.column_stack([pts[:, 0] * self.source_panel_scale_x, pts[:, 1] * self.source_panel_scale_y])
+                rounded = np.round(scaled).astype(np.int32).reshape(-1, 1, 2)
+                cv2.polylines(image, [rounded], False, (220, 220, 220), 1, lineType=cv2.LINE_AA)
 
         for name, points in sorted(self.current_contours.items()):
             pts = np.asarray(points, dtype=float)
@@ -583,6 +865,7 @@ class SourceAnnotationEditor:
         title_lines = [
             f"{self.args.artspeech_speaker}/{self.args.session} frame {self.source_frame_index1}",
             "Editable source annotation",
+            self._source_overlay_legend_text(),
         ]
         for row, line in enumerate(title_lines):
             cv2.putText(
@@ -647,8 +930,8 @@ class SourceAnnotationEditor:
 
         positions = {
             "source": (0, 0),
-            "source_grid": (PANEL_SIZE + PANEL_GAP, 0),
-            "target": (0, PANEL_SIZE + PANEL_GAP),
+            "target": (PANEL_SIZE + PANEL_GAP, 0),
+            "source_grid": (0, PANEL_SIZE + PANEL_GAP),
             "warped": (PANEL_SIZE + PANEL_GAP, PANEL_SIZE + PANEL_GAP),
         }
         self.source_panel_origin = positions["source"]
@@ -659,7 +942,7 @@ class SourceAnnotationEditor:
 
         footer_y = PANEL_SIZE * 2 + PANEL_GAP
         canvas[footer_y:, :] = FOOTER_BG
-        help_line = "Mouse: drag handles in top-left panel | Keys: s save only | v save + render | r reset | q quit"
+        help_line = "Mouse: drag handles | Keys: s save | v save+render | r reset | f fullscreen | q next | x exit all"
         cv2.putText(canvas, help_line, (12, footer_y + 24), cv2.FONT_HERSHEY_SIMPLEX, 0.48, TEXT_COLOR, 1, cv2.LINE_AA)
         cv2.putText(canvas, self.status_message[:145], (12, footer_y + 50), cv2.FONT_HERSHEY_SIMPLEX, 0.46, (120, 220, 255), 1, cv2.LINE_AA)
         return canvas
@@ -729,7 +1012,7 @@ class SourceAnnotationEditor:
             contour_name, _ = self.active_handle
             try:
                 self._recompute_state()
-                self.status_message = "Preview rebuilt. Keys: s save only, v save + render, r reset, q quit."
+                self.status_message = "Preview rebuilt. Keys: s save, v save+render, r reset, q next, x exit all."
             except Exception as exc:
                 if self.active_handle_backup is not None:
                     self.handle_points[contour_name] = self.active_handle_backup.copy()
@@ -749,7 +1032,12 @@ class SourceAnnotationEditor:
             max_output_frames=self.args.max_output_frames,
             output_mode=self.args.output_mode,
         )
-        mode_text = "Saved annotation only." if not render_video else "Saved annotation and rendered sequence."
+        if not render_video:
+            mode_text = "Saved annotation only."
+        elif self.args.render_background:
+            mode_text = "Saved annotation and started background render."
+        else:
+            mode_text = "Saved annotation and rendered sequence."
         self.status_message = f"{mode_text} Output dir: {self.output_dir}"
         self._refresh_display(source_only=False)
         print(json.dumps(result, indent=2, ensure_ascii=False))
@@ -757,15 +1045,44 @@ class SourceAnnotationEditor:
     def _handle_reset(self) -> None:
         self.handle_points = self._build_handle_points(self.original_contours)
         self._recompute_state()
-        self.status_message = "Reset to the initial projected annotation."
+        if self.loaded_saved_annotation:
+            self.status_message = "Reset to the latest saved annotation."
+        else:
+            self.status_message = "Reset to the initial projected annotation."
         self._refresh_display(source_only=False)
 
-    def _run_cv2_editor(self) -> None:
+    def _window_mode_label(self, *, fullscreen: bool) -> str:
+        if fullscreen:
+            return "fullscreen"
+        return "fixed" if self.args.window_mode == "fixed" else "full-height"
+
+    def _apply_window_mode(self, *, fullscreen: bool | None = None) -> None:
+        assert cv2 is not None
+        if fullscreen is None:
+            fullscreen = self.args.window_mode == "fullscreen"
+        if fullscreen:
+            cv2.setWindowProperty(WINDOW_NAME, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+            return
+
+        cv2.setWindowProperty(WINDOW_NAME, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_NORMAL)
+        if self.args.window_mode == "fixed":
+            window_width = min(1600, self.canvas_image.shape[1])
+            window_height = min(1200, self.canvas_image.shape[0])
+        else:
+            window_width, window_height = scaled_window_size(self.canvas_image.shape[1], self.canvas_image.shape[0])
+        cv2.resizeWindow(WINDOW_NAME, window_width, window_height)
+
+    def _run_cv2_editor(self) -> str:
         assert cv2 is not None
         self._refresh_display(source_only=False)
-        cv2.namedWindow(WINDOW_NAME, cv2.WINDOW_NORMAL)
-        cv2.resizeWindow(WINDOW_NAME, min(1600, self.canvas_image.shape[1]), min(1200, self.canvas_image.shape[0]))
+        window_flags = cv2.WINDOW_NORMAL
+        if hasattr(cv2, "WINDOW_KEEPRATIO"):
+            window_flags |= cv2.WINDOW_KEEPRATIO
+        cv2.namedWindow(WINDOW_NAME, window_flags)
+        self._apply_window_mode()
         cv2.setMouseCallback(WINDOW_NAME, self._on_mouse)
+        action = "next"
+        fullscreen_enabled = self.args.window_mode == "fullscreen"
 
         try:
             while True:
@@ -775,14 +1092,24 @@ class SourceAnnotationEditor:
                     continue
                 if key in (ord("q"), 27):
                     break
+                if key in (ord("x"), ord("X")):
+                    action = "exit_all"
+                    break
                 if key == ord("r"):
                     self._handle_reset()
+                elif key in (ord("f"), ord("F")):
+                    fullscreen_enabled = not fullscreen_enabled
+                    self._apply_window_mode(fullscreen=fullscreen_enabled)
+                    mode_label = self._window_mode_label(fullscreen=fullscreen_enabled)
+                    self.status_message = f"Window mode: {mode_label}. Keys: s save, v save+render, r reset, f toggle fullscreen."
+                    self._refresh_display(source_only=False)
                 elif key == ord("s"):
                     self._handle_save(render_video=False)
                 elif key == ord("v"):
                     self._handle_save(render_video=True)
         finally:
             cv2.destroyWindow(WINDOW_NAME)
+        return action
 
     def run(self) -> dict[str, object] | None:
         if self.args.no_gui:
@@ -791,11 +1118,11 @@ class SourceAnnotationEditor:
                 max_output_frames=self.args.max_output_frames,
                 output_mode=self.args.output_mode,
             )
+            result["action"] = "next"
             print(json.dumps(result, indent=2, ensure_ascii=False))
             return result
 
-        self._run_cv2_editor()
-        return None
+        return {"action": self._run_cv2_editor()}
 
 
 def main(argv: list[str] | None = None) -> int:
