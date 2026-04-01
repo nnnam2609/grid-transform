@@ -11,6 +11,7 @@ The repo is organized for reproducible experiments rather than a packaged librar
 - Move articulators or warp the full source image into target space.
 - Project VTLN annotations onto ArtSpeech videos when per-frame ArtSpeech contours are unavailable.
 - Interactively edit a projected source annotation on an ArtSpeech frame, save it, and reuse it for fixed-annotation session warping.
+- Run a multi-step `cv2` workflow to select a curated source speaker, edit source/target annotations, refine affine/TPS landmarks, and launch threaded background export jobs.
 - Warp a full ArtSpeech session into a target frame under a fixed-session annotation assumption.
 - Inspect within-speaker and cross-speaker vowel variability from ArtSpeech sessions.
 
@@ -26,6 +27,8 @@ The repo is organized for reproducible experiments rather than a packaged librar
   Side experiment code and archived research helpers.
 - `docs/`
   Public-facing documentation, data notes, and README assets.
+- `config.yaml`
+  Local default settings for the multi-step `cv2` annotation-to-grid-transform app. CLI flags still override the YAML values.
 - `VTLN/`
   Lightweight bundled VTLN reference images and ROI zips used by the default examples.
 - `vocal-tract-seg/`
@@ -69,6 +72,52 @@ Large external datasets are not redistributed in this repository.
 .\.venv\Scripts\python .\scripts\run\run_project_vtln_reference_to_artspeech_video.py --target-speaker 1640_s10_0829 --artspeech-speaker P7 --session S10 --dataset-root <ARTSPEECH_ROOT>
 .\.venv\Scripts\python .\scripts\run\run_warp_artspeech_session_to_target_video.py --annotation-speaker 1640_s10_0829 --artspeech-speaker P7 --session S10 --target-frame 143020 --dataset-root <ARTSPEECH_ROOT> --output-mode both
 ```
+
+### CV2 Annotation-To-Grid-Transform App
+
+This app is the current interactive workflow for the curated `10`-speaker setup. It reads defaults from `config.yaml` on startup, then walks through:
+
+1. `Step 0`: select curated source speaker/session/frame and choose the target mode (`nnUNet` or `VTLN`)
+2. `Step 1A`: edit the source annotation
+3. `Step 1B`: edit the target annotation
+4. `Step 2`: adjust affine/TPS landmarks and inspect native, affine, and final previews
+5. `Step 3`: launch a background export job, then return to `Step 0`
+
+Default launch:
+
+```powershell
+.\.venv\Scripts\python .\scripts\run\run_cv2_annotation_to_grid_transform_app.py
+```
+
+Use a different config file if needed:
+
+```powershell
+.\.venv\Scripts\python .\scripts\run\run_cv2_annotation_to_grid_transform_app.py --config path\to\other_config.yaml
+```
+
+Key behavior:
+
+- `config.yaml` defaults to `cache_mode: startup`, so the current selection is prewarmed from `Step 0`.
+- `Step 1` supports `S = save only`, `N = save and go next`, and `G = go next without saving`.
+- `Step 2` highlights transform controls with contrasting colors:
+  `Affine anchors = orange`, `TPS extra controls = green`, `other visible landmarks = yellow`.
+- `Step 3` uses the threaded exporter and writes a detached render job under the workspace output.
+
+Default workspace output root:
+
+```text
+outputs/annotation_to_grid_transform/
+```
+
+Latest-only files written per workspace:
+
+- `workspace_selection.latest.json`
+- `source_annotation.latest.json`
+- `target_annotation.latest.json`
+- `landmark_overrides.latest.json`
+- `transform_spec.latest.json`
+- `transform_review.latest.json`
+- preview PNGs and background render job files
 
 ### Interactive Source Annotation Editor
 

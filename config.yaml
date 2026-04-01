@@ -1,0 +1,54 @@
+# Local default configuration for the CV2 annotation-to-grid-transform app.
+# CLI flags still override anything defined here.
+#
+# Relative paths are resolved from the folder that contains this file.
+
+cv2_annotation_to_grid_transform:
+  defaults:
+    # Curated manifest used by Step 0 speaker selection.
+    manifest_csv: VTLN/u_curated_selection_20260330/selection_manifest.csv
+
+    # Root of the encoded ArtSpeech dataset.
+    artspeech_root: ../Data/Artspeech_database
+
+    # Canonical note used to resolve raw/VTLN speaker-session aliases.
+    mapping_doc: docs/ARTSPEECH_MAPPING.md
+
+    # Where latest-only workspace files are written.
+    workspace_root: outputs/annotation_to_grid_transform
+
+    # Default VTLN folder used by Step 0 when target mode is VTLN.
+    vtln_dir: VTLN
+
+    # Default nnUNet target shown in Step 0.
+    default_target_case: "2008-003^01-1791/test"
+    default_target_frame: 143020
+
+    # Background export defaults for Step 3.
+    render_workers: 8
+    render_prefetch: 0
+
+    # Cache behavior.
+    # startup    -> prewarm current selection from Step 0
+    # first-load -> only load/cache when a selection is opened the first time
+    cache_mode: startup
+
+    # Initial cv2 window behavior.
+    # full-height -> fit vertically while keeping aspect ratio
+    # fullscreen  -> full screen
+    # fixed       -> legacy fixed-size window
+    window_mode: full-height
+
+  ui:
+    # Step 1 editor layout.
+    editor_panel_width: 960
+    editor_panel_height: 960
+    editor_sidebar_width: 320
+    editor_footer_height: 88
+    editor_loupe_size: 240
+
+    # Step 2 review layout.
+    review_pane_width: 480
+    review_pane_height: 340
+    pane_gap: 12
+    review_footer_height: 176

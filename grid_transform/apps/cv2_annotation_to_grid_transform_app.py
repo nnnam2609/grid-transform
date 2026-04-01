@@ -5,8 +5,10 @@ import json
 import os
 import subprocess
 import sys
+from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Callable
 
 import cv2
 import numpy as np
@@ -50,6 +52,11 @@ from grid_transform.source_annotation import LONG_CONTOUR_HANDLE_COUNTS
 from grid_transform.warp import precompute_inverse_warp, warp_array_with_precomputed_inverse_warp
 
 
+APP_CONFIG_PATH = PROJECT_DIR / "config.yaml"
+APP_CONFIG_SECTION = "cv2_annotation_to_grid_transform"
+VALID_CACHE_MODES = {"startup", "first-load"}
+VALID_WINDOW_MODES = {"full-height", "fullscreen", "fixed"}
+
 WINDOW_NAME_STEP0 = "Annotation To Grid Transform - Step 0"
 WINDOW_NAME_STEP1 = "Annotation To Grid Transform - Step 1"
 WINDOW_NAME_STEP2 = "Annotation To Grid Transform - Step 2"
@@ -63,9 +70,9 @@ MUTED_TEXT = (180, 180, 180)
 ACCENT = (120, 220, 255)
 ROW_SELECTED = (64, 104, 164)
 ROW_BG = (38, 38, 38)
-ORANGE = (60, 168, 255)
-MAGENTA = (214, 0, 255)
-CYAN = (220, 220, 60)
+AFFINE_COLOR = (0, 140, 255)
+TPS_COLOR = (40, 235, 80)
+OTHER_LANDMARK_COLOR = (255, 230, 0)
 
 KEY_UP = 2490368
 KEY_DOWN = 2621440
@@ -84,7 +91,19 @@ EDITOR_LOUPE = 240
 REVIEW_PANE_W = 480
 REVIEW_PANE_H = 340
 PANE_GAP = 12
-REVIEW_FOOTER_H = 96
+REVIEW_FOOTER_H = 176
+
+UI_CONFIG_KEYS = {
+    "editor_panel_width": "EDITOR_PANEL_W",
+    "editor_panel_height": "EDITOR_PANEL_H",
+    "editor_sidebar_width": "EDITOR_SIDEBAR_W",
+    "editor_footer_height": "EDITOR_FOOTER_H",
+    "editor_loupe_size": "EDITOR_LOUPE",
+    "review_pane_width": "REVIEW_PANE_W",
+    "review_pane_height": "REVIEW_PANE_H",
+    "pane_gap": "PANE_GAP",
+    "review_footer_height": "REVIEW_FOOTER_H",
+}
 
 
 @dataclass
@@ -117,21 +136,144 @@ class PanelMapping:
     display_h: int
 
 
+def _read_yaml_config(path: Path) -> dict[str, object]:
+    if not path.is_file():
+        return {}
+    try:
+        import yaml
+    except ModuleNotFoundError as exc:
+        raise SystemExit(
+            f"config file {path} requires PyYAML. Install dependencies from requirements.txt first."
+        ) from exc
+
+    payload = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    if not isinstance(payload, dict):
+        raise SystemExit(f"config file {path} must contain a YAML mapping at the top level.")
+    return payload
+
+
+def _resolve_config_path(value: object, *, default: Path, config_path: Path) -> Path:
+    if value in (None, ""):
+        return default
+    candidate = Path(str(value))
+    if candidate.is_absolute():
+        return candidate
+    return (config_path.parent / candidate).resolve()
+
+
+def _resolve_config_int(value: object, *, default: int) -> int:
+    if value in (None, ""):
+        return int(default)
+    return int(value)
+
+
+def _resolve_config_str(value: object, *, default: str) -> str:
+    if value in (None, ""):
+        return default
+    return str(value)
+
+
+def _resolve_choice(value: object, *, default: str, valid: set[str], field_name: str) -> str:
+    resolved = _resolve_config_str(value, default=default)
+    if resolved not in valid:
+        raise SystemExit(f"Invalid {field_name}={resolved!r} in {APP_CONFIG_PATH.name}. Valid choices: {sorted(valid)}")
+    return resolved
+
+
+def _apply_ui_config(ui_payload: dict[str, object]) -> None:
+    globals_ns = globals()
+    for key, global_name in UI_CONFIG_KEYS.items():
+        if key not in ui_payload or ui_payload[key] in (None, ""):
+            continue
+        globals_ns[global_name] = int(ui_payload[key])
+
+
+def _load_app_config_defaults(config_path: Path) -> tuple[dict[str, object], dict[str, object]]:
+    payload = _read_yaml_config(config_path)
+    section = payload.get(APP_CONFIG_SECTION, {}) or {}
+    if not isinstance(section, dict):
+        raise SystemExit(f"Section {APP_CONFIG_SECTION!r} in {config_path} must be a mapping.")
+    defaults_payload = section.get("defaults", {}) or {}
+    ui_payload = section.get("ui", {}) or {}
+    if not isinstance(defaults_payload, dict):
+        raise SystemExit(f"Section {APP_CONFIG_SECTION}.defaults in {config_path} must be a mapping.")
+    if not isinstance(ui_payload, dict):
+        raise SystemExit(f"Section {APP_CONFIG_SECTION}.ui in {config_path} must be a mapping.")
+    _apply_ui_config(ui_payload)
+    return defaults_payload, ui_payload
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    pre_parser = argparse.ArgumentParser(add_help=False)
+    pre_parser.add_argument("--config", type=Path, default=APP_CONFIG_PATH)
+    pre_args, _ = pre_parser.parse_known_args(argv)
+    defaults_payload, _ui_payload = _load_app_config_defaults(pre_args.config)
+
     parser = argparse.ArgumentParser(description="CV2 multi-step annotation-to-grid-transform workflow.")
-    parser.add_argument("--manifest-csv", type=Path, default=DEFAULT_MANIFEST_CSV, help="Curated manifest CSV.")
-    parser.add_argument("--artspeech-root", type=Path, default=PROJECT_DIR.parent / "Data" / "Artspeech_database")
-    parser.add_argument("--mapping-doc", type=Path, default=DEFAULT_MAPPING_DOC)
-    parser.add_argument("--workspace-root", type=Path, default=DEFAULT_WORKSPACE_ROOT)
-    parser.add_argument("--vtln-dir", type=Path, default=PROJECT_DIR / "VTLN")
-    parser.add_argument("--default-target-case", default=DEFAULT_NNUNET_TARGET_CASE)
-    parser.add_argument("--default-target-frame", type=int, default=DEFAULT_NNUNET_TARGET_FRAME)
-    parser.add_argument("--render-workers", type=int, default=8)
-    parser.add_argument("--render-prefetch", type=int, default=0)
+    parser.add_argument(
+        "--config",
+        type=Path,
+        default=pre_args.config,
+        help="YAML config file. CLI flags override YAML defaults.",
+    )
+    parser.add_argument(
+        "--manifest-csv",
+        type=Path,
+        default=_resolve_config_path(defaults_payload.get("manifest_csv"), default=DEFAULT_MANIFEST_CSV, config_path=pre_args.config),
+        help="Curated manifest CSV.",
+    )
+    parser.add_argument(
+        "--artspeech-root",
+        type=Path,
+        default=_resolve_config_path(
+            defaults_payload.get("artspeech_root"),
+            default=PROJECT_DIR.parent / "Data" / "Artspeech_database",
+            config_path=pre_args.config,
+        ),
+    )
+    parser.add_argument(
+        "--mapping-doc",
+        type=Path,
+        default=_resolve_config_path(defaults_payload.get("mapping_doc"), default=DEFAULT_MAPPING_DOC, config_path=pre_args.config),
+    )
+    parser.add_argument(
+        "--workspace-root",
+        type=Path,
+        default=_resolve_config_path(defaults_payload.get("workspace_root"), default=DEFAULT_WORKSPACE_ROOT, config_path=pre_args.config),
+    )
+    parser.add_argument(
+        "--vtln-dir",
+        type=Path,
+        default=_resolve_config_path(defaults_payload.get("vtln_dir"), default=PROJECT_DIR / "VTLN", config_path=pre_args.config),
+    )
+    parser.add_argument("--default-target-case", default=_resolve_config_str(defaults_payload.get("default_target_case"), default=DEFAULT_NNUNET_TARGET_CASE))
+    parser.add_argument("--default-target-frame", type=int, default=_resolve_config_int(defaults_payload.get("default_target_frame"), default=DEFAULT_NNUNET_TARGET_FRAME))
+    parser.add_argument("--render-workers", type=int, default=_resolve_config_int(defaults_payload.get("render_workers"), default=8))
+    parser.add_argument("--render-prefetch", type=int, default=_resolve_config_int(defaults_payload.get("render_prefetch"), default=0))
+    parser.add_argument(
+        "--cache-mode",
+        choices=("startup", "first-load"),
+        default=_resolve_choice(
+            defaults_payload.get("cache_mode"),
+            default="startup",
+            valid=VALID_CACHE_MODES,
+            field_name="cache_mode",
+        ),
+        help=(
+            "Cache behavior for source/target context loading. "
+            "'startup' prewarms the current selection from step 0. "
+            "'first-load' loads and caches only when the selection is opened the first time."
+        ),
+    )
     parser.add_argument(
         "--window-mode",
         choices=("full-height", "fullscreen", "fixed"),
-        default="full-height",
+        default=_resolve_choice(
+            defaults_payload.get("window_mode"),
+            default="full-height",
+            valid=VALID_WINDOW_MODES,
+            field_name="window_mode",
+        ),
         help="Initial cv2 window mode for all steps.",
     )
     return parser.parse_args(argv)
@@ -274,13 +416,13 @@ def draw_points(
         point_arr = point_arr.reshape(1, 2)
         sx, sy = np.round(world_to_screen(mapping, point_arr)[0]).astype(int)
         if name in step1_labels:
-            color = ORANGE
+            color = AFFINE_COLOR
             marker = "circle"
         elif name in step2_extra_labels:
-            color = MAGENTA
+            color = TPS_COLOR
             marker = "diamond"
         else:
-            color = CYAN
+            color = OTHER_LANDMARK_COLOR
             marker = "ring"
         radius = 7 if name == highlight else 6
         if marker == "circle":
@@ -353,11 +495,100 @@ def save_canvas_preview(path: Path, image: np.ndarray) -> None:
     cv2.imwrite(str(path), image)
 
 
+def format_label_list(prefix: str, labels: list[str], *, max_chars: int = 88) -> list[str]:
+    if not labels:
+        return [f"{prefix}: -"]
+    lines: list[str] = []
+    current = f"{prefix}:"
+    for label in labels:
+        candidate = f"{current} {label}" if current != f"{prefix}:" else f"{current} {label}"
+        if len(candidate) > max_chars and current != f"{prefix}:":
+            lines.append(current)
+            current = f"  {label}"
+        else:
+            current = candidate
+    lines.append(current)
+    return lines
+
+
+def draw_step2_marker_legend(canvas: np.ndarray, x: int, y: int) -> None:
+    cv2.circle(canvas, (x + 10, y - 4), 7, (255, 255, 255), -1, cv2.LINE_AA)
+    cv2.circle(canvas, (x + 10, y - 4), 5, AFFINE_COLOR, -1, cv2.LINE_AA)
+    cv2.putText(canvas, "Affine anchors", (x + 26, y), cv2.FONT_HERSHEY_SIMPLEX, 0.46, AFFINE_COLOR, 1, cv2.LINE_AA)
+
+    diamond = np.array([[x + 10, y + 20], [x + 18, y + 28], [x + 10, y + 36], [x + 2, y + 28]], dtype=np.int32)
+    cv2.fillConvexPoly(canvas, diamond, TPS_COLOR, cv2.LINE_AA)
+    cv2.putText(canvas, "TPS extra controls", (x + 26, y + 32), cv2.FONT_HERSHEY_SIMPLEX, 0.46, TPS_COLOR, 1, cv2.LINE_AA)
+
+    cv2.circle(canvas, (x + 10, y + 60), 7, OTHER_LANDMARK_COLOR, 2, cv2.LINE_AA)
+    cv2.circle(canvas, (x + 10, y + 60), 4, (255, 255, 255), 1, cv2.LINE_AA)
+    cv2.putText(canvas, "Other visible landmarks", (x + 26, y + 64), cv2.FONT_HERSHEY_SIMPLEX, 0.46, OTHER_LANDMARK_COLOR, 1, cv2.LINE_AA)
+
+
+class ContextLoadCache:
+    def __init__(self) -> None:
+        self._executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="app-context-cache")
+        self._source_futures: dict[str, Future[dict[str, object]]] = {}
+        self._target_futures: dict[str, Future[dict[str, object]]] = {}
+        self._source_cache: dict[str, dict[str, object]] = {}
+        self._target_cache: dict[str, dict[str, object]] = {}
+
+    @staticmethod
+    def _source_key(selection: WorkspaceSelection) -> str:
+        return selection.workspace_id
+
+    @staticmethod
+    def _target_key(selection: WorkspaceSelection) -> str:
+        return selection.workspace_id
+
+    def prewarm(self, selection: WorkspaceSelection) -> None:
+        source_key = self._source_key(selection)
+        if source_key not in self._source_cache and source_key not in self._source_futures:
+            self._source_futures[source_key] = self._executor.submit(load_source_context, selection)
+        target_key = self._target_key(selection)
+        if target_key not in self._target_cache and target_key not in self._target_futures:
+            self._target_futures[target_key] = self._executor.submit(load_target_context, selection)
+
+    def get_source(self, selection: WorkspaceSelection) -> dict[str, object]:
+        key = self._source_key(selection)
+        if key in self._source_cache:
+            return self._source_cache[key]
+        future = self._source_futures.pop(key, None)
+        payload = future.result() if future is not None else load_source_context(selection)
+        self._source_cache[key] = payload
+        return payload
+
+    def get_target(self, selection: WorkspaceSelection) -> dict[str, object]:
+        key = self._target_key(selection)
+        if key in self._target_cache:
+            return self._target_cache[key]
+        future = self._target_futures.pop(key, None)
+        payload = future.result() if future is not None else load_target_context(selection)
+        self._target_cache[key] = payload
+        return payload
+
+    def cache_counts(self) -> tuple[int, int]:
+        return len(self._source_cache) + len(self._source_futures), len(self._target_cache) + len(self._target_futures)
+
+    def close(self) -> None:
+        self._executor.shutdown(wait=False, cancel_futures=True)
+
+
 class Cv2SelectionWindow:
-    def __init__(self, *, cases, mapping: MappingInfo, args: argparse.Namespace) -> None:
+    def __init__(
+        self,
+        *,
+        cases,
+        mapping: MappingInfo,
+        args: argparse.Namespace,
+        prewarm_selection: Callable[[WorkspaceSelection], None] | None = None,
+        cache_counts: Callable[[], tuple[int, int]] | None = None,
+    ) -> None:
         self.cases = cases
         self.mapping = mapping
         self.args = args
+        self.prewarm_selection = prewarm_selection
+        self.cache_counts = cache_counts
         self.case_index = 0
         self.focus = "speaker"
         self.target_type = "nnunet"
@@ -366,6 +597,7 @@ class Cv2SelectionWindow:
         self.vtln_reference = reference_name_for_case(self.cases[0]) if self.cases else ""
         self.vtln_dir = str(args.vtln_dir)
         self.click_targets: dict[str, tuple[int, int, int, int]] = {}
+        self._queue_prewarm()
 
     def _current_case(self):
         return self.cases[self.case_index]
@@ -378,11 +610,13 @@ class Cv2SelectionWindow:
         self.case_index = int(np.clip(self.case_index + delta, 0, len(self.cases) - 1))
         if self.focus == "speaker":
             self.vtln_reference = reference_name_for_case(self._current_case())
+        self._queue_prewarm()
 
     def _toggle_target_type(self) -> None:
         self.target_type = "vtln" if self.target_type == "nnunet" else "nnunet"
         if self.target_type == "vtln":
             self._reseed_vtln_reference_if_needed()
+        self._queue_prewarm()
 
     def _active_field_order(self) -> list[str]:
         order = ["speaker", "target_type"]
@@ -409,6 +643,14 @@ class Cv2SelectionWindow:
             if self.focus == "nnunet_frame" and not char.isdigit():
                 return
             setattr(self, self.focus, getattr(self, self.focus) + char)
+
+    def _queue_prewarm(self) -> None:
+        if self.prewarm_selection is None:
+            return
+        try:
+            self.prewarm_selection(self._build_selection())
+        except Exception:
+            return
 
     def _draw_field(self, canvas: np.ndarray, *, label: str, value: str, x0: int, y0: int, w: int, h: int, field_name: str) -> int:
         active = self.focus == field_name
@@ -492,6 +734,43 @@ class Cv2SelectionWindow:
 
         cv2.putText(right, "Focus:", (22, y + 26), cv2.FONT_HERSHEY_SIMPLEX, 0.54, ACCENT, 1, cv2.LINE_AA)
         cv2.putText(right, self.focus, (90, y + 26), cv2.FONT_HERSHEY_SIMPLEX, 0.54, TEXT_COLOR, 1, cv2.LINE_AA)
+        cv2.putText(
+            right,
+            f"cache mode: {self.args.cache_mode}",
+            (22, y + 52),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.48,
+            ACCENT,
+            1,
+            cv2.LINE_AA,
+        )
+        mode_note = (
+            "prewarm during step 0"
+            if self.args.cache_mode == "startup"
+            else "load/cache on first open"
+        )
+        cv2.putText(
+            right,
+            mode_note,
+            (22, y + 76),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.44,
+            MUTED_TEXT,
+            1,
+            cv2.LINE_AA,
+        )
+        if self.cache_counts is not None:
+            source_count, target_count = self.cache_counts()
+            cv2.putText(
+                right,
+                f"cache state: source={source_count} target={target_count}",
+                (22, y + 102),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.46,
+                MUTED_TEXT,
+                1,
+                cv2.LINE_AA,
+            )
         return canvas
 
     def _on_mouse(self, event: int, x: int, y: int, _flags: int, _param) -> None:
@@ -559,7 +838,21 @@ class Cv2SelectionWindow:
                 if self.focus == "target_type" and key in (KEY_LEFT, KEY_RIGHT, ord(" ")):
                     self._toggle_target_type()
                     continue
+                before = (
+                    self.nnunet_case,
+                    self.nnunet_frame,
+                    self.vtln_reference,
+                    self.vtln_dir,
+                )
                 self._handle_text_input(key)
+                after = (
+                    self.nnunet_case,
+                    self.nnunet_frame,
+                    self.vtln_reference,
+                    self.vtln_dir,
+                )
+                if after != before:
+                    self._queue_prewarm()
         finally:
             cv2.destroyWindow(WINDOW_NAME_STEP0)
 
@@ -601,10 +894,18 @@ class Cv2ContourEditorWindow:
         self.pan_anchor: tuple[int, int] | None = None
         self.view = ensure_view_state(None, tuple(self.image.shape[:2]))
         self.last_mapping: PanelMapping | None = None
-        self.status_message = (
-            "S = save only | N = save and go to the next step | "
-            "B = save and go back | R = reset | wheel = zoom | right-drag image = pan | X = exit"
-        )
+        if self.allow_back:
+            self.status_message = (
+                "S = save only | N = save and go to the next step | "
+                "G = go to the next step without saving | "
+                "B = save and go back | R = reset | wheel = zoom | right-drag image = pan | X = exit"
+            )
+        else:
+            self.status_message = (
+                "S = save only | N = save and go to the next step | "
+                "G = go to the next step without saving | "
+                "R = reset | wheel = zoom | right-drag image = pan | X = exit"
+            )
 
     def _base_handle_count(self, name: str, n_points: int) -> int:
         base = LONG_CONTOUR_HANDLE_COUNTS.get(name, min(n_points, 28))
@@ -774,12 +1075,14 @@ class Cv2ContourEditorWindow:
         canvas[footer_y:, :] = FOOTER_BG
         help_line = (
             "Wheel zoom | Right-drag image to pan | Left drag point | "
-            "S save only | N save and go to next step | R reset | I isolate | [ ] density | X exit"
+            "S save only | N save and go to next step | G go to next step without saving | "
+            "R reset | I isolate | [ ] density | X exit"
         )
         if self.allow_back:
             help_line = (
                 "Wheel zoom | Right-drag image to pan | Left drag point | "
                 "S save only | B save and go back | N save and go to next step | "
+                "G go to next step without saving | "
                 "R reset | I isolate | [ ] density | X exit"
             )
         cv2.putText(canvas, help_line, (12, footer_y + 30), cv2.FONT_HERSHEY_SIMPLEX, 0.52, TEXT_COLOR, 1, cv2.LINE_AA)
@@ -870,6 +1173,9 @@ class Cv2ContourEditorWindow:
                 elif key == ord("n"):
                     self._save()
                     return "next", self.current_contours
+                elif key in (ord("g"), ord("G")):
+                    self.status_message = "Continuing to the next step without saving to disk."
+                    return "next_no_save", self.current_contours
                 elif key == ord("b") and self.allow_back:
                     self._save()
                     return "back", self.current_contours
@@ -1125,9 +1431,19 @@ class Cv2TransformReviewWindow:
             "S save only | B save and go back to step 1 | "
             "0 save and return to step 0 | N save and go to step 3 | X exit"
         )
-        cv2.putText(canvas, help_line, (12, footer_y + 30), cv2.FONT_HERSHEY_SIMPLEX, 0.50, TEXT_COLOR, 1, cv2.LINE_AA)
-        cv2.putText(canvas, metric_line[:180], (12, footer_y + 58), cv2.FONT_HERSHEY_SIMPLEX, 0.48, MUTED_TEXT, 1, cv2.LINE_AA)
-        cv2.putText(canvas, self.status_message[:180], (12, footer_y + 84), cv2.FONT_HERSHEY_SIMPLEX, 0.50, ACCENT, 1, cv2.LINE_AA)
+        cv2.putText(canvas, help_line, (12, footer_y + 26), cv2.FONT_HERSHEY_SIMPLEX, 0.46, TEXT_COLOR, 1, cv2.LINE_AA)
+        cv2.putText(canvas, metric_line[:180], (12, footer_y + 52), cv2.FONT_HERSHEY_SIMPLEX, 0.44, MUTED_TEXT, 1, cv2.LINE_AA)
+        draw_step2_marker_legend(canvas, 12, footer_y + 78)
+        affine_lines = format_label_list("Affine anchors", list(self.bundle["transform_spec"]["step1_labels"]))
+        step1_set = set(self.bundle["transform_spec"]["step1_labels"])
+        tps_extra_labels = [label for label in self.bundle["transform_spec"]["step2_labels"] if label not in step1_set]
+        tps_lines = format_label_list("TPS extra controls", tps_extra_labels)
+        label_lines = affine_lines + tps_lines
+        start_x = 250
+        for index, line in enumerate(label_lines):
+            color = AFFINE_COLOR if index < len(affine_lines) else TPS_COLOR
+            cv2.putText(canvas, line, (start_x, footer_y + 82 + 22 * index), cv2.FONT_HERSHEY_SIMPLEX, 0.44, color, 1, cv2.LINE_AA)
+        cv2.putText(canvas, self.status_message[:180], (12, footer_y + REVIEW_FOOTER_H - 18), cv2.FONT_HERSHEY_SIMPLEX, 0.48, ACCENT, 1, cv2.LINE_AA)
         return canvas
 
     def _on_mouse(self, event: int, x: int, y: int, flags: int, _param) -> None:
@@ -1338,6 +1654,10 @@ class Cv2AnnotationToGridTransformApp:
         self.args = args
         self.mapping = parse_mapping_doc(args.mapping_doc)
         self.cases = load_curated_cases(args.manifest_csv, args.vtln_dir)
+        self.context_cache = ContextLoadCache()
+        self._selection_prewarm: Callable[[WorkspaceSelection], None] | None = None
+        if self.args.cache_mode == "startup":
+            self._selection_prewarm = self.context_cache.prewarm
 
     def _run_source_editor(self, selection: WorkspaceSelection, source_context: dict[str, object]) -> tuple[str, dict[str, np.ndarray]]:
         source_annotation_path = step_file_paths(selection.workspace_dir)["source_annotation"]
@@ -1351,7 +1671,8 @@ class Cv2AnnotationToGridTransformApp:
             title_lines=[
                 "Step 1A - Source annotation",
                 f"{selection.case.speaker}/{selection.case.session} frame {selection.case.frame_index_1based:04d}",
-                "S = save only | N = save and continue to Step 1B | no direct jump to Step 0",
+                "S = save only | N = save and continue to Step 1B | G = continue to Step 1B without saving",
+                "No direct jump to Step 0 from Step 1",
             ],
             info_lines=source_text_block(source_context["snapshot"], selection.reference_speaker),
             allow_back=False,
@@ -1377,6 +1698,7 @@ class Cv2AnnotationToGridTransformApp:
                 "Step 1B - Target annotation",
                 target_context["target_label"],
                 "S = save only | B = save and go back to Step 1A | N = save and continue to Step 2",
+                "G = continue to Step 2 without saving",
             ],
             info_lines=info_lines,
             allow_back=True,
@@ -1385,45 +1707,29 @@ class Cv2AnnotationToGridTransformApp:
         return editor.run()
 
     def run(self) -> int:
-        selection_window = Cv2SelectionWindow(cases=self.cases, mapping=self.mapping, args=self.args)
-        while True:
-            selection = selection_window.run()
-            if selection is None:
-                return 0
-
-            source_context = load_source_context(selection)
-            target_context = load_target_context(selection)
-
-            source_action, source_contours = self._run_source_editor(selection, source_context)
-            if source_action == "exit_all":
-                return 0
-
+        selection_window = Cv2SelectionWindow(
+            cases=self.cases,
+            mapping=self.mapping,
+            args=self.args,
+            prewarm_selection=self._selection_prewarm,
+            cache_counts=self.context_cache.cache_counts,
+        )
+        try:
             while True:
-                target_action, target_contours = self._run_target_editor(selection, target_context)
-                if target_action == "exit_all":
+                selection = selection_window.run()
+                if selection is None:
                     return 0
-                if target_action == "back":
-                    source_action, source_contours = self._run_source_editor(selection, source_context)
-                    if source_action == "exit_all":
-                        return 0
-                    continue
-                break
 
-            while True:
-                review_window = Cv2TransformReviewWindow(
-                    selection=selection,
-                    source_image=source_context["source_frame"],
-                    source_contours=source_contours,
-                    target_image=target_context["target_image"],
-                    target_contours=target_contours,
-                    args=self.args,
-                )
-                review_action = review_window.run()
-                if review_action == "exit_all":
+                if self.args.cache_mode == "startup":
+                    self.context_cache.prewarm(selection)
+                source_context = self.context_cache.get_source(selection)
+                target_context = self.context_cache.get_target(selection)
+
+                source_action, source_contours = self._run_source_editor(selection, source_context)
+                if source_action == "exit_all":
                     return 0
-                if review_action == "step0":
-                    break
-                if review_action == "back_step1":
+
+                while True:
                     target_action, target_contours = self._run_target_editor(selection, target_context)
                     if target_action == "exit_all":
                         return 0
@@ -1431,19 +1737,46 @@ class Cv2AnnotationToGridTransformApp:
                         source_action, source_contours = self._run_source_editor(selection, source_context)
                         if source_action == "exit_all":
                             return 0
+                        continue
+                    break
+
+                while True:
+                    review_window = Cv2TransformReviewWindow(
+                        selection=selection,
+                        source_image=source_context["source_frame"],
+                        source_contours=source_contours,
+                        target_image=target_context["target_image"],
+                        target_contours=target_contours,
+                        args=self.args,
+                    )
+                    review_action = review_window.run()
+                    if review_action == "exit_all":
+                        return 0
+                    if review_action == "step0":
+                        break
+                    if review_action == "back_step1":
                         target_action, target_contours = self._run_target_editor(selection, target_context)
                         if target_action == "exit_all":
                             return 0
-                    continue
+                        if target_action == "back":
+                            source_action, source_contours = self._run_source_editor(selection, source_context)
+                            if source_action == "exit_all":
+                                return 0
+                            target_action, target_contours = self._run_target_editor(selection, target_context)
+                            if target_action == "exit_all":
+                                return 0
+                        continue
 
-                export_window = Cv2ExportStepWindow(selection=selection, args=self.args)
-                export_action = export_window.run()
-                if export_action == "exit_all":
-                    return 0
-                if export_action == "back":
-                    continue
-                break
-            continue
+                    export_window = Cv2ExportStepWindow(selection=selection, args=self.args)
+                    export_action = export_window.run()
+                    if export_action == "exit_all":
+                        return 0
+                    if export_action == "back":
+                        continue
+                    break
+                continue
+        finally:
+            self.context_cache.close()
 
 
 def main(argv: list[str] | None = None) -> int:
