@@ -1,0 +1,167 @@
+{
+  "output_dir": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data",
+  "triplet_dir": "C:\\Users\\nhnguyen\\PhD_A2A\\backup\\grid_transform_cleanup_20260402\\u_curated_selection_20260330_rgb480_triplets",
+  "curated_dir": "C:\\Users\\nhnguyen\\PhD_A2A\\backup\\grid_transform_cleanup_20260402\\u_curated_selection_20260330",
+  "target_case": "2008-003^01-1791/test",
+  "speaker_rows": 10,
+  "zip_rows": 8,
+  "missing_annotation_rows": 2,
+  "nnunet_data_dst": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\nnunet_data_80\\2008-003^01-1791\\test",
+  "nnunet_groundtruth_dir": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\nnunet_data_80\\2008-003^01-1791\\test\\contours",
+  "rows": [
+    {
+      "output_basename": "1612_P1_S16_F0952",
+      "png_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\1612_P1_S16_F0952.png",
+      "zip_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\1612_P1_S16_F0952.zip",
+      "annotation_status": "scaled_latest_annotation",
+      "annotation_origin_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\annotation_to_grid_transform\\1612_P1_S16_F0952__nnunet_2008-003_01-1791_test_143020\\source_annotation.latest.json",
+      "source_shape": [
+        136,
+        136
+      ],
+      "target_shape": [
+        480,
+        480
+      ],
+      "scaled_contour_count": 18
+    },
+    {
+      "output_basename": "1617_P2_S9_F1478",
+      "png_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\1617_P2_S9_F1478.png",
+      "zip_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\1617_P2_S9_F1478.zip",
+      "annotation_status": "scaled_latest_annotation",
+      "annotation_origin_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\source_annotation_edits\\curated_u_batch\\1617_P2_S9_F1478\\edited_annotation.json",
+      "source_shape": [
+        136,
+        136
+      ],
+      "target_shape": [
+        480,
+        480
+      ],
+      "scaled_contour_count": 14
+    },
+    {
+      "output_basename": "1618_P3_S14_F1556",
+      "png_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\1618_P3_S14_F1556.png",
+      "zip_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\1618_P3_S14_F1556.zip",
+      "annotation_status": "scaled_latest_annotation",
+      "annotation_origin_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\source_annotation_edits\\curated_u_batch\\1618_P3_S14_F1556\\edited_annotation.json",
+      "source_shape": [
+        136,
+        136
+      ],
+      "target_shape": [
+        480,
+        480
+      ],
+      "scaled_contour_count": 18
+    },
+    {
+      "output_basename": "1628_P4_S4_F0196",
+      "png_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\1628_P4_S4_F0196.png",
+      "zip_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\1628_P4_S4_F0196.zip",
+      "annotation_status": "scaled_latest_annotation",
+      "annotation_origin_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\source_annotation_edits\\curated_u_batch\\1628_P4_S4_F0196\\edited_annotation.json",
+      "source_shape": [
+        136,
+        136
+      ],
+      "target_shape": [
+        480,
+        480
+      ],
+      "scaled_contour_count": 14
+    },
+    {
+      "output_basename": "1635_P5_S6_F0324",
+      "png_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\1635_P5_S6_F0324.png",
+      "zip_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\1635_P5_S6_F0324.zip",
+      "annotation_status": "scaled_latest_annotation",
+      "annotation_origin_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\source_annotation_edits\\curated_u_batch\\1635_P5_S6_F0324\\edited_annotation.json",
+      "source_shape": [
+        136,
+        136
+      ],
+      "target_shape": [
+        480,
+        480
+      ],
+      "scaled_contour_count": 18
+    },
+    {
+      "output_basename": "1638_P6_S8_F0138",
+      "png_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\1638_P6_S8_F0138.png",
+      "zip_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\1638_P6_S8_F0138.zip",
+      "annotation_status": "scaled_latest_annotation",
+      "annotation_origin_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\source_annotation_edits\\curated_u_batch\\1638_P6_S8_F0138\\edited_annotation.json",
+      "source_shape": [
+        136,
+        136
+      ],
+      "target_shape": [
+        480,
+        480
+      ],
+      "scaled_contour_count": 18
+    },
+    {
+      "output_basename": "1640_P7_S2_F0829",
+      "png_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\1640_P7_S2_F0829.png",
+      "zip_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\1640_P7_S2_F0829.zip",
+      "annotation_status": "scaled_latest_annotation",
+      "annotation_origin_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\annotation_to_grid_transform\\1640_P7_S2_F0829__nnunet_2008-003_01-1791_test_143020\\source_annotation.latest.json",
+      "source_shape": [
+        136,
+        136
+      ],
+      "target_shape": [
+        480,
+        480
+      ],
+      "scaled_contour_count": 11
+    },
+    {
+      "output_basename": "1653_P8_S2_F0159",
+      "png_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\1653_P8_S2_F0159.png",
+      "zip_path": "",
+      "annotation_status": "missing",
+      "annotation_origin_path": "",
+      "source_shape": null,
+      "target_shape": [
+        480,
+        480
+      ],
+      "scaled_contour_count": 0
+    },
+    {
+      "output_basename": "1659_P9_S5_F0196",
+      "png_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\1659_P9_S5_F0196.png",
+      "zip_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\1659_P9_S5_F0196.zip",
+      "annotation_status": "scaled_latest_annotation",
+      "annotation_origin_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\source_annotation_edits\\curated_u_batch\\1659_P9_S5_F0196\\edited_annotation.json",
+      "source_shape": [
+        136,
+        136
+      ],
+      "target_shape": [
+        480,
+        480
+      ],
+      "scaled_contour_count": 18
+    },
+    {
+      "output_basename": "1662_P10_S14_F0110",
+      "png_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\1662_P10_S14_F0110.png",
+      "zip_path": "",
+      "annotation_status": "missing",
+      "annotation_origin_path": "",
+      "source_shape": null,
+      "target_shape": [
+        480,
+        480
+      ],
+      "scaled_contour_count": 0
+    }
+  ]
+}

@@ -96,7 +96,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--case",
         default="2008-003^01-1791/test",
-        help="nnUNet case path relative to vocal-tract-seg/data_80 and results/.../inference_contours.",
+        help="nnUNet case path relative to VTLN/data/nnunet_data_80. Groundtruth contours are read from the case's contours folder.",
     )
     parser.add_argument(
         "--vtln-dir",
@@ -183,10 +183,7 @@ def resolve_speaker_role(args: argparse.Namespace) -> str:
 
 
 def discover_vtln_speakers(vtln_dir: Path) -> list[str]:
-    speakers: set[str] = set()
-    for candidate_dir in candidate_vtln_dirs(vtln_dir):
-        speakers.update(path.stem for path in candidate_dir.glob("*.zip"))
-    return sorted(speakers)
+    return sorted(path.stem for path in Path(vtln_dir).glob("*.zip"))
 
 
 def discover_saved_annotation_paths() -> list[Path]:

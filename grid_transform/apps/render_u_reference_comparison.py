@@ -15,6 +15,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 from grid_transform.config import DEFAULT_OUTPUT_DIR, DEFAULT_VTLN_DIR
+from grid_transform.image_utils import as_grayscale_uint8
 from grid_transform.io import candidate_vtln_dirs
 
 
@@ -93,10 +94,7 @@ def find_reference_image(reference_name: str, vtln_dir: Path) -> Path:
 
 
 def load_grayscale(path: Path) -> np.ndarray:
-    image = imageio.imread(path)
-    if image.ndim == 3:
-        image = image[..., 0]
-    return np.asarray(image, dtype=np.float32)
+    return np.asarray(as_grayscale_uint8(imageio.imread(path)), dtype=np.float32)
 
 
 def resize_to_match(image: np.ndarray, target_shape: tuple[int, int]) -> np.ndarray:

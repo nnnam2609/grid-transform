@@ -31,6 +31,7 @@ from grid_transform.apps.run_curated_u_annotation_batch import (
 )
 from grid_transform.artspeech_video import IntervalCursor, load_session_data, normalize_frame
 from grid_transform.config import DEFAULT_OUTPUT_DIR, PROJECT_DIR, VT_SEG_CONTOURS_ROOT, VT_SEG_DATA_ROOT
+from grid_transform.image_utils import as_grayscale_uint8
 from grid_transform.io import load_frame_npy, load_frame_vtln
 from grid_transform.source_annotation import (
     frame_correlation,
@@ -578,10 +579,7 @@ def load_target_context(selection: WorkspaceSelection) -> dict[str, object]:
         image, contours = load_frame_vtln(selection.target.vtln_reference, selection.target.vtln_dir)
         label = f"VTLN {selection.target.vtln_reference}"
         frame_number = 0
-    image_arr = np.asarray(image)
-    if image_arr.ndim == 3:
-        image_arr = image_arr[..., 0]
-    image_arr = np.clip(image_arr, 0, 255).astype(np.uint8)
+    image_arr = as_grayscale_uint8(image)
     return {
         "target_image": image_arr,
         "target_contours": contours,

@@ -38,6 +38,7 @@ from grid_transform.annotation_to_grid_workflow import (
     target_annotation_metadata,
     workspace_selection_to_payload,
 )
+from grid_transform.image_utils import as_grayscale_uint8
 from grid_transform.cv2_annotation_app_config import (
     APP_CONFIG_PATH,
     RENDER_PREFETCH_RANGE,
@@ -244,10 +245,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 
 def bgr_gray(image: np.ndarray) -> np.ndarray:
-    array = np.asarray(image)
-    if array.ndim == 3:
-        array = array[..., 0]
-    array = np.clip(array, 0, 255).astype(np.uint8)
+    array = as_grayscale_uint8(image)
     return cv2.cvtColor(array, cv2.COLOR_GRAY2BGR)
 
 

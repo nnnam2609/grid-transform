@@ -10,7 +10,7 @@ from pathlib import Path
 from grid_transform.config import DEFAULT_OUTPUT_DIR, PROJECT_DIR
 
 
-CURATED_VTLN_DIR = PROJECT_DIR / "VTLN" / "u_curated_selection_20260330"
+CURATED_VTLN_DIR = PROJECT_DIR / "VTLN" / "data"
 DEFAULT_MANIFEST_CSV = CURATED_VTLN_DIR / "selection_manifest.csv"
 DEFAULT_BATCH_OUTPUT_ROOT = DEFAULT_OUTPUT_DIR / "source_annotation_edits" / "curated_u_batch"
 ARTSPEECH_ROOT_DEFAULT = PROJECT_DIR.parent / "Data" / "Artspeech_database"
@@ -39,8 +39,8 @@ class BatchCase:
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Launch the existing cv2 source-annotation editor sequentially for the curated "
-            "ArtSpeech /u/ selections. Each case opens in order; press 'v' in the editor "
+            "Launch the existing cv2 source-annotation editor sequentially for the canonical "
+            "ArtSpeech /u/ VTLN/data bundle. Each case opens in order; press 'v' in the editor "
             "to save the edited annotation and render the grid/video outputs."
         )
     )

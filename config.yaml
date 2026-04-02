@@ -6,7 +6,7 @@
 cv2_annotation_to_grid_transform:
   defaults:
     # Curated manifest used by Step 0 speaker selection.
-    manifest_csv: VTLN/u_curated_selection_20260330/selection_manifest.csv
+    manifest_csv: VTLN/data/selection_manifest.csv
 
     # Root of the encoded ArtSpeech dataset.
     artspeech_root: ../Data/Artspeech_database
@@ -18,7 +18,7 @@ cv2_annotation_to_grid_transform:
     workspace_root: outputs/annotation_to_grid_transform
 
     # Default VTLN folder used by Step 0 when target mode is VTLN.
-    vtln_dir: VTLN
+    vtln_dir: VTLN/data
 
     # Default nnUNet target shown in Step 0.
     # Must be a positive integer.

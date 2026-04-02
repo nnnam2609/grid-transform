@@ -30,9 +30,7 @@ The repo is organized for reproducible experiments rather than a packaged librar
 - `config.yaml`
   Local default settings for the multi-step `cv2` annotation-to-grid-transform app. CLI flags still override the YAML values.
 - `VTLN/`
-  Lightweight bundled VTLN reference images and ROI zips used by the default examples.
-- `vocal-tract-seg/`
-  Lightweight bundled target-frame sample data used by the default examples.
+  Canonical bundled data now lives in `VTLN/data/`, including 480x480 RGB triplet references, scaled ROI zips, and the bundled nnUNet target case.
 
 `scripts/run/` is the canonical interface. Root scripts such as `create_speaker_grid.py` remain available as convenience aliases for older commands.
 
@@ -45,7 +43,7 @@ python -m venv .venv
 
 ## Data Expectations
 
-The base grid-transform examples run against the bundled sample/reference data in `VTLN/` and `vocal-tract-seg/`.
+The base grid-transform examples run against the bundled sample/reference data in `VTLN/data/`.
 
 ArtSpeech session utilities require a separate external dataset root. The expected structure is described in [`docs/DATA.md`](docs/DATA.md). In short, the code expects an ArtSpeech-style speaker layout with:
 
@@ -59,7 +57,7 @@ Large external datasets are not redistributed in this repository.
 ### Core Grid Transform Pipeline
 
 ```powershell
-.\.venv\Scripts\python .\scripts\run\run_create_speaker_grid.py --source vtln --speaker 1640_s10_0829
+.\.venv\Scripts\python .\scripts\run\run_create_speaker_grid.py --source vtln --speaker 1640_P7_S2_F0829
 .\.venv\Scripts\python .\scripts\run\run_method4_transform.py
 .\.venv\Scripts\python .\scripts\run\run_move_target_articulators.py
 .\.venv\Scripts\python .\scripts\run\run_warp_source_speaker_to_target.py
@@ -69,8 +67,8 @@ Large external datasets are not redistributed in this repository.
 
 ```powershell
 .\.venv\Scripts\python .\scripts\run\run_build_artspeech_session_video.py --speaker P7 --session S10 --dataset-root <ARTSPEECH_ROOT>
-.\.venv\Scripts\python .\scripts\run\run_project_vtln_reference_to_artspeech_video.py --target-speaker 1640_s10_0829 --artspeech-speaker P7 --session S10 --dataset-root <ARTSPEECH_ROOT>
-.\.venv\Scripts\python .\scripts\run\run_warp_artspeech_session_to_target_video.py --annotation-speaker 1640_s10_0829 --artspeech-speaker P7 --session S10 --target-frame 143020 --dataset-root <ARTSPEECH_ROOT> --output-mode both
+.\.venv\Scripts\python .\scripts\run\run_project_vtln_reference_to_artspeech_video.py --target-speaker 1640_P7_S2_F0829 --artspeech-speaker P7 --session S10 --dataset-root <ARTSPEECH_ROOT>
+.\.venv\Scripts\python .\scripts\run\run_warp_artspeech_session_to_target_video.py --annotation-speaker 1640_P7_S2_F0829 --artspeech-speaker P7 --session S10 --target-frame 143020 --dataset-root <ARTSPEECH_ROOT> --output-mode both
 ```
 
 ### CV2 Annotation-To-Grid-Transform App
@@ -131,7 +129,7 @@ The source-annotation editor opens a local `cv2` window, projects a VTLN referen
 Default example for the current bundled workflow:
 
 ```powershell
-.\.venv\Scripts\python .\scripts\run\run_edit_source_annotation.py --artspeech-speaker P7 --session S2 --reference-speaker 1640_s10_0829 --target-frame 143020 --dataset-root <ARTSPEECH_ROOT>
+.\.venv\Scripts\python .\scripts\run\run_edit_source_annotation.py --artspeech-speaker P7 --session S2 --reference-speaker 1640_P7_S2_F0829 --target-frame 143020 --dataset-root <ARTSPEECH_ROOT>
 ```
 
 Interactive controls:
@@ -170,7 +168,7 @@ Useful options:
 Headless save-only example:
 
 ```powershell
-.\.venv\Scripts\python .\scripts\run\run_edit_source_annotation.py --artspeech-speaker P7 --session S2 --reference-speaker 1640_s10_0829 --target-frame 143020 --dataset-root <ARTSPEECH_ROOT> --no-gui --skip-video-on-save
+.\.venv\Scripts\python .\scripts\run\run_edit_source_annotation.py --artspeech-speaker P7 --session S2 --reference-speaker 1640_P7_S2_F0829 --target-frame 143020 --dataset-root <ARTSPEECH_ROOT> --no-gui --skip-video-on-save
 ```
 
 Reuse a saved edited annotation in the warp pipeline:
@@ -183,7 +181,7 @@ Current tracked example from the saved `P7/S2` annotation bundle:
 
 - Source frame: `829`
 - Source time: `16.5533s`
-- Reference VTLN frame: `1640_s10_0829`
+- Reference VTLN frame: `1640_P7_S2_F0829`
 - Target frame: `143020`
 - Match correlation before manual edit: `0.9866`
 
@@ -253,7 +251,7 @@ Review video: [P7_S2_warped_to_143020_review.mp4](docs/assets/github/p7-s2-warpe
 ## Limitations
 
 - The repo currently assumes specific landmark conventions such as `I1..I7`, `C1..C6`, `M1`, `L6`, and `P1`.
-- Several workflows are designed around the bundled example pair: VTLN `1640_s10_0829` and segmentation frame `143020`.
+- Several workflows are designed around the bundled example pair: VTLN `1640_P7_S2_F0829` and segmentation frame `143020`.
 - ArtSpeech analyses rely on external aligned labels and on fixed-session assumptions when full contour annotations are unavailable.
 
 ## Release Checklist
