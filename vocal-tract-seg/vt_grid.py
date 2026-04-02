@@ -624,45 +624,37 @@ def build_grid(
     g.I1 = np.asarray(I_points['I1'], dtype=float) if I_points else None
 
     c1 = np.array(cc['c1'], dtype=float) if 'c1' in cc else None
-    soft_palate_points, soft_palate_path = _find_soft_palate_points(contours, c1=c1)
+    soft_palate_points, _ = _find_soft_palate_points(contours, c1=c1)
     if I_points and soft_palate_points:
         I_points = dict(I_points)
         I_points.update(soft_palate_points)
         g.I_points = I_points
 
-    vt_seed = smooth_path
-    if vt_seed is not None and soft_palate_path is not None:
-        if np.linalg.norm(vt_seed[-1] - soft_palate_path[0]) < 1e-6:
-            vt_seed = np.vstack([vt_seed, soft_palate_path[1:]])
-        else:
-            vt_seed = np.vstack([vt_seed, soft_palate_path])
-
-    # Build the H1 / VT path as I1 -> ... -> I6 -> I7 -> C1 when possible.
+    # Build the H1 / VT path as I1 -> ... -> I5, then a direct tail to C1.
     vt_full = None
-    if I_points and c1 is not None:
-        P1_i7 = None
+    tail_start = None
+    if I_points and 'I5' in I_points:
+        tail_start = np.asarray(I_points['I5'], dtype=float)
+    elif smooth_path is not None and len(smooth_path) > 0:
+        tail_start = np.asarray(smooth_path[-1], dtype=float)
+
+    if tail_start is not None and c1 is not None:
+        P1_i5 = _find_pharynx_intersection(tail_start, c1, contours)
         vt_parts = []
 
         if smooth_path is not None:
             vt_parts.append(np.asarray(smooth_path, dtype=float))
 
-        if 'I6' in I_points and 'I7' in I_points:
-            i6 = np.asarray(I_points['I6'], dtype=float)
-            i7 = np.asarray(I_points['I7'], dtype=float)
-            soft_part = np.vstack([i6, i7])
-            if len(vt_parts) > 0 and np.linalg.norm(vt_parts[-1][-1] - soft_part[0]) < 1e-6:
-                vt_parts.append(soft_part[1:])
-            else:
-                vt_parts.append(soft_part)
-
-            P1_i7 = _find_pharynx_intersection(i7, c1, contours)
+        tail_start_part = np.asarray(tail_start, dtype=float).reshape(1, 2)
+        if len(vt_parts) == 0 or np.linalg.norm(vt_parts[-1][-1] - tail_start_part[0]) >= 1e-6:
+            vt_parts.append(tail_start_part)
 
         vt_parts.append(np.asarray(c1, dtype=float).reshape(1, 2))
         vt_full = np.vstack([part for part in vt_parts if len(part) > 0])
         g.vt_curve = _resample(vt_full, NP)
-        g.P1_point = P1_i7
+        g.P1_point = P1_i5
     else:
-        g.vt_curve = _resample(vt_seed, NP) if vt_seed is not None else None
+        g.vt_curve = _resample(smooth_path, NP) if smooth_path is not None else None
 
     if g.P1_point is None:
         g.warnings.append("missing_P1: no pharynx intersection found for the H1 tail")
@@ -704,7 +696,7 @@ def build_grid(
         vt_len = max(np.linalg.norm(vt[-1] - vt[0]), 1e-8)
         scale = np.linalg.norm(R - L) / vt_len
         if i == 0 and g.I_points is not None:
-            # ---- H1: composite curve  L1 -> I5 -> C1 ----
+            # ---- H1: palate contour L1 -> I5, then direct I5 -> C1 ----
             #
             # Part 1 (L1 -> I5): follows the palate segmentation
             #   contour directly from the VT curve.
@@ -762,7 +754,7 @@ def build_grid(
     g.spine_curve = _resample(spine_pts, 400)
 
     # --- Labels ---
-    g.h_labels = ['L1->I6->I7->C1', 'M1->C2']
+    g.h_labels = ['L1->I5->C1', 'M1->C2']
     for i in range(2, n_h - 1):
         g.h_labels.append(f'L{i + 1}->{sk[i].upper()}')
     g.h_labels.append(f'L6->{sk[-1].upper()}')
@@ -900,11 +892,10 @@ def _draw_landmarks(ax, g: GridData, show_labels: bool, style_cfg: dict):
                         fontweight='bold', ha=ha,
                         bbox=dict(boxstyle='round,pad=0.25', fc=style_cfg['i_label_fc'], alpha=0.85))
 
-    # Show the I6 -> I7 -> C1 guide, with P1 marked on the I7 -> C1 segment.
-    if g.I_points and 'I6' in g.I_points and 'I7' in g.I_points:
+    # Show the direct I5 -> C1 tail guide, with P1 marked on the same segment.
+    if g.I_points and 'I5' in g.I_points:
         guide_pts = [
-            np.asarray(g.I_points['I6'], dtype=float),
-            np.asarray(g.I_points['I7'], dtype=float),
+            np.asarray(g.I_points['I5'], dtype=float),
         ]
         if g.P1_point is not None:
             guide_pts.append(np.asarray(g.P1_point, dtype=float))
@@ -912,7 +903,7 @@ def _draw_landmarks(ax, g: GridData, show_labels: bool, style_cfg: dict):
             guide_pts.append(np.asarray(g.cervical_centers['c1'], dtype=float))
         guide_pts = np.asarray(guide_pts, dtype=float)
         ax.plot(guide_pts[:, 0], guide_pts[:, 1], '--', color=style_cfg['guide_color'],
-                lw=2.0, alpha=0.8, zorder=14, label='I6-I7-C1 guide with P1')
+                lw=2.0, alpha=0.8, zorder=14, label='I5-C1 guide with P1')
 
     # C points (blue circles)
     if g.cervical_centers:

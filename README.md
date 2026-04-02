@@ -102,6 +102,11 @@ Key behavior:
 - `Step 2` highlights transform controls with contrasting colors:
   `Affine anchors = orange`, `TPS extra controls = green`, `other visible landmarks = yellow`.
 - `Step 3` uses the threaded exporter and writes a detached render job under the workspace output.
+- `render_workers` and `render_prefetch` are validated early, and invalid Step 3 launches write `background_render_job.json` with `status: failed_validation` instead of spawning a process.
+
+Headless/runtime note:
+
+- The CV2 app still imports `cv2` at module import time. In some headless environments, even `--help` may require a GUI-capable/OpenCV runtime (for example, a working libGL/OpenCV install).
 
 Default workspace output root:
 

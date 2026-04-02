@@ -18,15 +18,37 @@ from grid_transform.annotation_to_grid_workflow import (
     step_file_paths,
 )
 from grid_transform.artspeech_video import load_session_data, normalize_frame
+from grid_transform.cv2_annotation_app_config import (
+    RENDER_PREFETCH_RANGE,
+    RENDER_WORKERS_RANGE,
+    argparse_bounded_int,
+    validate_render_settings,
+)
 from grid_transform.warp import precompute_inverse_warp, warp_array_with_precomputed_inverse_warp
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Background threaded export for a saved annotation-to-grid workspace.")
     parser.add_argument("--workspace-dir", type=Path, required=True)
-    parser.add_argument("--workers", type=int, default=8)
-    parser.add_argument("--prefetch", type=int, default=0)
-    parser.add_argument("--max-frames", type=int, default=0)
+    parser.add_argument(
+        "--workers",
+        type=argparse_bounded_int(
+            "render_workers",
+            min_value=RENDER_WORKERS_RANGE[0],
+            max_value=RENDER_WORKERS_RANGE[1],
+        ),
+        default=8,
+    )
+    parser.add_argument(
+        "--prefetch",
+        type=argparse_bounded_int(
+            "render_prefetch",
+            min_value=RENDER_PREFETCH_RANGE[0],
+            max_value=RENDER_PREFETCH_RANGE[1],
+        ),
+        default=0,
+    )
+    parser.add_argument("--max-frames", type=argparse_bounded_int("max_frames", min_value=0), default=0)
     return parser.parse_args(argv)
 
 
@@ -43,6 +65,11 @@ def _render_single_frame(index: int, *, images: np.ndarray, frame_min: float, fr
 
 
 def run_workspace_export(*, workspace_dir: Path, workers: int, prefetch: int, max_frames: int) -> dict[str, object]:
+    workers, prefetch = validate_render_settings(
+        workers=workers,
+        prefetch=prefetch,
+        source="workspace export",
+    )
     paths = step_file_paths(workspace_dir)
     selection = payload_to_workspace_selection(load_json(paths["selection"]))
     transform_spec = load_json(paths["transform_spec"])
@@ -81,7 +108,7 @@ def run_workspace_export(*, workspace_dir: Path, workers: int, prefetch: int, ma
         0: export_dir / "warped_preview_frame_0001.png",
         frame_count // 2: export_dir / f"warped_preview_frame_{frame_count // 2 + 1:04d}.png",
     }
-    prefetch_count = _resolve_prefetch(max(1, workers), prefetch)
+    prefetch_count = _resolve_prefetch(workers, prefetch)
 
     with imageio.get_writer(
         warped_video_path,
@@ -96,7 +123,7 @@ def run_workspace_export(*, workspace_dir: Path, workers: int, prefetch: int, ma
         pending: dict[int, Future[tuple[int, np.ndarray]]] = {}
         submission_order: deque[int] = deque()
         next_submit = 0
-        with ThreadPoolExecutor(max_workers=max(1, workers), thread_name_prefix="workspace-warp") as executor:
+        with ThreadPoolExecutor(max_workers=workers, thread_name_prefix="workspace-warp") as executor:
             for index in range(frame_count):
                 while next_submit < frame_count and len(pending) < prefetch_count:
                     future = executor.submit(

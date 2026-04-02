@@ -21,10 +21,13 @@ cv2_annotation_to_grid_transform:
     vtln_dir: VTLN
 
     # Default nnUNet target shown in Step 0.
+    # Must be a positive integer.
     default_target_case: "2008-003^01-1791/test"
     default_target_frame: 143020
 
     # Background export defaults for Step 3.
+    # render_workers: integer in [1, 64]
+    # render_prefetch: integer in [0, 1024]
     render_workers: 8
     render_prefetch: 0
 
@@ -41,6 +44,10 @@ cv2_annotation_to_grid_transform:
 
   ui:
     # Step 1 editor layout.
+    # editor_panel_width / editor_panel_height: integers in [240, 4096]
+    # editor_sidebar_width: integer in [160, 2048]
+    # editor_footer_height: integer in [48, 2048]
+    # editor_loupe_size: integer in [96, 1024]
     editor_panel_width: 960
     editor_panel_height: 960
     editor_sidebar_width: 320
@@ -48,6 +55,9 @@ cv2_annotation_to_grid_transform:
     editor_loupe_size: 240
 
     # Step 2 review layout.
+    # review_pane_width / review_pane_height: integers in [240, 4096]
+    # pane_gap: integer in [0, 256]
+    # review_footer_height: integer in [48, 2048]
     review_pane_width: 480
     review_pane_height: 340
     pane_gap: 12

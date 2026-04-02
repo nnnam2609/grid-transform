@@ -38,6 +38,21 @@ from grid_transform.annotation_to_grid_workflow import (
     target_annotation_metadata,
     workspace_selection_to_payload,
 )
+from grid_transform.cv2_annotation_app_config import (
+    APP_CONFIG_PATH,
+    RENDER_PREFETCH_RANGE,
+    RENDER_WORKERS_RANGE,
+    UIConfig,
+    VALID_CACHE_MODES,
+    VALID_WINDOW_MODES,
+    argparse_bounded_int,
+    load_cv2_app_config_defaults,
+    render_validation_errors,
+    resolve_choice,
+    resolve_config_int,
+    resolve_config_path,
+    resolve_config_str,
+)
 from grid_transform.apps.edit_source_annotation import (
     CONTOUR_COLORS,
     WINDOW_MARGIN,
@@ -51,11 +66,6 @@ from grid_transform.config import PROJECT_DIR
 from grid_transform.source_annotation import LONG_CONTOUR_HANDLE_COUNTS
 from grid_transform.warp import precompute_inverse_warp, warp_array_with_precomputed_inverse_warp
 
-
-APP_CONFIG_PATH = PROJECT_DIR / "config.yaml"
-APP_CONFIG_SECTION = "cv2_annotation_to_grid_transform"
-VALID_CACHE_MODES = {"startup", "first-load"}
-VALID_WINDOW_MODES = {"full-height", "fullscreen", "fixed"}
 
 WINDOW_NAME_STEP0 = "Annotation To Grid Transform - Step 0"
 WINDOW_NAME_STEP1 = "Annotation To Grid Transform - Step 1"
@@ -81,29 +91,6 @@ KEY_RIGHT = 2555904
 KEY_TAB = 9
 KEY_ENTER = 13
 KEY_BACKSPACE = 8
-
-EDITOR_PANEL_W = 960
-EDITOR_PANEL_H = 960
-EDITOR_SIDEBAR_W = 320
-EDITOR_FOOTER_H = 88
-EDITOR_LOUPE = 240
-
-REVIEW_PANE_W = 480
-REVIEW_PANE_H = 340
-PANE_GAP = 12
-REVIEW_FOOTER_H = 176
-
-UI_CONFIG_KEYS = {
-    "editor_panel_width": "EDITOR_PANEL_W",
-    "editor_panel_height": "EDITOR_PANEL_H",
-    "editor_sidebar_width": "EDITOR_SIDEBAR_W",
-    "editor_footer_height": "EDITOR_FOOTER_H",
-    "editor_loupe_size": "EDITOR_LOUPE",
-    "review_pane_width": "REVIEW_PANE_W",
-    "review_pane_height": "REVIEW_PANE_H",
-    "pane_gap": "PANE_GAP",
-    "review_footer_height": "REVIEW_FOOTER_H",
-}
 
 
 @dataclass
@@ -136,78 +123,11 @@ class PanelMapping:
     display_h: int
 
 
-def _read_yaml_config(path: Path) -> dict[str, object]:
-    if not path.is_file():
-        return {}
-    try:
-        import yaml
-    except ModuleNotFoundError as exc:
-        raise SystemExit(
-            f"config file {path} requires PyYAML. Install dependencies from requirements.txt first."
-        ) from exc
-
-    payload = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    if not isinstance(payload, dict):
-        raise SystemExit(f"config file {path} must contain a YAML mapping at the top level.")
-    return payload
-
-
-def _resolve_config_path(value: object, *, default: Path, config_path: Path) -> Path:
-    if value in (None, ""):
-        return default
-    candidate = Path(str(value))
-    if candidate.is_absolute():
-        return candidate
-    return (config_path.parent / candidate).resolve()
-
-
-def _resolve_config_int(value: object, *, default: int) -> int:
-    if value in (None, ""):
-        return int(default)
-    return int(value)
-
-
-def _resolve_config_str(value: object, *, default: str) -> str:
-    if value in (None, ""):
-        return default
-    return str(value)
-
-
-def _resolve_choice(value: object, *, default: str, valid: set[str], field_name: str) -> str:
-    resolved = _resolve_config_str(value, default=default)
-    if resolved not in valid:
-        raise SystemExit(f"Invalid {field_name}={resolved!r} in {APP_CONFIG_PATH.name}. Valid choices: {sorted(valid)}")
-    return resolved
-
-
-def _apply_ui_config(ui_payload: dict[str, object]) -> None:
-    globals_ns = globals()
-    for key, global_name in UI_CONFIG_KEYS.items():
-        if key not in ui_payload or ui_payload[key] in (None, ""):
-            continue
-        globals_ns[global_name] = int(ui_payload[key])
-
-
-def _load_app_config_defaults(config_path: Path) -> tuple[dict[str, object], dict[str, object]]:
-    payload = _read_yaml_config(config_path)
-    section = payload.get(APP_CONFIG_SECTION, {}) or {}
-    if not isinstance(section, dict):
-        raise SystemExit(f"Section {APP_CONFIG_SECTION!r} in {config_path} must be a mapping.")
-    defaults_payload = section.get("defaults", {}) or {}
-    ui_payload = section.get("ui", {}) or {}
-    if not isinstance(defaults_payload, dict):
-        raise SystemExit(f"Section {APP_CONFIG_SECTION}.defaults in {config_path} must be a mapping.")
-    if not isinstance(ui_payload, dict):
-        raise SystemExit(f"Section {APP_CONFIG_SECTION}.ui in {config_path} must be a mapping.")
-    _apply_ui_config(ui_payload)
-    return defaults_payload, ui_payload
-
-
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     pre_parser = argparse.ArgumentParser(add_help=False)
     pre_parser.add_argument("--config", type=Path, default=APP_CONFIG_PATH)
     pre_args, _ = pre_parser.parse_known_args(argv)
-    defaults_payload, _ui_payload = _load_app_config_defaults(pre_args.config)
+    defaults_payload, ui_config = load_cv2_app_config_defaults(pre_args.config)
 
     parser = argparse.ArgumentParser(description="CV2 multi-step annotation-to-grid-transform workflow.")
     parser.add_argument(
@@ -219,13 +139,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--manifest-csv",
         type=Path,
-        default=_resolve_config_path(defaults_payload.get("manifest_csv"), default=DEFAULT_MANIFEST_CSV, config_path=pre_args.config),
+        default=resolve_config_path(defaults_payload.get("manifest_csv"), default=DEFAULT_MANIFEST_CSV, config_path=pre_args.config),
         help="Curated manifest CSV.",
     )
     parser.add_argument(
         "--artspeech-root",
         type=Path,
-        default=_resolve_config_path(
+        default=resolve_config_path(
             defaults_payload.get("artspeech_root"),
             default=PROJECT_DIR.parent / "Data" / "Artspeech_database",
             config_path=pre_args.config,
@@ -234,30 +154,71 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--mapping-doc",
         type=Path,
-        default=_resolve_config_path(defaults_payload.get("mapping_doc"), default=DEFAULT_MAPPING_DOC, config_path=pre_args.config),
+        default=resolve_config_path(defaults_payload.get("mapping_doc"), default=DEFAULT_MAPPING_DOC, config_path=pre_args.config),
     )
     parser.add_argument(
         "--workspace-root",
         type=Path,
-        default=_resolve_config_path(defaults_payload.get("workspace_root"), default=DEFAULT_WORKSPACE_ROOT, config_path=pre_args.config),
+        default=resolve_config_path(defaults_payload.get("workspace_root"), default=DEFAULT_WORKSPACE_ROOT, config_path=pre_args.config),
     )
     parser.add_argument(
         "--vtln-dir",
         type=Path,
-        default=_resolve_config_path(defaults_payload.get("vtln_dir"), default=PROJECT_DIR / "VTLN", config_path=pre_args.config),
+        default=resolve_config_path(defaults_payload.get("vtln_dir"), default=PROJECT_DIR / "VTLN", config_path=pre_args.config),
     )
-    parser.add_argument("--default-target-case", default=_resolve_config_str(defaults_payload.get("default_target_case"), default=DEFAULT_NNUNET_TARGET_CASE))
-    parser.add_argument("--default-target-frame", type=int, default=_resolve_config_int(defaults_payload.get("default_target_frame"), default=DEFAULT_NNUNET_TARGET_FRAME))
-    parser.add_argument("--render-workers", type=int, default=_resolve_config_int(defaults_payload.get("render_workers"), default=8))
-    parser.add_argument("--render-prefetch", type=int, default=_resolve_config_int(defaults_payload.get("render_prefetch"), default=0))
+    parser.add_argument("--default-target-case", default=resolve_config_str(defaults_payload.get("default_target_case"), default=DEFAULT_NNUNET_TARGET_CASE))
+    parser.add_argument(
+        "--default-target-frame",
+        type=argparse_bounded_int("default_target_frame", min_value=1),
+        default=resolve_config_int(
+            defaults_payload.get("default_target_frame"),
+            default=DEFAULT_NNUNET_TARGET_FRAME,
+            field_name="default_target_frame",
+            config_path=pre_args.config,
+            min_value=1,
+        ),
+    )
+    parser.add_argument(
+        "--render-workers",
+        type=argparse_bounded_int(
+            "render_workers",
+            min_value=RENDER_WORKERS_RANGE[0],
+            max_value=RENDER_WORKERS_RANGE[1],
+        ),
+        default=resolve_config_int(
+            defaults_payload.get("render_workers"),
+            default=8,
+            field_name="render_workers",
+            config_path=pre_args.config,
+            min_value=RENDER_WORKERS_RANGE[0],
+            max_value=RENDER_WORKERS_RANGE[1],
+        ),
+    )
+    parser.add_argument(
+        "--render-prefetch",
+        type=argparse_bounded_int(
+            "render_prefetch",
+            min_value=RENDER_PREFETCH_RANGE[0],
+            max_value=RENDER_PREFETCH_RANGE[1],
+        ),
+        default=resolve_config_int(
+            defaults_payload.get("render_prefetch"),
+            default=0,
+            field_name="render_prefetch",
+            config_path=pre_args.config,
+            min_value=RENDER_PREFETCH_RANGE[0],
+            max_value=RENDER_PREFETCH_RANGE[1],
+        ),
+    )
     parser.add_argument(
         "--cache-mode",
         choices=("startup", "first-load"),
-        default=_resolve_choice(
+        default=resolve_choice(
             defaults_payload.get("cache_mode"),
             default="startup",
             valid=VALID_CACHE_MODES,
             field_name="cache_mode",
+            config_path=pre_args.config,
         ),
         help=(
             "Cache behavior for source/target context loading. "
@@ -268,15 +229,18 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--window-mode",
         choices=("full-height", "fullscreen", "fixed"),
-        default=_resolve_choice(
+        default=resolve_choice(
             defaults_payload.get("window_mode"),
             default="full-height",
             valid=VALID_WINDOW_MODES,
             field_name="window_mode",
+            config_path=pre_args.config,
         ),
         help="Initial cv2 window mode for all steps.",
     )
-    return parser.parse_args(argv)
+    args = parser.parse_args(argv)
+    args.ui_config = ui_config
+    return args
 
 
 def bgr_gray(image: np.ndarray) -> np.ndarray:
@@ -493,6 +457,69 @@ def draw_sidebar_block(panel: np.ndarray, title: str, lines: list[str], top: int
 def save_canvas_preview(path: Path, image: np.ndarray) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     cv2.imwrite(str(path), image)
+
+
+def _collect_xy_arrays(*collections: object) -> list[np.ndarray]:
+    arrays: list[np.ndarray] = []
+    stack = list(collections)
+    while stack:
+        value = stack.pop()
+        if value is None:
+            continue
+        if isinstance(value, dict):
+            stack.extend(value.values())
+            continue
+        if isinstance(value, (list, tuple)):
+            stack.extend(value)
+            continue
+        arr = np.asarray(value, dtype=float)
+        if arr.ndim == 1 and arr.shape[0] == 2:
+            arrays.append(arr.reshape(1, 2))
+        elif arr.ndim == 2 and arr.shape[1] == 2:
+            arrays.append(arr)
+    return arrays
+
+
+def build_focus_view(
+    image_shape: tuple[int, int],
+    panel_w: int,
+    panel_h: int,
+    *collections: object,
+    padding: float = 20.0,
+) -> ViewState:
+    arrays = _collect_xy_arrays(*collections)
+    if not arrays:
+        return ensure_view_state(None, image_shape)
+    points = np.concatenate(arrays, axis=0)
+    finite = np.isfinite(points).all(axis=1)
+    points = points[finite]
+    if len(points) == 0:
+        return ensure_view_state(None, image_shape)
+
+    image_h, image_w = image_shape[:2]
+    x_min = float(np.clip(points[:, 0].min() - padding, 0.0, image_w))
+    x_max = float(np.clip(points[:, 0].max() + padding, 0.0, image_w))
+    y_min = float(np.clip(points[:, 1].min() - padding, 0.0, image_h))
+    y_max = float(np.clip(points[:, 1].max() + padding, 0.0, image_h))
+
+    crop_w = max(32.0, x_max - x_min)
+    crop_h = max(32.0, y_max - y_min)
+    panel_aspect = max(float(panel_w) / max(float(panel_h), 1.0), 1e-6)
+    crop_aspect = crop_w / max(crop_h, 1e-6)
+    if crop_aspect > panel_aspect:
+        crop_h = crop_w / panel_aspect
+    else:
+        crop_w = crop_h * panel_aspect
+
+    crop_w = min(crop_w, float(image_w))
+    crop_h = min(crop_h, float(image_h))
+    zoom = min(float(image_w) / max(crop_w, 1.0), float(image_h) / max(crop_h, 1.0))
+    view = ViewState(
+        zoom=max(1.0, zoom),
+        center_x=float((x_min + x_max) * 0.5),
+        center_y=float((y_min + y_max) * 0.5),
+    )
+    return ensure_view_state(view, image_shape)
 
 
 def format_label_list(prefix: str, labels: list[str], *, max_chars: int = 88) -> list[str]:
@@ -869,6 +896,7 @@ class Cv2ContourEditorWindow:
         title_lines: list[str],
         info_lines: list[str],
         allow_back: bool,
+        ui_config: UIConfig,
         args: argparse.Namespace,
     ) -> None:
         self.window_name = window_name
@@ -878,6 +906,7 @@ class Cv2ContourEditorWindow:
         self.title_lines = title_lines
         self.info_lines = info_lines
         self.allow_back = allow_back
+        self.ui_config = ui_config
         self.args = args
         self.saved_payload = load_annotation_state_if_available(save_path)
         starting_contours = self.saved_payload["contours"] if self.saved_payload is not None else contours
@@ -997,7 +1026,12 @@ class Cv2ContourEditorWindow:
         self.status_message = f"Isolate mode: {'on' if self.isolate_mode else 'off'}"
 
     def _render_main_panel(self) -> tuple[np.ndarray, PanelMapping]:
-        panel, mapping = render_panel_base(self.image, EDITOR_PANEL_W, EDITOR_PANEL_H, self.view)
+        panel, mapping = render_panel_base(
+            self.image,
+            self.ui_config.editor_panel_width,
+            self.ui_config.editor_panel_height,
+            self.view,
+        )
         draw_header_text(panel, self.title_lines)
         visible = self._visible_contour_names()
         for name in visible:
@@ -1028,13 +1062,18 @@ class Cv2ContourEditorWindow:
             anchor = self.handle_points[name][index]
         elif self.last_mouse_world is not None:
             anchor = np.asarray(self.last_mouse_world, dtype=float)
-        canvas = np.full((EDITOR_LOUPE, EDITOR_LOUPE, 3), PANEL_BG, dtype=np.uint8)
+        canvas = np.full((self.ui_config.editor_loupe_size, self.ui_config.editor_loupe_size, 3), PANEL_BG, dtype=np.uint8)
         if anchor is None:
             draw_header_text(canvas, ["Loupe", "Click or hover a point"])
             return canvas
         zoom = 7.0
         view = ViewState(zoom=zoom, center_x=float(anchor[0]), center_y=float(anchor[1]))
-        panel, mapping = render_panel_base(self.image, EDITOR_LOUPE, EDITOR_LOUPE, view)
+        panel, mapping = render_panel_base(
+            self.image,
+            self.ui_config.editor_loupe_size,
+            self.ui_config.editor_loupe_size,
+            view,
+        )
         draw_header_text(panel, ["Loupe", f"x{zoom:.1f}"])
         visible = self._visible_contour_names()
         for name in visible:
@@ -1056,22 +1095,35 @@ class Cv2ContourEditorWindow:
         return panel
 
     def _compose_canvas(self) -> np.ndarray:
-        canvas = np.full((EDITOR_PANEL_H + EDITOR_FOOTER_H, EDITOR_PANEL_W + EDITOR_SIDEBAR_W, 3), PANEL_BG, dtype=np.uint8)
+        canvas = np.full(
+            (
+                self.ui_config.editor_panel_height + self.ui_config.editor_footer_height,
+                self.ui_config.editor_panel_width + self.ui_config.editor_sidebar_width,
+                3,
+            ),
+            PANEL_BG,
+            dtype=np.uint8,
+        )
         main_panel, mapping = self._render_main_panel()
         self.last_mapping = mapping
-        canvas[:EDITOR_PANEL_H, :EDITOR_PANEL_W] = main_panel
+        canvas[: self.ui_config.editor_panel_height, : self.ui_config.editor_panel_width] = main_panel
 
-        sidebar = np.full((EDITOR_PANEL_H, EDITOR_SIDEBAR_W, 3), SIDEBAR_BG, dtype=np.uint8)
+        sidebar = np.full(
+            (self.ui_config.editor_panel_height, self.ui_config.editor_sidebar_width, 3),
+            SIDEBAR_BG,
+            dtype=np.uint8,
+        )
         loupe = self._render_loupe()
-        sidebar[16 : 16 + EDITOR_LOUPE, 40 : 40 + EDITOR_LOUPE] = loupe
-        top = 280
+        loupe_size = self.ui_config.editor_loupe_size
+        sidebar[16 : 16 + loupe_size, 40 : 40 + loupe_size] = loupe
+        top = max(280, 16 + loupe_size + 24)
         top = draw_sidebar_block(sidebar, "Info", self.info_lines, top)
         top = draw_sidebar_block(sidebar, "Mode", [f"density: {self.density_mode}", f"isolate: {self.isolate_mode}"], top, highlight=True)
         if self.saved_payload is not None:
             top = draw_sidebar_block(sidebar, "Saved", ["Loaded latest saved annotation"], top)
-        canvas[:EDITOR_PANEL_H, EDITOR_PANEL_W:] = sidebar
+        canvas[: self.ui_config.editor_panel_height, self.ui_config.editor_panel_width :] = sidebar
 
-        footer_y = EDITOR_PANEL_H
+        footer_y = self.ui_config.editor_panel_height
         canvas[footer_y:, :] = FOOTER_BG
         help_line = (
             "Wheel zoom | Right-drag image to pan | Left drag point | "
@@ -1206,6 +1258,7 @@ class Cv2TransformReviewWindow:
         source_contours: dict[str, np.ndarray],
         target_image: np.ndarray,
         target_contours: dict[str, np.ndarray],
+        ui_config: UIConfig,
         args: argparse.Namespace,
     ) -> None:
         self.selection = selection
@@ -1213,6 +1266,7 @@ class Cv2TransformReviewWindow:
         self.target_image = np.asarray(target_image, dtype=np.uint8)
         self.source_contours = {name: np.asarray(points, dtype=float).copy() for name, points in source_contours.items()}
         self.target_contours = {name: np.asarray(points, dtype=float).copy() for name, points in target_contours.items()}
+        self.ui_config = ui_config
         self.args = args
         self.paths = step_file_paths(selection.workspace_dir)
 
@@ -1237,13 +1291,16 @@ class Cv2TransformReviewWindow:
             "target_affine": ensure_view_state(None, tuple(self.target_image.shape[:2])),
             "target_final": ensure_view_state(None, tuple(self.target_image.shape[:2])),
         }
+        pane_w = self.ui_config.review_pane_width
+        pane_h = self.ui_config.review_pane_height
+        pane_gap = self.ui_config.pane_gap
         self.pane_geometries = {
-            "source_native": PaneGeometry(0, 0, REVIEW_PANE_W, REVIEW_PANE_H),
-            "source_affine": PaneGeometry(REVIEW_PANE_W + PANE_GAP, 0, REVIEW_PANE_W, REVIEW_PANE_H),
-            "source_final": PaneGeometry((REVIEW_PANE_W + PANE_GAP) * 2, 0, REVIEW_PANE_W, REVIEW_PANE_H),
-            "target_native": PaneGeometry(0, REVIEW_PANE_H + PANE_GAP, REVIEW_PANE_W, REVIEW_PANE_H),
-            "target_affine": PaneGeometry(REVIEW_PANE_W + PANE_GAP, REVIEW_PANE_H + PANE_GAP, REVIEW_PANE_W, REVIEW_PANE_H),
-            "target_final": PaneGeometry((REVIEW_PANE_W + PANE_GAP) * 2, REVIEW_PANE_H + PANE_GAP, REVIEW_PANE_W, REVIEW_PANE_H),
+            "source_native": PaneGeometry(0, 0, pane_w, pane_h),
+            "source_affine": PaneGeometry(pane_w + pane_gap, 0, pane_w, pane_h),
+            "source_final": PaneGeometry((pane_w + pane_gap) * 2, 0, pane_w, pane_h),
+            "target_native": PaneGeometry(0, pane_h + pane_gap, pane_w, pane_h),
+            "target_affine": PaneGeometry(pane_w + pane_gap, pane_h + pane_gap, pane_w, pane_h),
+            "target_final": PaneGeometry((pane_w + pane_gap) * 2, pane_h + pane_gap, pane_w, pane_h),
         }
         self.last_panel_mappings: dict[str, PanelMapping] = {}
         self.active_landmark: tuple[str, str] | None = None
@@ -1255,6 +1312,7 @@ class Cv2TransformReviewWindow:
             "S = save only | B = save and go back to step 1 | "
             "0 = save and return to step 0 | N = save and go to step 3 | X = exit"
         )
+        self._apply_stage_focus_views()
 
     def _warp_source_image(self, *, stage: str, spec: dict[str, object]) -> np.ndarray:
         target_shape = tuple(int(value) for value in spec["target_shape"])
@@ -1282,6 +1340,43 @@ class Cv2TransformReviewWindow:
         step1 = set(self.bundle["transform_spec"]["step1_labels"])
         step2 = set(self.bundle["transform_spec"]["step2_labels"])
         return step1, step2 - step1
+
+    def _set_shared_stage_view(self, pane_names: tuple[str, str], view: ViewState) -> None:
+        for pane_name in pane_names:
+            self.pane_views[pane_name] = ViewState(
+                zoom=float(view.zoom),
+                center_x=float(view.center_x),
+                center_y=float(view.center_y),
+            )
+
+    def _apply_stage_focus_views(self) -> None:
+        image_shape = tuple(self.target_image.shape[:2])
+        pane_w = self.ui_config.review_pane_width
+        pane_h = self.ui_config.review_pane_height
+        affine_view = build_focus_view(
+            image_shape,
+            pane_w,
+            pane_h,
+            self.bundle["affine_contours"],
+            padding=10.0,
+        )
+        final_view = build_focus_view(
+            image_shape,
+            pane_w,
+            pane_h,
+            self.bundle["final_contours"],
+            padding=10.0,
+        )
+        self._set_shared_stage_view(("source_affine", "target_affine"), affine_view)
+        self._set_shared_stage_view(("source_final", "target_final"), final_view)
+
+    @staticmethod
+    def _stage_pair_for_pane(pane_name: str) -> tuple[str, str] | None:
+        if pane_name in {"source_affine", "target_affine"}:
+            return ("source_affine", "target_affine")
+        if pane_name in {"source_final", "target_final"}:
+            return ("source_final", "target_final")
+        return None
 
     def _pane_name_at(self, x: int, y: int) -> str | None:
         for name, geometry in self.pane_geometries.items():
@@ -1334,14 +1429,16 @@ class Cv2TransformReviewWindow:
         save_json(self.paths["transform_review"], self.bundle["transform_review"])
         overview = self._compose_canvas()
         save_canvas_preview(self.paths["overview_preview"], overview)
-        save_canvas_preview(self.paths["native_preview"], overview[:, :REVIEW_PANE_W].copy())
+        pane_w = self.ui_config.review_pane_width
+        pane_gap = self.ui_config.pane_gap
+        save_canvas_preview(self.paths["native_preview"], overview[:, :pane_w].copy())
         save_canvas_preview(
             self.paths["affine_preview"],
-            overview[:, REVIEW_PANE_W + PANE_GAP : REVIEW_PANE_W * 2 + PANE_GAP].copy(),
+            overview[:, pane_w + pane_gap : pane_w * 2 + pane_gap].copy(),
         )
         save_canvas_preview(
             self.paths["final_preview"],
-            overview[:, REVIEW_PANE_W * 2 + PANE_GAP * 2 :].copy(),
+            overview[:, pane_w * 2 + pane_gap * 2 :].copy(),
         )
         self.status_message = "Saved transform_spec.latest.json and transform_review.latest.json"
 
@@ -1412,13 +1509,17 @@ class Cv2TransformReviewWindow:
         return panel
 
     def _compose_canvas(self) -> np.ndarray:
-        canvas_h = REVIEW_PANE_H * 2 + PANE_GAP + REVIEW_FOOTER_H
-        canvas_w = REVIEW_PANE_W * 3 + PANE_GAP * 2
+        pane_w = self.ui_config.review_pane_width
+        pane_h = self.ui_config.review_pane_height
+        pane_gap = self.ui_config.pane_gap
+        footer_h = self.ui_config.review_footer_height
+        canvas_h = pane_h * 2 + pane_gap + footer_h
+        canvas_w = pane_w * 3 + pane_gap * 2
         canvas = np.full((canvas_h, canvas_w, 3), PANEL_BG, dtype=np.uint8)
         for name, geometry in self.pane_geometries.items():
             panel = self._render_named_panel(name)
             canvas[geometry.y0 : geometry.y0 + geometry.height, geometry.x0 : geometry.x0 + geometry.width] = panel
-        footer_y = REVIEW_PANE_H * 2 + PANE_GAP
+        footer_y = pane_h * 2 + pane_gap
         canvas[footer_y:, :] = FOOTER_BG
         final_metrics = self.bundle["transform_review"]["metrics"]["final"]
         metric_line = (
@@ -1443,7 +1544,7 @@ class Cv2TransformReviewWindow:
         for index, line in enumerate(label_lines):
             color = AFFINE_COLOR if index < len(affine_lines) else TPS_COLOR
             cv2.putText(canvas, line, (start_x, footer_y + 82 + 22 * index), cv2.FONT_HERSHEY_SIMPLEX, 0.44, color, 1, cv2.LINE_AA)
-        cv2.putText(canvas, self.status_message[:180], (12, footer_y + REVIEW_FOOTER_H - 18), cv2.FONT_HERSHEY_SIMPLEX, 0.48, ACCENT, 1, cv2.LINE_AA)
+        cv2.putText(canvas, self.status_message[:180], (12, footer_y + footer_h - 18), cv2.FONT_HERSHEY_SIMPLEX, 0.48, ACCENT, 1, cv2.LINE_AA)
         return canvas
 
     def _on_mouse(self, event: int, x: int, y: int, flags: int, _param) -> None:
@@ -1463,7 +1564,12 @@ class Cv2TransformReviewWindow:
             view.center_x = float(local_xy[0])
             view.center_y = float(local_xy[1])
             shape = self.source_image.shape[:2] if pane_name == "source_native" else self.target_image.shape[:2]
-            self.pane_views[pane_name] = ensure_view_state(view, shape)
+            updated_view = ensure_view_state(view, shape)
+            stage_pair = self._stage_pair_for_pane(pane_name)
+            if stage_pair is not None:
+                self._set_shared_stage_view(stage_pair, updated_view)
+            else:
+                self.pane_views[pane_name] = updated_view
             return
         if event == cv2.EVENT_RBUTTONDOWN and local_xy is not None:
             self.dragging_pan = True
@@ -1476,7 +1582,12 @@ class Cv2TransformReviewWindow:
             view.center_x -= dx / max(mapping.scale, 1e-6)
             view.center_y -= dy / max(mapping.scale, 1e-6)
             shape = self.source_image.shape[:2] if pane_name == "source_native" else self.target_image.shape[:2]
-            self.pane_views[pane_name] = ensure_view_state(view, shape)
+            updated_view = ensure_view_state(view, shape)
+            stage_pair = self._stage_pair_for_pane(pane_name)
+            if stage_pair is not None:
+                self._set_shared_stage_view(stage_pair, updated_view)
+            else:
+                self.pane_views[pane_name] = updated_view
             self.pan_anchor = (pane_name, x, y)
             return
         if event == cv2.EVENT_RBUTTONUP:
@@ -1495,21 +1606,22 @@ class Cv2TransformReviewWindow:
             self.active_landmark_backup = None if current_point is None else np.asarray(current_point, dtype=float).copy()
             return
         if event == cv2.EVENT_MOUSEMOVE and self.active_landmark is not None and local_xy is not None:
-            self._update_landmark(role, self.active_landmark[1], local_xy)
+            active_role, active_name = self.active_landmark
+            self._update_landmark(active_role, active_name, local_xy)
             try:
                 self.bundle = self._recompute_bundle()
                 self.status_message = "Updated transform preview."
             except Exception as exc:
-                if role == "source":
+                if active_role == "source":
                     if self.active_landmark_backup is None:
-                        self.source_landmark_overrides.pop(self.active_landmark[1], None)
+                        self.source_landmark_overrides.pop(active_name, None)
                     else:
-                        self.source_landmark_overrides[self.active_landmark[1]] = self.active_landmark_backup.copy()
+                        self.source_landmark_overrides[active_name] = self.active_landmark_backup.copy()
                 else:
                     if self.active_landmark_backup is None:
-                        self.target_landmark_overrides.pop(self.active_landmark[1], None)
+                        self.target_landmark_overrides.pop(active_name, None)
                     else:
-                        self.target_landmark_overrides[self.active_landmark[1]] = self.active_landmark_backup.copy()
+                        self.target_landmark_overrides[active_name] = self.active_landmark_backup.copy()
                 self.bundle = self._recompute_bundle()
                 self.status_message = f"Invalid landmark edit reverted: {exc}"
             return
@@ -1580,6 +1692,26 @@ class Cv2ExportStepWindow:
 
     def _launch_export(self) -> None:
         self.export_dir.mkdir(parents=True, exist_ok=True)
+        log_path = self.export_dir / "background_render.log"
+        job_path = self.export_dir / "background_render_job.json"
+        validation_errors = render_validation_errors(
+            workers=self.args.render_workers,
+            prefetch=self.args.render_prefetch,
+            source="Step 3 background export",
+        )
+        if validation_errors:
+            save_json(
+                job_path,
+                {
+                    "status": "failed_validation",
+                    "workspace_dir": str(self.selection.workspace_dir),
+                    "log_path": str(log_path),
+                    "render_workers": self.args.render_workers,
+                    "render_prefetch": self.args.render_prefetch,
+                    "errors": validation_errors,
+                },
+            )
+            return
         module_name = "grid_transform.apps.export_saved_workspace_video_threaded"
         command = [
             sys.executable,
@@ -1588,12 +1720,10 @@ class Cv2ExportStepWindow:
             "--workspace-dir",
             str(self.selection.workspace_dir),
             "--workers",
-            str(int(self.args.render_workers)),
+            str(self.args.render_workers),
             "--prefetch",
-            str(int(self.args.render_prefetch)),
+            str(self.args.render_prefetch),
         ]
-        log_path = self.export_dir / "background_render.log"
-        job_path = self.export_dir / "background_render_job.json"
         popen_kwargs: dict[str, object] = {
             "cwd": str(PROJECT_DIR),
             "stdin": subprocess.DEVNULL,
@@ -1618,8 +1748,8 @@ class Cv2ExportStepWindow:
             "command": command,
             "log_path": str(log_path),
             "workspace_dir": str(self.selection.workspace_dir),
-            "render_workers": int(self.args.render_workers),
-            "render_prefetch": int(self.args.render_prefetch),
+            "render_workers": self.args.render_workers,
+            "render_prefetch": self.args.render_prefetch,
         }
         save_json(job_path, job_payload)
 
@@ -1652,6 +1782,7 @@ class Cv2ExportStepWindow:
 class Cv2AnnotationToGridTransformApp:
     def __init__(self, args: argparse.Namespace) -> None:
         self.args = args
+        self.ui_config: UIConfig = args.ui_config
         self.mapping = parse_mapping_doc(args.mapping_doc)
         self.cases = load_curated_cases(args.manifest_csv, args.vtln_dir)
         self.context_cache = ContextLoadCache()
@@ -1676,6 +1807,7 @@ class Cv2AnnotationToGridTransformApp:
             ],
             info_lines=source_text_block(source_context["snapshot"], selection.reference_speaker),
             allow_back=False,
+            ui_config=self.ui_config,
             args=self.args,
         )
         return editor.run()
@@ -1702,6 +1834,7 @@ class Cv2AnnotationToGridTransformApp:
             ],
             info_lines=info_lines,
             allow_back=True,
+            ui_config=self.ui_config,
             args=self.args,
         )
         return editor.run()
@@ -1747,6 +1880,7 @@ class Cv2AnnotationToGridTransformApp:
                         source_contours=source_contours,
                         target_image=target_context["target_image"],
                         target_contours=target_contours,
+                        ui_config=self.ui_config,
                         args=self.args,
                     )
                     review_action = review_window.run()
