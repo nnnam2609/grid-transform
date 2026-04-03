@@ -10,7 +10,7 @@ The repo is organized for reproducible experiments rather than a packaged librar
 - Estimate a two-step `Affine + TPS` transform between a source speaker and a target frame.
 - Move articulators or warp the full source image into target space.
 - Project VTLN annotations onto ArtSpeech videos when per-frame ArtSpeech contours are unavailable.
-- Interactively edit a projected source annotation on an ArtSpeech frame, save it, and reuse it for fixed-annotation session warping.
+- Interactively edit a projected source annotation on an ArtSpeech frame, save it, reuse it for fixed-annotation session warping, and promote the latest saved annotation back into the canonical VTLN defaults.
 - Run a multi-step `cv2` workflow to select a curated source speaker, edit source/target annotations, refine affine/TPS landmarks, and launch threaded background export jobs.
 - Warp a full ArtSpeech session into a target frame under a fixed-session annotation assumption.
 - Inspect within-speaker and cross-speaker vowel variability from ArtSpeech sessions.
@@ -97,6 +97,7 @@ Key behavior:
 
 - `config.yaml` defaults to `cache_mode: startup`, so the current selection is prewarmed from `Step 0`.
 - `Step 1` supports `S = save only`, `N = save and go next`, and `G = go next without saving`.
+- Saving in `Step 1A` updates the workspace copy under `outputs/annotation_to_grid_transform/.../source_annotation.latest.json`; that latest saved JSON is then eligible to overwrite/regenerate the canonical default annotation for the matching `(speaker, session, frame)` in the downstream bundle/sync commands.
 - `Step 2` highlights transform controls with contrasting colors:
   `Affine anchors = orange`, `TPS extra controls = green`, `other visible landmarks = yellow`.
 - `Step 3` uses the threaded exporter and writes a detached render job under the workspace output.
@@ -124,7 +125,7 @@ Latest-only files written per workspace:
 
 ### Interactive Source Annotation Editor
 
-The source-annotation editor opens a local `cv2` window, projects a VTLN reference contour set onto the best-matching ArtSpeech frame, lets you drag contour handles, then saves the edited annotation for reuse in the session warp pipeline.
+The source-annotation editor opens a local `cv2` window, projects a VTLN reference contour set onto the best-matching ArtSpeech frame, lets you drag contour handles, then saves the edited annotation for reuse in the session warp pipeline and for promotion back into the canonical/default annotation bundle.
 
 Default example for the current bundled workflow:
 
@@ -146,6 +147,8 @@ Default save location:
 outputs/source_annotation_edits/p7_s2_frame_0829/
 ```
 
+Saving here does not edit `VTLN/data/` directly. The editor writes a latest saved annotation snapshot, and the bundle/sync maintenance commands decide when that snapshot overwrites the canonical defaults.
+
 Saved files:
 
 - `edited_annotation.json`: canonical contour coordinates plus source/target metadata.
@@ -155,6 +158,12 @@ Saved files:
 - `editor_overview.png`: 4-panel snapshot matching the editor layout.
 - `save_summary.json`: summary of the saved assets and any triggered sequence render.
 - `sequence_warp/`: created when rendering is requested; contains warped/review videos, preview PNGs, and `warp_summary.json`.
+
+Canonical overwrite flow:
+
+- The newest saved annotation for a given `(artspeech_speaker, session, source_frame)` wins, whether it came from `outputs/annotation_to_grid_transform/.../source_annotation.latest.json` or `outputs/source_annotation_edits/.../edited_annotation.json`.
+- `run_sync_latest_annotations_to_curated_vtln.py` overwrites the matching curated `VTLN/u_curated_selection_20260330/*.png` and `*.zip` files in place, after archiving the previous files.
+- `run_build_vtln_data_bundle.py` rebuilds the public `VTLN/data/` bundle from the current triplet manifest plus the newest saved annotations.
 
 Useful options:
 
@@ -169,6 +178,13 @@ Headless save-only example:
 
 ```powershell
 .\.venv\Scripts\python .\scripts\run\run_edit_source_annotation.py --artspeech-speaker P7 --session S2 --reference-speaker 1640_P7_S2_F0829 --target-frame 143020 --dataset-root <ARTSPEECH_ROOT> --no-gui --skip-video-on-save
+```
+
+Promote the latest saved annotations into the canonical defaults:
+
+```powershell
+.\.venv\Scripts\python .\scripts\run\run_sync_latest_annotations_to_curated_vtln.py
+.\.venv\Scripts\python .\scripts\run\run_build_vtln_data_bundle.py
 ```
 
 Reuse a saved edited annotation in the warp pipeline:
@@ -223,6 +239,13 @@ The canonical CLI surface is the `scripts/run/` directory. Current tracked wrapp
 .\.venv\Scripts\python .\scripts\run\run_move_target_articulators.py
 .\.venv\Scripts\python .\scripts\run\run_warp_source_speaker_to_target.py
 .\.venv\Scripts\python .\scripts\run\run_evaluate_vtln_grid_quality.py
+```
+
+### Canonical Bundle Maintenance Commands
+
+```powershell
+.\.venv\Scripts\python .\scripts\run\run_sync_latest_annotations_to_curated_vtln.py
+.\.venv\Scripts\python .\scripts\run\run_build_vtln_data_bundle.py
 ```
 
 ### Report and PDF Commands

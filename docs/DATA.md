@@ -33,6 +33,20 @@ Examples:
 
 The bundled default example uses target frame `143020` from case `2008-003^01-1791/test`.
 
+## Canonical Annotation Update Flow
+
+Interactive annotation edits are saved under `outputs/`, not written directly into `VTLN/data/`.
+
+Current pipeline behavior:
+
+- `outputs/annotation_to_grid_transform/.../source_annotation.latest.json` stores the latest source annotation saved from the multi-step cv2 workflow.
+- `outputs/source_annotation_edits/.../edited_annotation.json` stores the latest source annotation saved from the standalone source-annotation editor.
+- For a given `(artspeech_speaker, session, source_frame)`, the newest saved JSON from those locations is treated as the authoritative annotation update.
+- `scripts/run/run_sync_latest_annotations_to_curated_vtln.py` applies that update back onto the canonical curated VTLN selection in place by overwriting the matching `*.png` and `*.zip` files after archiving the previous versions.
+- `scripts/run/run_build_vtln_data_bundle.py` rebuilds the public `VTLN/data/` bundle from the triplet manifest and those newest saved annotations. If no newer saved annotation exists for a row, the builder falls back to the curated ZIP already present in the curated VTLN folder.
+
+In other words, the saved annotation snapshot becomes the new default/canonical annotation only when it is promoted through the sync/build maintenance commands.
+
 ## External ArtSpeech Dataset Contract
 
 The session-oriented utilities expect an ArtSpeech-style dataset root supplied with `--dataset-root`.
