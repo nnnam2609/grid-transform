@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 import numpy as np
@@ -302,6 +302,94 @@ def _apply_overrides(
     return merged
 
 
+def _single_point_landmark_pairs(
+    src_landmarks: dict[str, np.ndarray | None],
+    dst_landmarks: dict[str, np.ndarray | None],
+) -> list[tuple[str, np.ndarray, np.ndarray]]:
+    pairs_by_source_key: dict[tuple[float, float], tuple[str, np.ndarray, np.ndarray]] = {}
+    for name, src_value in src_landmarks.items():
+        dst_value = dst_landmarks.get(name)
+        if src_value is None or dst_value is None:
+            continue
+        src_arr = np.asarray(src_value, dtype=float)
+        dst_arr = np.asarray(dst_value, dtype=float)
+        if src_arr.ndim != 1 or dst_arr.ndim != 1 or src_arr.shape != (2,) or dst_arr.shape != (2,):
+            continue
+        key = tuple(np.round(src_arr, 6))
+        displacement = float(np.linalg.norm(dst_arr - src_arr))
+        current = pairs_by_source_key.get(key)
+        if current is None:
+            pairs_by_source_key[key] = (name, src_arr, dst_arr)
+            continue
+        _, current_src, current_dst = current
+        current_displacement = float(np.linalg.norm(current_dst - current_src))
+        if displacement >= current_displacement:
+            pairs_by_source_key[key] = (name, src_arr, dst_arr)
+    return list(pairs_by_source_key.values())
+
+
+def _deform_grid_from_landmark_overrides(
+    grid,
+    raw_landmarks: dict[str, np.ndarray | None],
+    updated_landmarks: dict[str, np.ndarray | None],
+):
+    pairs = _single_point_landmark_pairs(raw_landmarks, updated_landmarks)
+    if not pairs:
+        return grid
+    if all(np.allclose(src_arr, dst_arr, atol=1e-6) for _, src_arr, dst_arr in pairs):
+        return grid
+
+    src_points = np.vstack([src_arr for _, src_arr, _ in pairs])
+    dst_points = np.vstack([dst_arr for _, _, dst_arr in pairs])
+
+    if len(src_points) >= 3:
+        deformation = fit_tps(src_points, dst_points, smoothing=0.0)
+
+        def apply_deformation(points):
+            return apply_tps(deformation, points)
+
+    else:
+        mean_delta = np.mean(dst_points - src_points, axis=0)
+
+        def apply_deformation(points):
+            return np.asarray(points, dtype=float) + mean_delta
+
+    deformed_horiz_raw = [apply_deformation(line) for line in grid.horiz_lines]
+    deformed_horiz, deformed_vert = smooth_transformed_grid(
+        deformed_horiz_raw,
+        updated_landmarks,
+        grid.n_vert,
+        top_axis_passes=4,
+    )
+
+    left_pts = np.asarray([line[0] for line in deformed_horiz], dtype=float) if deformed_horiz else None
+    right_pts = np.asarray([line[-1] for line in deformed_horiz], dtype=float) if deformed_horiz else None
+    i_points = {
+        name: None if updated_landmarks.get(name) is None else np.asarray(updated_landmarks[name], dtype=float).copy()
+        for name in (f"I{index}" for index in range(1, 8))
+    }
+    cervical_centers = {
+        f"c{index}": None if updated_landmarks.get(f"C{index}") is None else tuple(np.asarray(updated_landmarks[f"C{index}"], dtype=float))
+        for index in range(1, 7)
+    }
+
+    return replace(
+        grid,
+        horiz_lines=[np.asarray(line, dtype=float).copy() for line in deformed_horiz],
+        vert_lines=[np.asarray(line, dtype=float).copy() for line in deformed_vert],
+        left_pts=left_pts,
+        right_pts=right_pts,
+        I1=None if updated_landmarks.get("I1") is None else np.asarray(updated_landmarks["I1"], dtype=float).copy(),
+        L6=None if updated_landmarks.get("L6") is None else np.asarray(updated_landmarks["L6"], dtype=float).copy(),
+        I_points=i_points,
+        cervical_centers=cervical_centers,
+        P1_point=None if updated_landmarks.get("P1") is None else np.asarray(updated_landmarks["P1"], dtype=float).copy(),
+        M1_point=None if updated_landmarks.get("M1") is None else np.asarray(updated_landmarks["M1"], dtype=float).copy(),
+        vt_curve=None if grid.vt_curve is None else np.asarray(apply_deformation(grid.vt_curve), dtype=float),
+        spine_curve=None if grid.spine_curve is None else np.asarray(apply_deformation(grid.spine_curve), dtype=float),
+    )
+
+
 def _serialize_affine(transform: dict[str, np.ndarray]) -> dict[str, object]:
     return {
         "A": np.asarray(transform["A"], dtype=float).tolist(),
@@ -340,13 +428,15 @@ def build_transform_bundle(
     source_landmark_overrides: dict[str, np.ndarray | None] | None = None,
     target_landmark_overrides: dict[str, np.ndarray | None] | None = None,
 ) -> dict[str, object]:
-    source_grid = build_grid(source_image, source_contours, n_vert=9, n_points=250, frame_number=source_frame_number)
-    target_grid = build_grid(target_image, target_contours, n_vert=9, n_points=250, frame_number=target_frame_number)
+    source_grid_base = build_grid(source_image, source_contours, n_vert=9, n_points=250, frame_number=source_frame_number)
+    target_grid_base = build_grid(target_image, target_contours, n_vert=9, n_points=250, frame_number=target_frame_number)
 
-    source_landmarks_raw = extract_true_landmarks(source_grid)
-    target_landmarks_raw = extract_true_landmarks(target_grid)
+    source_landmarks_raw = extract_true_landmarks(source_grid_base)
+    target_landmarks_raw = extract_true_landmarks(target_grid_base)
     source_landmarks = _apply_overrides(source_landmarks_raw, source_landmark_overrides)
     target_landmarks = _apply_overrides(target_landmarks_raw, target_landmark_overrides)
+    source_grid = _deform_grid_from_landmark_overrides(source_grid_base, source_landmarks_raw, source_landmarks)
+    target_grid = _deform_grid_from_landmark_overrides(target_grid_base, target_landmarks_raw, target_landmarks)
 
     step0_errors = compute_named_point_errors(source_landmarks, target_landmarks, LANDMARK_REPORT_ORDER)
     step0_metrics = compute_metrics(source_landmarks, target_landmarks)

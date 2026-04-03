@@ -98,9 +98,13 @@ Key behavior:
 - `config.yaml` defaults to `cache_mode: startup`, so the current selection is prewarmed from `Step 0`.
 - `Step 1` supports `S = save only`, `N = save and go next`, and `G = go next without saving`.
 - Saving in `Step 1A` updates the workspace copy under `outputs/annotation_to_grid_transform/.../source_annotation.latest.json`; that latest saved JSON is then eligible to overwrite/regenerate the canonical default annotation for the matching `(speaker, session, frame)` in the downstream bundle/sync commands.
+- `Step 2` supports `S = save only`, `G = go to Step 3 without saving`, `N = save and go to Step 3`, `B = save and go back to Step 1`, and `0 = save and return to Step 0`.
+- Dragging a landmark in `Step 2` now recomputes the corresponding native source/target grid immediately, so the native, affine, and final previews all track the updated grid state instead of only moving the landmark overlay.
+- `Step 2` includes `Reset source grid` and `Reset target grid` buttons, plus hotkeys `1` and `2`, to clear landmark overrides for one side and restore the grid rebuilt from that side's current annotation.
 - `Step 2` highlights transform controls with contrasting colors:
   `Affine anchors = orange`, `TPS extra controls = green`, `other visible landmarks = yellow`.
 - `Step 3` uses the threaded exporter and writes a detached render job under the workspace output.
+- If `Step 3` is opened from `Step 2` with `G`, the current transform stays in memory without touching `transform_spec.latest.json`; pressing launch in `Step 3` saves that in-memory transform immediately before export, while `B` returns to `Step 2` with the unsaved edits still present.
 - `render_workers` and `render_prefetch` are validated early, and invalid Step 3 launches write `background_render_job.json` with `status: failed_validation` instead of spawning a process.
 
 Headless/runtime note:
@@ -263,14 +267,6 @@ The canonical CLI surface is the `scripts/run/` directory. Current tracked wrapp
 ```powershell
 .\.venv\Scripts\python .\scripts\run\run_sync_latest_annotations_to_curated_vtln.py
 .\.venv\Scripts\python .\scripts\run\run_build_vtln_data_bundle.py
-```
-
-### Report and PDF Commands
-
-```powershell
-.\.venv\Scripts\python .\scripts\run\run_generate_report_assets.py
-.\.venv\Scripts\python .\scripts\run\run_convert_to_pdf.py
-.\scripts\run\build_report.ps1
 ```
 
 ### ArtSpeech and Projection Commands

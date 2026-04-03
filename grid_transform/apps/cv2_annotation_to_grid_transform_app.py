@@ -124,6 +124,17 @@ class PanelMapping:
     display_h: int
 
 
+@dataclass(frozen=True)
+class ClickTarget:
+    x0: int
+    y0: int
+    width: int
+    height: int
+
+    def contains(self, x: int, y: int) -> bool:
+        return self.x0 <= x < self.x0 + self.width and self.y0 <= y < self.y0 + self.height
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     pre_parser = argparse.ArgumentParser(add_help=False)
     pre_parser.add_argument("--config", type=Path, default=APP_CONFIG_PATH)
@@ -247,6 +258,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def bgr_gray(image: np.ndarray) -> np.ndarray:
     array = as_grayscale_uint8(image)
     return cv2.cvtColor(array, cv2.COLOR_GRAY2BGR)
+
+
+def copy_points_map(points_map: dict[str, np.ndarray | None] | None) -> dict[str, np.ndarray | None]:
+    if not points_map:
+        return {}
+    return {
+        name: None if value is None else np.asarray(value, dtype=float).copy()
+        for name, value in points_map.items()
+    }
 
 
 def ensure_view_state(view: ViewState | None, image_shape: tuple[int, int]) -> ViewState:
@@ -450,6 +470,25 @@ def draw_sidebar_block(panel: np.ndarray, title: str, lines: list[str], top: int
     for index, line in enumerate(lines):
         cv2.putText(panel, line, (24, top + 52 + 20 * index), cv2.FONT_HERSHEY_SIMPLEX, 0.47, TEXT_COLOR, 1, cv2.LINE_AA)
     return top + block_h + 12
+
+
+def draw_action_button(
+    canvas: np.ndarray,
+    *,
+    rect: ClickTarget,
+    title: str,
+    subtitle: str,
+    enabled: bool,
+    accent_color: tuple[int, int, int] = ACCENT,
+) -> None:
+    fill = (42, 42, 42) if enabled else (28, 28, 28)
+    outline = accent_color if enabled else (72, 72, 72)
+    title_color = TEXT_COLOR if enabled else MUTED_TEXT
+    subtitle_color = accent_color if enabled else (120, 120, 120)
+    cv2.rectangle(canvas, (rect.x0, rect.y0), (rect.x0 + rect.width, rect.y0 + rect.height), fill, -1)
+    cv2.rectangle(canvas, (rect.x0, rect.y0), (rect.x0 + rect.width, rect.y0 + rect.height), outline, 1)
+    cv2.putText(canvas, title, (rect.x0 + 12, rect.y0 + 24), cv2.FONT_HERSHEY_SIMPLEX, 0.52, title_color, 1, cv2.LINE_AA)
+    cv2.putText(canvas, subtitle, (rect.x0 + 12, rect.y0 + 46), cv2.FONT_HERSHEY_SIMPLEX, 0.42, subtitle_color, 1, cv2.LINE_AA)
 
 
 def save_canvas_preview(path: Path, image: np.ndarray) -> None:
@@ -1258,6 +1297,9 @@ class Cv2TransformReviewWindow:
         target_contours: dict[str, np.ndarray],
         ui_config: UIConfig,
         args: argparse.Namespace,
+        initial_source_landmark_overrides: dict[str, np.ndarray | None] | None = None,
+        initial_target_landmark_overrides: dict[str, np.ndarray | None] | None = None,
+        initial_dirty: bool = False,
     ) -> None:
         self.selection = selection
         self.source_image = np.asarray(source_image, dtype=np.uint8)
@@ -1270,7 +1312,10 @@ class Cv2TransformReviewWindow:
 
         self.source_landmark_overrides: dict[str, np.ndarray | None] = {}
         self.target_landmark_overrides: dict[str, np.ndarray | None] = {}
-        if self.paths["landmark_overrides"].is_file():
+        if initial_source_landmark_overrides is not None or initial_target_landmark_overrides is not None:
+            self.source_landmark_overrides = copy_points_map(initial_source_landmark_overrides)
+            self.target_landmark_overrides = copy_points_map(initial_target_landmark_overrides)
+        elif self.paths["landmark_overrides"].is_file():
             try:
                 overrides_payload = json.loads(self.paths["landmark_overrides"].read_text(encoding="utf-8"))
                 for name, value in overrides_payload.get("source_landmark_overrides", {}).items():
@@ -1301,13 +1346,16 @@ class Cv2TransformReviewWindow:
             "target_final": PaneGeometry((pane_w + pane_gap) * 2, pane_h + pane_gap, pane_w, pane_h),
         }
         self.last_panel_mappings: dict[str, PanelMapping] = {}
+        self.footer_buttons: dict[str, ClickTarget] = {}
         self.active_landmark: tuple[str, str] | None = None
         self.active_landmark_backup: np.ndarray | None = None
         self.dragging_pan = False
         self.pan_anchor: tuple[str, int, int] | None = None
+        self.dirty = bool(initial_dirty)
         self.status_message = (
             "Drag source/target landmarks in the native panels. Right-drag image to pan. "
-            "S = save only | B = save and go back to step 1 | "
+            "Click reset buttons or press 1/2 to restore annotation-built source/target grids. "
+            "G = go to step 3 without saving | S = save only | B = save and go back to step 1 | "
             "0 = save and return to step 0 | N = save and go to step 3 | X = exit"
         )
         self._apply_stage_focus_views()
@@ -1415,6 +1463,23 @@ class Cv2TransformReviewWindow:
         else:
             self.target_landmark_overrides[name] = clamped
 
+    def _reset_landmarks_for_role(self, role: str) -> None:
+        overrides = self.source_landmark_overrides if role == "source" else self.target_landmark_overrides
+        if not overrides:
+            self.status_message = f"{role.capitalize()} grid already matches the annotation-built landmarks."
+            return
+        cleared_count = len(overrides)
+        overrides.clear()
+        if self.active_landmark is not None and self.active_landmark[0] == role:
+            self.active_landmark = None
+            self.active_landmark_backup = None
+        self.bundle = self._recompute_bundle()
+        self.dirty = True
+        self.status_message = (
+            f"Reset {role} grid to the landmarks rebuilt from the current {role} annotation "
+            f"({cleared_count} override{'s' if cleared_count != 1 else ''} cleared)."
+        )
+
     def _save(self) -> None:
         save_json(
             self.paths["landmark_overrides"],
@@ -1438,6 +1503,7 @@ class Cv2TransformReviewWindow:
             self.paths["final_preview"],
             overview[:, pane_w * 2 + pane_gap * 2 :].copy(),
         )
+        self.dirty = False
         self.status_message = "Saved transform_spec.latest.json and transform_review.latest.json"
 
     def _render_named_panel(self, pane_name: str) -> np.ndarray:
@@ -1519,6 +1585,7 @@ class Cv2TransformReviewWindow:
             canvas[geometry.y0 : geometry.y0 + geometry.height, geometry.x0 : geometry.x0 + geometry.width] = panel
         footer_y = pane_h * 2 + pane_gap
         canvas[footer_y:, :] = FOOTER_BG
+        self.footer_buttons = {}
         final_metrics = self.bundle["transform_review"]["metrics"]["final"]
         metric_line = (
             f"final horiz_axis_rms={final_metrics.get('horiz_axis_rms')} "
@@ -1527,7 +1594,8 @@ class Cv2TransformReviewWindow:
         )
         help_line = (
             "Drag only in native panels | wheel zoom | right-drag image to pan | "
-            "S save only | B save and go back to step 1 | "
+            "1 reset source | 2 reset target | "
+            "G go step 3 no-save | S save only | B save and go back to step 1 | "
             "0 save and return to step 0 | N save and go to step 3 | X exit"
         )
         cv2.putText(canvas, help_line, (12, footer_y + 26), cv2.FONT_HERSHEY_SIMPLEX, 0.46, TEXT_COLOR, 1, cv2.LINE_AA)
@@ -1542,10 +1610,44 @@ class Cv2TransformReviewWindow:
         for index, line in enumerate(label_lines):
             color = AFFINE_COLOR if index < len(affine_lines) else TPS_COLOR
             cv2.putText(canvas, line, (start_x, footer_y + 82 + 22 * index), cv2.FONT_HERSHEY_SIMPLEX, 0.44, color, 1, cv2.LINE_AA)
+        button_y = footer_y + 84
+        button_w = 240
+        button_h = 56
+        button_gap = 14
+        target_rect = ClickTarget(canvas_w - 24 - button_w, button_y, button_w, button_h)
+        source_rect = ClickTarget(target_rect.x0 - button_gap - button_w, button_y, button_w, button_h)
+        source_override_count = len(self.source_landmark_overrides)
+        target_override_count = len(self.target_landmark_overrides)
+        self.footer_buttons["reset_source"] = source_rect
+        self.footer_buttons["reset_target"] = target_rect
+        draw_action_button(
+            canvas,
+            rect=source_rect,
+            title="Reset source grid",
+            subtitle=f"1 | clear {source_override_count} source override{'s' if source_override_count != 1 else ''}",
+            enabled=source_override_count > 0,
+            accent_color=(255, 190, 11),
+        )
+        draw_action_button(
+            canvas,
+            rect=target_rect,
+            title="Reset target grid",
+            subtitle=f"2 | clear {target_override_count} target override{'s' if target_override_count != 1 else ''}",
+            enabled=target_override_count > 0,
+            accent_color=(60, 134, 255),
+        )
         cv2.putText(canvas, self.status_message[:180], (12, footer_y + footer_h - 18), cv2.FONT_HERSHEY_SIMPLEX, 0.48, ACCENT, 1, cv2.LINE_AA)
         return canvas
 
     def _on_mouse(self, event: int, x: int, y: int, flags: int, _param) -> None:
+        if event == cv2.EVENT_LBUTTONDOWN:
+            for button_name, rect in self.footer_buttons.items():
+                if rect.contains(x, y):
+                    if button_name == "reset_source":
+                        self._reset_landmarks_for_role("source")
+                    elif button_name == "reset_target":
+                        self._reset_landmarks_for_role("target")
+                    return
         pane_name = self._pane_name_at(x, y)
         if pane_name is None:
             return
@@ -1608,6 +1710,7 @@ class Cv2TransformReviewWindow:
             self._update_landmark(active_role, active_name, local_xy)
             try:
                 self.bundle = self._recompute_bundle()
+                self.dirty = True
                 self.status_message = "Updated transform preview."
             except Exception as exc:
                 if active_role == "source":
@@ -1647,6 +1750,13 @@ class Cv2TransformReviewWindow:
                     return "exit_all"
                 if key == ord("s"):
                     self._save()
+                elif key in (ord("g"), ord("G")):
+                    self.status_message = "Continuing to Step 3 without saving the current transform to disk."
+                    return "step3_no_save"
+                elif key == ord("1"):
+                    self._reset_landmarks_for_role("source")
+                elif key == ord("2"):
+                    self._reset_landmarks_for_role("target")
                 elif key == ord("b"):
                     self._save()
                     return "back_step1"
@@ -1661,15 +1771,29 @@ class Cv2TransformReviewWindow:
 
 
 class Cv2ExportStepWindow:
-    def __init__(self, *, selection: WorkspaceSelection, args: argparse.Namespace) -> None:
+    def __init__(
+        self,
+        *,
+        selection: WorkspaceSelection,
+        args: argparse.Namespace,
+        has_unsaved_transform: bool = False,
+        save_before_launch: Callable[[], None] | None = None,
+    ) -> None:
         self.selection = selection
         self.args = args
         self.paths = step_file_paths(selection.workspace_dir)
         self.export_dir = selection.workspace_dir / "background_export"
+        self.has_unsaved_transform = bool(has_unsaved_transform)
+        self.save_before_launch = save_before_launch
 
     def _render(self) -> np.ndarray:
         canvas = np.full((420, 980, 3), PANEL_BG, dtype=np.uint8)
         cv2.putText(canvas, "Step 3 - Background export", (20, 34), cv2.FONT_HERSHEY_SIMPLEX, 0.84, TEXT_COLOR, 2, cv2.LINE_AA)
+        launch_line = "L = launch background export and return to step 0"
+        note_line = "After launch, the app returns to step 0 by default."
+        if self.has_unsaved_transform:
+            launch_line = "L = save current Step 2 transform, then launch background export"
+            note_line = "Current Step 2 changes are still only in memory until launch or manual save."
         lines = [
             f"workspace: {self.selection.workspace_id}",
             f"source: {self.selection.case.speaker}/{self.selection.case.session} frame {self.selection.case.frame_index_1based:04d}",
@@ -1678,17 +1802,24 @@ class Cv2ExportStepWindow:
             f"workers/prefetch: {self.args.render_workers}/{self.args.render_prefetch}",
             f"output dir: {self.export_dir}",
             "",
-            "L = launch background export and return to step 0",
+            launch_line,
             "B = go back to step 2",
-            "After launch, the app returns to step 0 by default.",
+            note_line,
         ]
         y = 86
         for line in lines:
-            cv2.putText(canvas, line, (24, y), cv2.FONT_HERSHEY_SIMPLEX, 0.58, TEXT_COLOR if line else MUTED_TEXT, 1, cv2.LINE_AA)
+            color = TEXT_COLOR if line else MUTED_TEXT
+            if self.has_unsaved_transform and line in {launch_line, note_line}:
+                color = ACCENT
+            cv2.putText(canvas, line, (24, y), cv2.FONT_HERSHEY_SIMPLEX, 0.58, color, 1, cv2.LINE_AA)
             y += 28
         return canvas
 
     def _launch_export(self) -> None:
+        if self.save_before_launch is not None:
+            self.save_before_launch()
+            self.has_unsaved_transform = False
+            self.save_before_launch = None
         self.export_dir.mkdir(parents=True, exist_ok=True)
         log_path = self.export_dir / "background_render.log"
         job_path = self.export_dir / "background_render_job.json"
@@ -1871,6 +2002,9 @@ class Cv2AnnotationToGridTransformApp:
                         continue
                     break
 
+                pending_source_landmark_overrides: dict[str, np.ndarray | None] | None = None
+                pending_target_landmark_overrides: dict[str, np.ndarray | None] | None = None
+                pending_review_dirty = False
                 while True:
                     review_window = Cv2TransformReviewWindow(
                         selection=selection,
@@ -1880,6 +2014,9 @@ class Cv2AnnotationToGridTransformApp:
                         target_contours=target_contours,
                         ui_config=self.ui_config,
                         args=self.args,
+                        initial_source_landmark_overrides=pending_source_landmark_overrides,
+                        initial_target_landmark_overrides=pending_target_landmark_overrides,
+                        initial_dirty=pending_review_dirty,
                     )
                     review_action = review_window.run()
                     if review_action == "exit_all":
@@ -1899,11 +2036,20 @@ class Cv2AnnotationToGridTransformApp:
                                 return 0
                         continue
 
-                    export_window = Cv2ExportStepWindow(selection=selection, args=self.args)
+                    export_window = Cv2ExportStepWindow(
+                        selection=selection,
+                        args=self.args,
+                        has_unsaved_transform=(review_action == "step3_no_save"),
+                        save_before_launch=review_window._save if review_action == "step3_no_save" else None,
+                    )
                     export_action = export_window.run()
                     if export_action == "exit_all":
                         return 0
                     if export_action == "back":
+                        if review_action == "step3_no_save":
+                            pending_source_landmark_overrides = copy_points_map(review_window.source_landmark_overrides)
+                            pending_target_landmark_overrides = copy_points_map(review_window.target_landmark_overrides)
+                            pending_review_dirty = review_window.dirty
                         continue
                     break
                 continue
