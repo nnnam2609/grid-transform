@@ -210,6 +210,51 @@ Review video: [P7_S2_warped_to_143020_review.mp4](docs/assets/github/p7-s2-warpe
 .\.venv\Scripts\python .\scripts\run\run_analyze_aligned_speaker_vowel_variants.py --speaker P7 --samples-per-vowel 10
 ```
 
+## Full Command Inventory
+
+The canonical CLI surface is the `scripts/run/` directory. Current tracked wrappers:
+
+### Core Grid and Transform Commands
+
+```powershell
+.\.venv\Scripts\python .\scripts\run\run_create_speaker_grid.py
+.\.venv\Scripts\python .\scripts\run\run_average_speaker_grid_transform.py
+.\.venv\Scripts\python .\scripts\run\run_method4_transform.py
+.\.venv\Scripts\python .\scripts\run\run_move_target_articulators.py
+.\.venv\Scripts\python .\scripts\run\run_warp_source_speaker_to_target.py
+.\.venv\Scripts\python .\scripts\run\run_evaluate_vtln_grid_quality.py
+```
+
+### Report and PDF Commands
+
+```powershell
+.\.venv\Scripts\python .\scripts\run\run_generate_report_assets.py
+.\.venv\Scripts\python .\scripts\run\run_convert_to_pdf.py
+.\scripts\run\build_report.ps1
+```
+
+### ArtSpeech and Projection Commands
+
+```powershell
+.\.venv\Scripts\python .\scripts\run\run_build_artspeech_session_video.py
+.\.venv\Scripts\python .\scripts\run\run_build_p4_s10_video.py
+.\.venv\Scripts\python .\scripts\run\run_compare_vtln_to_artspeech_session.py
+.\.venv\Scripts\python .\scripts\run\run_project_vtln_reference_to_artspeech_video.py
+.\.venv\Scripts\python .\scripts\run\run_edit_source_annotation.py
+.\.venv\Scripts\python .\scripts\run\run_warp_artspeech_session_to_target_video.py
+```
+
+### Vowel Variability and Comparison Commands
+
+```powershell
+.\.venv\Scripts\python .\scripts\run\run_extract_vowel_samples.py
+.\.venv\Scripts\python .\scripts\run\run_extract_all_speakers_vowel_variants.py
+.\.venv\Scripts\python .\scripts\run\run_extract_speaker_vowel_variants.py
+.\.venv\Scripts\python .\scripts\run\run_make_vowel_contact_sheets.py
+.\.venv\Scripts\python .\scripts\run\run_analyze_aligned_speaker_vowel_variants.py
+.\.venv\Scripts\python .\scripts\run\run_compare_gender_group_transforms.py
+```
+
 ## Results Gallery
 
 ### Default Target Grid
