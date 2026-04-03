@@ -127,11 +127,28 @@ Latest-only files written per workspace:
 
 The source-annotation editor opens a local `cv2` window, projects a VTLN reference contour set onto the best-matching ArtSpeech frame, lets you drag contour handles, then saves the edited annotation for reuse in the session warp pipeline and for promotion back into the canonical/default annotation bundle.
 
-Default example for the current bundled workflow:
+Zero-arg launch on this workspace:
+
+```powershell
+.\.venv\Scripts\python .\scripts\run\run_edit_source_annotation.py
+```
+
+This uses the current built-in defaults:
+
+- `--artspeech-speaker P7`
+- `--session S2`
+- `--reference-speaker 1640_P7_S2_F0829`
+- `--target-frame 143020`
+- `--vtln-dir VTLN/data`
+- the auto-resolved local ArtSpeech dataset root
+
+Portable explicit launch:
 
 ```powershell
 .\.venv\Scripts\python .\scripts\run\run_edit_source_annotation.py --artspeech-speaker P7 --session S2 --reference-speaker 1640_P7_S2_F0829 --target-frame 143020 --dataset-root <ARTSPEECH_ROOT>
 ```
+
+If the zero-arg launch fails on another machine, the usual cause is that the default ArtSpeech dataset root cannot be resolved there. In that case, pass `--dataset-root <ARTSPEECH_ROOT>` explicitly.
 
 Interactive controls:
 
