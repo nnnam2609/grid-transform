@@ -20,6 +20,7 @@ from grid_transform.source_annotation import load_source_annotation_json
 CURATED_VTLN_DIR_DEFAULT = PROJECT_DIR / "VTLN" / "u_curated_selection_20260330"
 MANIFEST_CSV_DEFAULT = CURATED_VTLN_DIR_DEFAULT / "selection_manifest.csv"
 ARCHIVE_ROOT_DEFAULT = DEFAULT_OUTPUT_DIR / "vtln_annotation_archive"
+BACKUP_ROOT_DEFAULT = PROJECT_DIR.parent / "backup"
 
 
 @dataclass(frozen=True)
@@ -88,6 +89,16 @@ def load_manifest(path: Path) -> list[CuratedRow]:
     with path.open("r", encoding="utf-8", newline="") as handle:
         reader = csv.DictReader(handle)
         return [parse_manifest_row(row) for row in reader]
+
+
+def resolve_existing_dir(path: Path, *, leaf_name: str) -> Path:
+    if path.is_dir():
+        return path
+    if BACKUP_ROOT_DEFAULT.is_dir():
+        matches = [candidate for candidate in BACKUP_ROOT_DEFAULT.rglob(leaf_name) if candidate.is_dir()]
+        if matches:
+            return max(matches, key=lambda candidate: candidate.stat().st_mtime)
+    return path
 
 
 def discover_saved_annotation_paths() -> list[Path]:
@@ -197,6 +208,11 @@ def write_summary(
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
+    args.curated_vtln_dir = resolve_existing_dir(args.curated_vtln_dir, leaf_name=CURATED_VTLN_DIR_DEFAULT.name)
+    if not args.manifest_csv.is_file():
+        candidate_manifest = args.curated_vtln_dir / "selection_manifest.csv"
+        if candidate_manifest.is_file():
+            args.manifest_csv = candidate_manifest
     curated_rows = load_manifest(args.manifest_csv)
     latest_map = build_latest_annotation_map()
 
