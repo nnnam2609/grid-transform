@@ -3,7 +3,7 @@
 This repository mixes three data tiers:
 
 1. lightweight bundled reference data in `VTLN/`
-2. lightweight bundled target-frame sample data in `vocal-tract-seg/`
+2. lightweight bundled target-frame sample data in `VTLN/data/`
 3. larger external ArtSpeech session data used by the video and vowel-analysis utilities
 
 The goal of this note is to document the **path contract** expected by the code, not to prescribe any machine-specific mount or download workflow.
@@ -12,30 +12,40 @@ The goal of this note is to document the **path contract** expected by the code,
 
 ### `VTLN/`
 
-The repo bundles a small set of VTLN-style reference images and ROI zips used by the default examples.
+The repo bundles a canonical `VTLN/data/` folder used by the default examples.
 
 Expected file pattern:
 
-- `<image_name>.png` or `<image_name>.tif`
-- `<image_name>.zip`
+- `data/<image_name>.png` or `data/<image_name>.tif`
+- `data/<image_name>.zip`
+- `data/nnunet_data_80/<case>/test/PNG_MR/<frame>.png`
+- `data/nnunet_data_80/<case>/test/contours/<frame>.zip`
+- `data/nnunet_data_80/<case>/test/contours/<frame>_*.roi`
 
 The zip contains ImageJ ROI contours keyed by articulator name.
 
 Examples:
 
-- `1640_s10_0829.png`
-- `1640_s10_0829.zip`
-
-### `vocal-tract-seg/`
-
-The repo also bundles a lightweight segmentation example used by the default source/target pipeline.
-
-Relevant path pattern:
-
-- `vocal-tract-seg/data_80/<case>/test/PNG_MR/<frame>.png`
-- `vocal-tract-seg/results/nnunet_080/inference_contours/<case>/test/<frame>_*.npy`
+- `data/1640_P7_S2_F0829.png`
+- `data/1640_P7_S2_F0829.zip`
+- `data/nnunet_data_80/2008-003^01-1791/test/PNG_MR/143020.png`
+- `data/nnunet_data_80/2008-003^01-1791/test/contours/143020.zip`
 
 The bundled default example uses target frame `143020` from case `2008-003^01-1791/test`.
+
+## Canonical Annotation Update Flow
+
+Interactive annotation edits are saved under `outputs/`, not written directly into `VTLN/data/`.
+
+Current pipeline behavior:
+
+- `outputs/annotation_to_grid_transform/.../source_annotation.latest.json` stores the latest source annotation saved from the multi-step cv2 workflow.
+- `outputs/source_annotation_edits/.../edited_annotation.json` stores the latest source annotation saved from the standalone source-annotation editor.
+- For a given `(artspeech_speaker, session, source_frame)`, the newest saved JSON from those locations is treated as the authoritative annotation update.
+- `scripts/run/run_sync_latest_annotations_to_curated_vtln.py` applies that update back onto the canonical curated VTLN selection in place by overwriting the matching `*.png` and `*.zip` files after archiving the previous versions.
+- `scripts/run/run_build_vtln_data_bundle.py` rebuilds the public `VTLN/data/` bundle from the triplet manifest and those newest saved annotations. If no newer saved annotation exists for a row, the builder falls back to the curated ZIP already present in the curated VTLN folder.
+
+In other words, the saved annotation snapshot becomes the new default/canonical annotation only when it is promoted through the sync/build maintenance commands.
 
 ## External ArtSpeech Dataset Contract
 
@@ -68,13 +78,13 @@ The ArtSpeech workflows in this repo do not require the full dataset to be copie
 
 ### VTLN reference loading
 
-- grayscale image: `.png`, `.tif`, or `.tiff`
+- RGB triplet or grayscale image: `.png`, `.tif`, or `.tiff`
 - contours: `.zip` containing ImageJ `.roi` files
 
 ### Segmentation target loading
 
 - frame images: `PNG_MR/<frame>.png`
-- predicted contour arrays: `<frame>_*.npy`
+- groundtruth contours: `contours/<frame>.zip` or `contours/<frame>_*.roi`
 
 ### ArtSpeech session loading
 
@@ -102,7 +112,7 @@ Phone labels are expected to follow the same style as the token inventory used b
 ## Which Workflows Need Which Data
 
 - Core grid transform pipeline:
-  works with the bundled `VTLN/` and `vocal-tract-seg/` examples by default.
+  works with the bundled `VTLN/data/` examples by default.
 - Report generation:
   uses the same bundled sample/reference data unless you override paths in the scripts.
 - ArtSpeech session video, projection, warp, and vowel-variability workflows:

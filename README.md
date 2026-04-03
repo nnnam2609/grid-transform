@@ -10,7 +10,8 @@ The repo is organized for reproducible experiments rather than a packaged librar
 - Estimate a two-step `Affine + TPS` transform between a source speaker and a target frame.
 - Move articulators or warp the full source image into target space.
 - Project VTLN annotations onto ArtSpeech videos when per-frame ArtSpeech contours are unavailable.
-- Interactively edit a projected source annotation on an ArtSpeech frame, save it, and reuse it for fixed-annotation session warping.
+- Interactively edit a projected source annotation on an ArtSpeech frame, save it, reuse it for fixed-annotation session warping, and promote the latest saved annotation back into the canonical VTLN defaults.
+- Run a multi-step `cv2` workflow to select a curated source speaker, edit source/target annotations, refine affine/TPS landmarks, and launch threaded background export jobs.
 - Warp a full ArtSpeech session into a target frame under a fixed-session annotation assumption.
 - Inspect within-speaker and cross-speaker vowel variability from ArtSpeech sessions.
 
@@ -26,10 +27,10 @@ The repo is organized for reproducible experiments rather than a packaged librar
   Side experiment code and archived research helpers.
 - `docs/`
   Public-facing documentation, data notes, and README assets.
+- `config.yaml`
+  Local default settings for the multi-step `cv2` annotation-to-grid-transform app. CLI flags still override the YAML values.
 - `VTLN/`
-  Lightweight bundled VTLN reference images and ROI zips used by the default examples.
-- `vocal-tract-seg/`
-  Lightweight bundled target-frame sample data used by the default examples.
+  Canonical bundled data now lives in `VTLN/data/`, including 480x480 RGB triplet references, scaled ROI zips, and the bundled nnUNet target case.
 
 `scripts/run/` is the canonical interface. Root scripts such as `create_speaker_grid.py` remain available as convenience aliases for older commands.
 
@@ -42,7 +43,7 @@ python -m venv .venv
 
 ## Data Expectations
 
-The base grid-transform examples run against the bundled sample/reference data in `VTLN/` and `vocal-tract-seg/`.
+The base grid-transform examples run against the bundled sample/reference data in `VTLN/data/`.
 
 ArtSpeech session utilities require a separate external dataset root. The expected structure is described in [`docs/DATA.md`](docs/DATA.md). In short, the code expects an ArtSpeech-style speaker layout with:
 
@@ -56,7 +57,7 @@ Large external datasets are not redistributed in this repository.
 ### Core Grid Transform Pipeline
 
 ```powershell
-.\.venv\Scripts\python .\scripts\run\run_create_speaker_grid.py --source vtln --speaker 1640_s10_0829
+.\.venv\Scripts\python .\scripts\run\run_create_speaker_grid.py --source vtln --speaker 1640_P7_S2_F0829
 .\.venv\Scripts\python .\scripts\run\run_method4_transform.py
 .\.venv\Scripts\python .\scripts\run\run_move_target_articulators.py
 .\.venv\Scripts\python .\scripts\run\run_warp_source_speaker_to_target.py
@@ -66,19 +67,92 @@ Large external datasets are not redistributed in this repository.
 
 ```powershell
 .\.venv\Scripts\python .\scripts\run\run_build_artspeech_session_video.py --speaker P7 --session S10 --dataset-root <ARTSPEECH_ROOT>
-.\.venv\Scripts\python .\scripts\run\run_project_vtln_reference_to_artspeech_video.py --target-speaker 1640_s10_0829 --artspeech-speaker P7 --session S10 --dataset-root <ARTSPEECH_ROOT>
-.\.venv\Scripts\python .\scripts\run\run_warp_artspeech_session_to_target_video.py --annotation-speaker 1640_s10_0829 --artspeech-speaker P7 --session S10 --target-frame 143020 --dataset-root <ARTSPEECH_ROOT> --output-mode both
+.\.venv\Scripts\python .\scripts\run\run_project_vtln_reference_to_artspeech_video.py --target-speaker 1640_P7_S2_F0829 --artspeech-speaker P7 --session S10 --dataset-root <ARTSPEECH_ROOT>
+.\.venv\Scripts\python .\scripts\run\run_warp_artspeech_session_to_target_video.py --annotation-speaker 1640_P7_S2_F0829 --artspeech-speaker P7 --session S10 --target-frame 143020 --dataset-root <ARTSPEECH_ROOT> --output-mode both
 ```
+
+### CV2 Annotation-To-Grid-Transform App
+
+This app is the current interactive workflow for the curated `10`-speaker setup. It reads defaults from `config.yaml` on startup, then walks through:
+
+1. `Step 0`: select curated source speaker/session/frame and choose the target mode (`nnUNet` or `VTLN`)
+2. `Step 1A`: edit the source annotation
+3. `Step 1B`: edit the target annotation
+4. `Step 2`: adjust affine/TPS landmarks and inspect native, affine, and final previews
+5. `Step 3`: launch a background export job, then return to `Step 0`
+
+Default launch:
+
+```powershell
+.\.venv\Scripts\python .\scripts\run\run_cv2_annotation_to_grid_transform_app.py
+```
+
+Use a different config file if needed:
+
+```powershell
+.\.venv\Scripts\python .\scripts\run\run_cv2_annotation_to_grid_transform_app.py --config path\to\other_config.yaml
+```
+
+Key behavior:
+
+- `config.yaml` defaults to `cache_mode: startup`, so the current selection is prewarmed from `Step 0`.
+- `Step 1` supports `S = save only`, `N = save and go next`, and `G = go next without saving`.
+- Saving in `Step 1A` updates the workspace copy under `outputs/annotation_to_grid_transform/.../source_annotation.latest.json`; that latest saved JSON is then eligible to overwrite/regenerate the canonical default annotation for the matching `(speaker, session, frame)` in the downstream bundle/sync commands.
+- `Step 2` supports `S = save only`, `G = go to Step 3 without saving`, `N = save and go to Step 3`, `B = save and go back to Step 1`, and `0 = save and return to Step 0`.
+- Dragging a landmark in `Step 2` now recomputes the corresponding native source/target grid immediately, so the native, affine, and final previews all track the updated grid state instead of only moving the landmark overlay.
+- `Step 2` includes `Reset source grid` and `Reset target grid` buttons, plus hotkeys `1` and `2`, to clear landmark overrides for one side and restore the grid rebuilt from that side's current annotation.
+- `Step 2` highlights transform controls with contrasting colors:
+  `Affine anchors = orange`, `TPS extra controls = green`, `other visible landmarks = yellow`.
+- `Step 3` uses the threaded exporter and writes a detached render job under the workspace output.
+- If `Step 3` is opened from `Step 2` with `G`, the current transform stays in memory without touching `transform_spec.latest.json`; pressing launch in `Step 3` saves that in-memory transform immediately before export, while `B` returns to `Step 2` with the unsaved edits still present.
+- `render_workers` and `render_prefetch` are validated early, and invalid Step 3 launches write `background_render_job.json` with `status: failed_validation` instead of spawning a process.
+
+Headless/runtime note:
+
+- The CV2 app still imports `cv2` at module import time. In some headless environments, even `--help` may require a GUI-capable/OpenCV runtime (for example, a working libGL/OpenCV install).
+
+Default workspace output root:
+
+```text
+outputs/annotation_to_grid_transform/
+```
+
+Latest-only files written per workspace:
+
+- `workspace_selection.latest.json`
+- `source_annotation.latest.json`
+- `target_annotation.latest.json`
+- `landmark_overrides.latest.json`
+- `transform_spec.latest.json`
+- `transform_review.latest.json`
+- preview PNGs and background render job files
 
 ### Interactive Source Annotation Editor
 
-The source-annotation editor opens a local `cv2` window, projects a VTLN reference contour set onto the best-matching ArtSpeech frame, lets you drag contour handles, then saves the edited annotation for reuse in the session warp pipeline.
+The source-annotation editor opens a local `cv2` window, projects a VTLN reference contour set onto the best-matching ArtSpeech frame, lets you drag contour handles, then saves the edited annotation for reuse in the session warp pipeline and for promotion back into the canonical/default annotation bundle.
 
-Default example for the current bundled workflow:
+Zero-arg launch on this workspace:
 
 ```powershell
-.\.venv\Scripts\python .\scripts\run\run_edit_source_annotation.py --artspeech-speaker P7 --session S2 --reference-speaker 1640_s10_0829 --target-frame 143020 --dataset-root <ARTSPEECH_ROOT>
+.\.venv\Scripts\python .\scripts\run\run_edit_source_annotation.py
 ```
+
+This uses the current built-in defaults:
+
+- `--artspeech-speaker P7`
+- `--session S2`
+- `--reference-speaker 1640_P7_S2_F0829`
+- `--target-frame 143020`
+- `--vtln-dir VTLN/data`
+- the auto-resolved local ArtSpeech dataset root
+
+Portable explicit launch:
+
+```powershell
+.\.venv\Scripts\python .\scripts\run\run_edit_source_annotation.py --artspeech-speaker P7 --session S2 --reference-speaker 1640_P7_S2_F0829 --target-frame 143020 --dataset-root <ARTSPEECH_ROOT>
+```
+
+If the zero-arg launch fails on another machine, the usual cause is that the default ArtSpeech dataset root cannot be resolved there. In that case, pass `--dataset-root <ARTSPEECH_ROOT>` explicitly.
 
 Interactive controls:
 
@@ -94,6 +168,8 @@ Default save location:
 outputs/source_annotation_edits/p7_s2_frame_0829/
 ```
 
+Saving here does not edit `VTLN/data/` directly. The editor writes a latest saved annotation snapshot, and the bundle/sync maintenance commands decide when that snapshot overwrites the canonical defaults.
+
 Saved files:
 
 - `edited_annotation.json`: canonical contour coordinates plus source/target metadata.
@@ -103,6 +179,12 @@ Saved files:
 - `editor_overview.png`: 4-panel snapshot matching the editor layout.
 - `save_summary.json`: summary of the saved assets and any triggered sequence render.
 - `sequence_warp/`: created when rendering is requested; contains warped/review videos, preview PNGs, and `warp_summary.json`.
+
+Canonical overwrite flow:
+
+- The newest saved annotation for a given `(artspeech_speaker, session, source_frame)` wins, whether it came from `outputs/annotation_to_grid_transform/.../source_annotation.latest.json` or `outputs/source_annotation_edits/.../edited_annotation.json`.
+- `run_sync_latest_annotations_to_curated_vtln.py` overwrites the matching curated `VTLN/u_curated_selection_20260330/*.png` and `*.zip` files in place, after archiving the previous files.
+- `run_build_vtln_data_bundle.py` rebuilds the public `VTLN/data/` bundle from the current triplet manifest plus the newest saved annotations.
 
 Useful options:
 
@@ -116,7 +198,14 @@ Useful options:
 Headless save-only example:
 
 ```powershell
-.\.venv\Scripts\python .\scripts\run\run_edit_source_annotation.py --artspeech-speaker P7 --session S2 --reference-speaker 1640_s10_0829 --target-frame 143020 --dataset-root <ARTSPEECH_ROOT> --no-gui --skip-video-on-save
+.\.venv\Scripts\python .\scripts\run\run_edit_source_annotation.py --artspeech-speaker P7 --session S2 --reference-speaker 1640_P7_S2_F0829 --target-frame 143020 --dataset-root <ARTSPEECH_ROOT> --no-gui --skip-video-on-save
+```
+
+Promote the latest saved annotations into the canonical defaults:
+
+```powershell
+.\.venv\Scripts\python .\scripts\run\run_sync_latest_annotations_to_curated_vtln.py
+.\.venv\Scripts\python .\scripts\run\run_build_vtln_data_bundle.py
 ```
 
 Reuse a saved edited annotation in the warp pipeline:
@@ -129,7 +218,7 @@ Current tracked example from the saved `P7/S2` annotation bundle:
 
 - Source frame: `829`
 - Source time: `16.5533s`
-- Reference VTLN frame: `1640_s10_0829`
+- Reference VTLN frame: `1640_P7_S2_F0829`
 - Target frame: `143020`
 - Match correlation before manual edit: `0.9866`
 
@@ -156,6 +245,50 @@ Review video: [P7_S2_warped_to_143020_review.mp4](docs/assets/github/p7-s2-warpe
 .\.venv\Scripts\python .\scripts\run\run_extract_all_speakers_vowel_variants.py --dataset-root <ARTSPEECH_ROOT> --samples-per-vowel 10
 .\.venv\Scripts\python .\scripts\run\run_extract_speaker_vowel_variants.py --speaker P7 --dataset-root <ARTSPEECH_ROOT> --samples-per-vowel 10
 .\.venv\Scripts\python .\scripts\run\run_analyze_aligned_speaker_vowel_variants.py --speaker P7 --samples-per-vowel 10
+```
+
+## Full Command Inventory
+
+The canonical CLI surface is the `scripts/run/` directory. Current tracked wrappers:
+
+### Core Grid and Transform Commands
+
+```powershell
+.\.venv\Scripts\python .\scripts\run\run_create_speaker_grid.py
+.\.venv\Scripts\python .\scripts\run\run_average_speaker_grid_transform.py
+.\.venv\Scripts\python .\scripts\run\run_method4_transform.py
+.\.venv\Scripts\python .\scripts\run\run_move_target_articulators.py
+.\.venv\Scripts\python .\scripts\run\run_warp_source_speaker_to_target.py
+.\.venv\Scripts\python .\scripts\run\run_evaluate_vtln_grid_quality.py
+```
+
+### Canonical Bundle Maintenance Commands
+
+```powershell
+.\.venv\Scripts\python .\scripts\run\run_sync_latest_annotations_to_curated_vtln.py
+.\.venv\Scripts\python .\scripts\run\run_build_vtln_data_bundle.py
+```
+
+### ArtSpeech and Projection Commands
+
+```powershell
+.\.venv\Scripts\python .\scripts\run\run_build_artspeech_session_video.py
+.\.venv\Scripts\python .\scripts\run\run_build_p4_s10_video.py
+.\.venv\Scripts\python .\scripts\run\run_compare_vtln_to_artspeech_session.py
+.\.venv\Scripts\python .\scripts\run\run_project_vtln_reference_to_artspeech_video.py
+.\.venv\Scripts\python .\scripts\run\run_edit_source_annotation.py
+.\.venv\Scripts\python .\scripts\run\run_warp_artspeech_session_to_target_video.py
+```
+
+### Vowel Variability and Comparison Commands
+
+```powershell
+.\.venv\Scripts\python .\scripts\run\run_extract_vowel_samples.py
+.\.venv\Scripts\python .\scripts\run\run_extract_all_speakers_vowel_variants.py
+.\.venv\Scripts\python .\scripts\run\run_extract_speaker_vowel_variants.py
+.\.venv\Scripts\python .\scripts\run\run_make_vowel_contact_sheets.py
+.\.venv\Scripts\python .\scripts\run\run_analyze_aligned_speaker_vowel_variants.py
+.\.venv\Scripts\python .\scripts\run\run_compare_gender_group_transforms.py
 ```
 
 ## Results Gallery
@@ -199,7 +332,7 @@ Review video: [P7_S2_warped_to_143020_review.mp4](docs/assets/github/p7-s2-warpe
 ## Limitations
 
 - The repo currently assumes specific landmark conventions such as `I1..I7`, `C1..C6`, `M1`, `L6`, and `P1`.
-- Several workflows are designed around the bundled example pair: VTLN `1640_s10_0829` and segmentation frame `143020`.
+- Several workflows are designed around the bundled example pair: VTLN `1640_P7_S2_F0829` and segmentation frame `143020`.
 - ArtSpeech analyses rely on external aligned labels and on fixed-session assumptions when full contour annotations are unavailable.
 
 ## Release Checklist

@@ -1,0 +1,11 @@
+output_basename,speaker,raw_subject,session,selected_source,prev_frame_1based,center_frame_1based,next_frame_1based,channel_order,output_size,annotation_status,annotation_zip_status
+1612_P1_S16_F0952,P1,1612,S16,P1/S16/F0952,951,952,953,"R=t-1,G=t,B=t+1",480x480,copied,copied
+1617_P2_S9_F1478,P2,1617,S9,P2/S9/F1478,1477,1478,1479,"R=t-1,G=t,B=t+1",480x480,copied,copied
+1618_P3_S14_F1556,P3,1618,S14,P3/S14/F1556,1555,1556,1557,"R=t-1,G=t,B=t+1",480x480,copied,copied
+1628_P4_S4_F0196,P4,1628,S4,P4/S4/F0196,195,196,197,"R=t-1,G=t,B=t+1",480x480,copied,copied
+1635_P5_S6_F0324,P5,1635,S6,P5/S6/F0324,323,324,325,"R=t-1,G=t,B=t+1",480x480,copied,copied
+1638_P6_S8_F0138,P6,1638,S8,P6/S8/F0138,137,138,139,"R=t-1,G=t,B=t+1",480x480,copied,copied
+1640_P7_S2_F0829,P7,1640,S2,P7/S2/F0829,828,829,830,"R=t-1,G=t,B=t+1",480x480,copied,copied
+1653_P8_S2_F0159,P8,1653,S2,P8/S2/F0159,158,159,160,"R=t-1,G=t,B=t+1",480x480,not_found,missing
+1659_P9_S5_F0196,P9,1659,S5,P9/S5/F0196,195,196,197,"R=t-1,G=t,B=t+1",480x480,copied,copied
+1662_P10_S14_F0110,P10,1662,S14,P10/S14/F0110,109,110,111,"R=t-1,G=t,B=t+1",480x480,not_available,missing

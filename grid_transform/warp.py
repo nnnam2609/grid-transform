@@ -7,6 +7,7 @@ import numpy as np
 from scipy.ndimage import map_coordinates
 
 from grid_transform.config import TONGUE_COLOR
+from grid_transform.image_utils import as_grayscale_float
 from grid_transform.figures import format_frame
 
 
@@ -16,10 +17,7 @@ WARPED_COLOR = "#ef476f"
 
 
 def _as_grayscale_float(source_image) -> np.ndarray:
-    source_arr = np.asarray(source_image, dtype=float)
-    if source_arr.ndim == 3:
-        source_arr = source_arr[..., 0]
-    return source_arr
+    return as_grayscale_float(source_image)
 
 
 def precompute_inverse_warp(target_shape, inverse_mapping_fn, source_shape):

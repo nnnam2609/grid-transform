@@ -114,12 +114,21 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--artspeech-speaker", default="P7", help="ArtSpeech speaker id, for example P7.")
     parser.add_argument("--session", default="S2", help="ArtSpeech session id, for example S2.")
-    parser.add_argument("--reference-speaker", default="1640_s10_0829", help="VTLN reference speaker/image name.")
+    parser.add_argument(
+        "--reference-speaker",
+        default="1640_P7_S2_F0829",
+        help="VTLN reference speaker/image name. Defaults to the bundled 1640_P7_S2_F0829 example.",
+    )
     parser.add_argument("--source-frame", type=int, help="Optional 1-based source frame override. Defaults to the best reference match.")
     parser.add_argument("--target-frame", type=int, default=143020, help="nnUNet target frame number.")
     parser.add_argument("--target-case", default="2008-003^01-1791/test", help="nnUNet target case relative path.")
     parser.add_argument("--dataset-root", type=Path, help="Optional explicit ArtSpeech dataset root.")
-    parser.add_argument("--vtln-dir", type=Path, default=PROJECT_DIR / "VTLN", help="Folder containing VTLN images and ROI zip files.")
+    parser.add_argument(
+        "--vtln-dir",
+        type=Path,
+        default=PROJECT_DIR / "VTLN" / "data",
+        help="Folder containing VTLN images and ROI zip files. Defaults to the bundled VTLN/data folder.",
+    )
     parser.add_argument("--output-dir", type=Path, help="Optional explicit output directory.")
     parser.add_argument("--output-mode", choices=("both", "warped", "review"), default="both", help="Which sequence outputs to render.")
     parser.add_argument("--max-output-frames", type=int, default=0, help="Optional debug limit for the sequence render triggered on save.")
