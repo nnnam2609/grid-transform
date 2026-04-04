@@ -10,6 +10,7 @@ The repo is organized for reproducible experiments rather than a packaged librar
 - Estimate a two-step `Affine + TPS` transform between a source speaker and a target frame.
 - Move articulators or warp the full source image into target space.
 - Project VTLN annotations onto ArtSpeech videos when per-frame ArtSpeech contours are unavailable.
+- Browse and edit every bundled `VTLN/data/*.zip` speaker annotation in one cv2 window, with direct save/reset control and a live grid preview.
 - Interactively edit a projected source annotation on an ArtSpeech frame, save it, reuse it for fixed-annotation session warping, and promote the latest saved annotation back into the canonical VTLN defaults.
 - Run a multi-step `cv2` workflow to select a curated source speaker, edit source/target annotations, refine affine/TPS landmarks, and launch threaded background export jobs.
 - Warp a full ArtSpeech session into a target frame under a fixed-session annotation assumption.
@@ -126,6 +127,44 @@ Latest-only files written per workspace:
 - `transform_spec.latest.json`
 - `transform_review.latest.json`
 - preview PNGs and background render job files
+
+### VTLN Annotation Browser
+
+The VTLN annotation browser scans every `*.zip` bundle under `VTLN/data/`, opens one speaker at a time, lets you drag contour handles directly on the bundled reference image, and shows the live grid preview in the same window.
+
+Launch:
+
+```powershell
+.\.venv\Scripts\python.exe .\scripts\run\run_edit_vtln_annotation_browser.py
+```
+
+Layout and behavior:
+
+- left panel: speaker list plus dirty/error state
+- center panel: editable VTLN image + contour handles
+- right panel: live grid preview rebuilt from the current contours
+- the grid preview uses the current `build_grid(...)` logic, including the active no-mid-plane H1 behavior
+
+Controls:
+
+- drag handles with left mouse to edit contours
+- mouse wheel or `+` / `-` to zoom
+- right-drag to pan
+- `Up` / `Down` to switch speaker
+- `S` to save
+- `R` to discard the current speaker edits and reload
+- `X` to exit
+
+Save semantics:
+
+- saving writes a timestamped backup zip under `outputs/vtln_annotation_browser/backups/<speaker>/`
+- after the backup is written, the app overwrites `VTLN/data/<speaker>.zip` directly
+- speaker switching is blocked while the current speaker is dirty; save or reset first
+
+Validation behavior:
+
+- the grid is recomputed after each handle release
+- if an edit makes `build_grid(...)` invalid, that drag is reverted and the last valid contour state is kept
 
 ### Interactive Source Annotation Editor
 
@@ -275,6 +314,7 @@ The canonical CLI surface is the `scripts/run/` directory. Current tracked wrapp
 .\.venv\Scripts\python .\scripts\run\run_build_artspeech_session_video.py
 .\.venv\Scripts\python .\scripts\run\run_build_p4_s10_video.py
 .\.venv\Scripts\python .\scripts\run\run_compare_vtln_to_artspeech_session.py
+.\.venv\Scripts\python.exe .\scripts\run\run_edit_vtln_annotation_browser.py
 .\.venv\Scripts\python .\scripts\run\run_project_vtln_reference_to_artspeech_video.py
 .\.venv\Scripts\python .\scripts\run\run_edit_source_annotation.py
 .\.venv\Scripts\python .\scripts\run\run_warp_artspeech_session_to_target_video.py
