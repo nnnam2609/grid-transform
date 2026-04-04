@@ -21,7 +21,7 @@ from grid_transform.transfer import build_two_step_transform, smooth_transformed
 from grid_transform.vt import build_grid
 
 
-CURATED_SPEAKER_DIRNAME = "u_curated_selection_20260330"
+CURATED_SPEAKER_DIRNAME = "data"
 CURATED_SPEAKER_GENDER = {
     "P1": "male",
     "P2": "male",
@@ -96,7 +96,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--vtln-dir",
         type=Path,
         default=default_curated_vtln_dir(),
-        help=f"Curated VTLN speaker folder. Defaults to VTLN/{CURATED_SPEAKER_DIRNAME}.",
+        help=f"Canonical curated VTLN speaker folder. Defaults to VTLN/{CURATED_SPEAKER_DIRNAME}.",
     )
     parser.add_argument(
         "--output-dir",
