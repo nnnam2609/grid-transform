@@ -5,6 +5,7 @@ from pathlib import Path
 
 import numpy as np
 
+from grid_transform.image_utils import as_grayscale_uint8
 from grid_transform.annotation_projection import (
     build_resize_affine,
     resize_inverse_mapping,
@@ -20,13 +21,6 @@ LONG_CONTOUR_HANDLE_COUNTS = {
     "pharynx": 32,
     "soft-palate-midline": 24,
 }
-
-
-def as_grayscale_uint8(image) -> np.ndarray:
-    array = np.asarray(image)
-    if array.ndim == 3:
-        array = array[..., 0]
-    return np.clip(array, 0, 255).astype(np.uint8)
 
 
 def frame_correlation(reference_frame: np.ndarray, session_frame: np.ndarray) -> float:

@@ -1,15 +1,7 @@
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-
-ROOT_DIR = Path(__file__).resolve().parents[2]
-if str(ROOT_DIR) not in sys.path:
-    sys.path.insert(0, str(ROOT_DIR))
-
-from grid_transform.apps.compare_vtln_to_artspeech_session import main
+from _bootstrap import run_app
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(run_app("grid_transform.apps.compare_vtln_to_artspeech_session"))

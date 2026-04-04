@@ -1,11 +1,6 @@
 from __future__ import annotations
 
-from grid_transform.config import ensure_vt_grid_import_path
-
-
-ensure_vt_grid_import_path()
-
-from vt_grid import (
+from grid_transform.vt_grid import (
     GridContourValidation,
     GridValidationError,
     build_grid,

@@ -28,8 +28,8 @@ def bootstrap_notebook(project_dir: Path | None = None) -> dict[str, object]:
     if str(project_dir) not in sys.path:
         sys.path.insert(0, str(project_dir))
 
-    vt_seg_dir = project_dir / "vocal-tract-seg"
-    vtln_dir = project_dir / "VTLN"
+    vt_seg_dir = project_dir / VT_SEG_DATA_ROOT.parent.relative_to(project_dir)
+    vtln_dir = project_dir / NOTEBOOK_VTLN_DIR.relative_to(project_dir)
 
     return {
         "PROJECT_DIR": project_dir,

@@ -1,4 +1,4 @@
-from grid_transform.apps.method4_transform import *  # noqa: F401,F403
+from grid_transform.apps.method4_transform import main
 
 
 if __name__ == "__main__":

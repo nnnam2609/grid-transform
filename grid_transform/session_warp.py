@@ -28,6 +28,7 @@ from grid_transform.config import (
     VT_SEG_CONTOURS_ROOT,
     VT_SEG_DATA_ROOT,
 )
+from grid_transform.image_utils import as_grayscale_uint8 as image_as_grayscale_uint8
 from grid_transform.io import load_frame_npy, load_frame_vtln
 from grid_transform.source_annotation import load_source_annotation_json
 from grid_transform.transfer import (
@@ -93,10 +94,7 @@ def default_output_dir_for_saved_annotation(
 
 
 def as_grayscale_uint8(image) -> np.ndarray:
-    array = np.asarray(image)
-    if array.ndim == 3:
-        array = array[..., 0]
-    return np.clip(array, 0, 255).astype(np.uint8)
+    return image_as_grayscale_uint8(image)
 
 
 def gray_to_rgb(frame: np.ndarray) -> np.ndarray:

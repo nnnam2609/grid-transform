@@ -1,4 +1,4 @@
-from grid_transform.apps.move_target_articulators import *  # noqa: F401,F403
+from grid_transform.apps.move_target_articulators import main
 
 
 if __name__ == "__main__":

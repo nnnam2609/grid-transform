@@ -13,6 +13,7 @@ __pycache__/
 AGENTS.md
 logs/
 scripts/windows/
+local/report_tools/
 
 # Local reference material
 docs/references/*.pdf
