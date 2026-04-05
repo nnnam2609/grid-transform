@@ -3,10 +3,11 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shutil
 import subprocess
 import sys
 from concurrent.futures import Future, ThreadPoolExecutor
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Callable
 
@@ -39,6 +40,7 @@ from grid_transform.annotation_to_grid_workflow import (
     workspace_selection_to_payload,
 )
 from grid_transform.image_utils import as_grayscale_uint8
+from grid_transform.io import VTLN_TRIPLET_SHAPE
 from grid_transform.cv2_annotation_app_config import (
     APP_CONFIG_PATH,
     RENDER_PREFETCH_RANGE,
@@ -62,8 +64,9 @@ from grid_transform.apps.edit_source_annotation import (
     scaled_window_size,
     source_text_block,
 )
+from grid_transform.apps import build_vtln_data_bundle
 from grid_transform.apps.run_curated_u_annotation_batch import DEFAULT_MANIFEST_CSV
-from grid_transform.config import PROJECT_DIR
+from grid_transform.config import DEFAULT_OUTPUT_DIR, PROJECT_DIR
 from grid_transform.source_annotation import LONG_CONTOUR_HANDLE_COUNTS
 from grid_transform.warp import precompute_inverse_warp, warp_array_with_precomputed_inverse_warp
 
@@ -92,6 +95,16 @@ KEY_RIGHT = 2555904
 KEY_TAB = 9
 KEY_ENTER = 13
 KEY_BACKSPACE = 8
+
+VALID_CONFIG_LANDMARK_NAMES = frozenset(
+    {
+        *(f"I{i}" for i in range(1, 8)),
+        "P1",
+        *(f"C{i}" for i in range(1, 7)),
+        "M1",
+        "L6",
+    }
+)
 
 
 @dataclass
@@ -133,6 +146,27 @@ class ClickTarget:
 
     def contains(self, x: int, y: int) -> bool:
         return self.x0 <= x < self.x0 + self.width and self.y0 <= y < self.y0 + self.height
+
+
+def resolve_disabled_landmarks_config(value: object, *, config_path: Path) -> tuple[str, ...]:
+    if value in (None, "", []):
+        return ()
+    if isinstance(value, str):
+        raw_items = [item.strip() for item in value.replace(",", " ").split()]
+    elif isinstance(value, (list, tuple, set)):
+        raw_items = [str(item).strip() for item in value]
+    else:
+        raise SystemExit(
+            f"disabled_landmarks in config file {config_path} must be a string or a list of landmark names."
+        )
+    cleaned = [item.upper() for item in raw_items if item]
+    invalid = sorted({item for item in cleaned if item not in VALID_CONFIG_LANDMARK_NAMES})
+    if invalid:
+        raise SystemExit(
+            f"Invalid disabled_landmarks in config file {config_path}: {invalid}. "
+            f"Valid names: {sorted(VALID_CONFIG_LANDMARK_NAMES)}"
+        )
+    return tuple(dict.fromkeys(cleaned))
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -252,6 +286,18 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     args = parser.parse_args(argv)
     args.ui_config = ui_config
+    args.disabled_landmarks = resolve_disabled_landmarks_config(
+        defaults_payload.get("disabled_landmarks"),
+        config_path=pre_args.config,
+    )
+    args.top_axis_smoothing_passes = resolve_config_int(
+        defaults_payload.get("top_axis_smoothing_passes"),
+        default=4,
+        field_name="top_axis_smoothing_passes",
+        config_path=pre_args.config,
+        min_value=0,
+        max_value=32,
+    )
     return args
 
 
@@ -267,6 +313,106 @@ def copy_points_map(points_map: dict[str, np.ndarray | None] | None) -> dict[str
         name: None if value is None else np.asarray(value, dtype=float).copy()
         for name, value in points_map.items()
     }
+
+
+def sanitize_promotion_token(value: str) -> str:
+    cleaned = "".join(char if (char.isalnum() or char in "._-") else "_" for char in value.strip())
+    return cleaned.strip("._-") or "case"
+
+
+def contour_bounds(contours: dict[str, np.ndarray] | dict[str, object]) -> tuple[float, float, float, float] | None:
+    min_x = float("inf")
+    min_y = float("inf")
+    max_x = float("-inf")
+    max_y = float("-inf")
+    found = False
+    for points in contours.values():
+        array = np.asarray(points, dtype=float)
+        if array.ndim != 2 or array.shape[1] != 2 or len(array) == 0:
+            continue
+        found = True
+        min_x = min(min_x, float(array[:, 0].min()))
+        min_y = min(min_y, float(array[:, 1].min()))
+        max_x = max(max_x, float(array[:, 0].max()))
+        max_y = max(max_y, float(array[:, 1].max()))
+    if not found:
+        return None
+    return min_x, min_y, max_x, max_y
+
+
+def source_annotation_payload_is_plausible(payload: dict[str, object] | None) -> bool:
+    if not payload:
+        return False
+    metadata = payload.get("metadata", {})
+    source_shape_raw = metadata.get("source_shape") or metadata.get("reference_shape")
+    if source_shape_raw is None:
+        return True
+    try:
+        source_h = int(source_shape_raw[0])
+        source_w = int(source_shape_raw[1])
+    except (TypeError, ValueError, IndexError):
+        return True
+    bounds = contour_bounds(payload.get("contours", {}))
+    if bounds is None:
+        return True
+    min_x, min_y, max_x, max_y = bounds
+    tolerance_px = 6.0
+    tolerance_scale = 1.15
+    return (
+        min_x >= -tolerance_px
+        and min_y >= -tolerance_px
+        and max_x <= source_w * tolerance_scale + tolerance_px
+        and max_y <= source_h * tolerance_scale + tolerance_px
+    )
+
+
+def discover_saved_source_annotation_paths() -> list[Path]:
+    patterns = (
+        (DEFAULT_OUTPUT_DIR / "annotation_to_grid_transform", "source_annotation.latest.json"),
+        (DEFAULT_OUTPUT_DIR / "source_annotation_edits", "edited_annotation.json"),
+    )
+    paths: list[Path] = []
+    for root, filename in patterns:
+        if not root.is_dir():
+            continue
+        paths.extend(root.rglob(filename))
+    return sorted(set(paths))
+
+
+def find_latest_source_annotation_for_selection(selection: WorkspaceSelection) -> dict[str, object] | None:
+    best_payload: dict[str, object] | None = None
+    best_mtime = float("-inf")
+    expected_key = (
+        str(selection.case.speaker),
+        str(selection.case.session),
+        int(selection.case.frame_index_1based),
+    )
+    for path in discover_saved_source_annotation_paths():
+        payload = load_annotation_state_if_available(path)
+        if payload is None:
+            continue
+        metadata = payload.get("metadata", {})
+        # Target-promotion snapshots live under the same outputs tree, but they are
+        # stored in target/VTLN coordinates and must never override Step 1A source loads.
+        if str(metadata.get("promoted_from_role") or "").strip().lower() == "target":
+            continue
+        if not source_annotation_payload_is_plausible(payload):
+            continue
+        payload_key = (
+            str(metadata.get("artspeech_speaker") or ""),
+            str(metadata.get("session") or ""),
+            int(metadata.get("source_frame") or 0),
+        )
+        if payload_key != expected_key:
+            continue
+        try:
+            mtime = path.stat().st_mtime
+        except OSError:
+            continue
+        if mtime > best_mtime:
+            best_payload = payload
+            best_mtime = mtime
+    return best_payload
 
 
 def ensure_view_state(view: ViewState | None, image_shape: tuple[int, int]) -> ViewState:
@@ -634,6 +780,16 @@ class ContextLoadCache:
     def cache_counts(self) -> tuple[int, int]:
         return len(self._source_cache) + len(self._source_futures), len(self._target_cache) + len(self._target_futures)
 
+    def clear(self) -> None:
+        for future in self._source_futures.values():
+            future.cancel()
+        for future in self._target_futures.values():
+            future.cancel()
+        self._source_futures.clear()
+        self._target_futures.clear()
+        self._source_cache.clear()
+        self._target_cache.clear()
+
     def close(self) -> None:
         self._executor.shutdown(wait=False, cancel_futures=True)
 
@@ -654,32 +810,33 @@ class Cv2SelectionWindow:
         self.prewarm_selection = prewarm_selection
         self.cache_counts = cache_counts
         self.case_index = 0
+        self.target_case_index = 0
         self.focus = "speaker"
         self.target_type = "nnunet"
         self.nnunet_case = args.default_target_case
         self.nnunet_frame = str(int(args.default_target_frame))
-        self.vtln_reference = reference_name_for_case(self.cases[0]) if self.cases else ""
         self.vtln_dir = str(args.vtln_dir)
         self.click_targets: dict[str, tuple[int, int, int, int]] = {}
+        self.status_message = ""
         self._queue_prewarm()
 
     def _current_case(self):
         return self.cases[self.case_index]
 
-    def _reseed_vtln_reference_if_needed(self) -> None:
-        if not self.vtln_reference:
-            self.vtln_reference = reference_name_for_case(self._current_case())
+    def _current_target_case(self):
+        return self.cases[self.target_case_index]
 
     def _cycle_case(self, delta: int) -> None:
         self.case_index = int(np.clip(self.case_index + delta, 0, len(self.cases) - 1))
-        if self.focus == "speaker":
-            self.vtln_reference = reference_name_for_case(self._current_case())
+        self._queue_prewarm()
+
+    def _cycle_target_case(self, delta: int) -> None:
+        self.target_case_index = int(np.clip(self.target_case_index + delta, 0, len(self.cases) - 1))
         self._queue_prewarm()
 
     def _toggle_target_type(self) -> None:
         self.target_type = "vtln" if self.target_type == "nnunet" else "nnunet"
-        if self.target_type == "vtln":
-            self._reseed_vtln_reference_if_needed()
+        self.status_message = f"Target mode: {'VTLN' if self.target_type == 'vtln' else 'nnUNet'}"
         self._queue_prewarm()
 
     def _active_field_order(self) -> list[str]:
@@ -687,7 +844,7 @@ class Cv2SelectionWindow:
         if self.target_type == "nnunet":
             order.extend(["nnunet_case", "nnunet_frame"])
         else:
-            order.extend(["vtln_reference", "vtln_dir"])
+            order.extend(["target_case", "vtln_dir"])
         return order
 
     def _focus_next(self) -> None:
@@ -696,7 +853,7 @@ class Cv2SelectionWindow:
         self.focus = order[(index + 1) % len(order)]
 
     def _handle_text_input(self, key: int) -> None:
-        if self.focus not in {"nnunet_case", "nnunet_frame", "vtln_reference", "vtln_dir"}:
+        if self.focus not in {"nnunet_case", "nnunet_frame", "vtln_dir"}:
             return
         if key == KEY_BACKSPACE:
             current = getattr(self, self.focus)
@@ -716,7 +873,20 @@ class Cv2SelectionWindow:
         except Exception:
             return
 
-    def _draw_field(self, canvas: np.ndarray, *, label: str, value: str, x0: int, y0: int, w: int, h: int, field_name: str) -> int:
+    def _draw_field(
+        self,
+        canvas: np.ndarray,
+        *,
+        label: str,
+        value: str,
+        x0: int,
+        y0: int,
+        w: int,
+        h: int,
+        field_name: str,
+        global_x0: int = 0,
+        global_y0: int = 0,
+    ) -> int:
         active = self.focus == field_name
         fill = (58, 58, 58) if active else (34, 34, 34)
         outline = ACCENT if active else (90, 90, 90)
@@ -724,7 +894,7 @@ class Cv2SelectionWindow:
         cv2.rectangle(canvas, (x0, y0), (x0 + w, y0 + h), outline, 1)
         cv2.putText(canvas, label, (x0 + 10, y0 + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.48, MUTED_TEXT, 1, cv2.LINE_AA)
         cv2.putText(canvas, value or "-", (x0 + 10, y0 + 46), cv2.FONT_HERSHEY_SIMPLEX, 0.52, TEXT_COLOR, 1, cv2.LINE_AA)
-        self.click_targets[field_name] = (x0, y0, w, h)
+        self.click_targets[field_name] = (global_x0 + x0, global_y0 + y0, w, h)
         return y0 + h + 10
 
     def _render(self) -> np.ndarray:
@@ -733,7 +903,7 @@ class Cv2SelectionWindow:
         cv2.putText(canvas, "Step 0 - Select speaker, source, and target", (20, 34), cv2.FONT_HERSHEY_SIMPLEX, 0.84, TEXT_COLOR, 2, cv2.LINE_AA)
         cv2.putText(
             canvas,
-            "Enter continue | Up/Down speaker | Tab focus | Left/Right toggle target mode | X exit app",
+            "Enter continue | Up/Down source or VTLN target | Tab focus | Left/Right toggle target mode | X exit app",
             (20, 62),
             cv2.FONT_HERSHEY_SIMPLEX,
             0.48,
@@ -749,7 +919,7 @@ class Cv2SelectionWindow:
         middle[:] = SIDEBAR_BG
         right[:] = SIDEBAR_BG
 
-        cv2.putText(left, "Curated Speakers", (20, 34), cv2.FONT_HERSHEY_SIMPLEX, 0.72, TEXT_COLOR, 1, cv2.LINE_AA)
+        cv2.putText(left, "Curated Source", (20, 34), cv2.FONT_HERSHEY_SIMPLEX, 0.72, TEXT_COLOR, 1, cv2.LINE_AA)
         y = 60
         for index, case in enumerate(self.cases):
             row_h = 60
@@ -763,6 +933,8 @@ class Cv2SelectionWindow:
             y += row_h + 8
 
         case = self._current_case()
+        target_case = self._current_target_case()
+        selection = self._build_selection()
         reference_name = reference_name_for_case(case)
         alias = self.mapping.vtln_session_map.get(reference_name, (case.speaker, case.session))
         cv2.putText(middle, "Resolved Source", (20, 34), cv2.FONT_HERSHEY_SIMPLEX, 0.72, TEXT_COLOR, 1, cv2.LINE_AA)
@@ -773,28 +945,72 @@ class Cv2SelectionWindow:
             f"reference: {reference_name}",
             f"alias: {alias[0]}/{alias[1]}",
             f"annotation status: {case.annotation_status or '-'}",
+            f"video export: {'available' if selection.dataset_root is not None else 'missing'}",
         ]
         y = 70
         for line in info_lines:
             cv2.putText(middle, line, (22, y), cv2.FONT_HERSHEY_SIMPLEX, 0.54, TEXT_COLOR, 1, cv2.LINE_AA)
             y += 28
 
-        paths = step_file_paths(self.args.workspace_root / "placeholder")
-        cv2.putText(middle, "Latest-state files per workspace:", (20, y + 16), cv2.FONT_HERSHEY_SIMPLEX, 0.58, ACCENT, 1, cv2.LINE_AA)
-        y += 46
-        for name in ("source_annotation", "target_annotation", "transform_spec"):
-            cv2.putText(middle, f"- {paths[name].name}", (28, y), cv2.FONT_HERSHEY_SIMPLEX, 0.48, MUTED_TEXT, 1, cv2.LINE_AA)
-            y += 22
+        if self.target_type == "vtln":
+            cv2.putText(middle, "Curated VTLN Targets", (20, y + 16), cv2.FONT_HERSHEY_SIMPLEX, 0.58, ACCENT, 1, cv2.LINE_AA)
+            y += 40
+            for index, curated_target in enumerate(self.cases):
+                row_h = 48
+                row_rect = (12, y, 476, row_h)
+                color = ROW_SELECTED if index == self.target_case_index else ROW_BG
+                cv2.rectangle(middle, (row_rect[0], row_rect[1]), (row_rect[0] + row_rect[2], row_rect[1] + row_rect[3]), color, -1)
+                cv2.rectangle(middle, (row_rect[0], row_rect[1]), (row_rect[0] + row_rect[2], row_rect[1] + row_rect[3]), (90, 90, 90), 1)
+                cv2.putText(
+                    middle,
+                    reference_name_for_case(curated_target),
+                    (24, y + 22),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.56,
+                    TEXT_COLOR,
+                    1,
+                    cv2.LINE_AA,
+                )
+                cv2.putText(
+                    middle,
+                    f"{curated_target.speaker}/{curated_target.session}  F{curated_target.frame_index_1based:04d}",
+                    (24, y + 40),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.42,
+                    MUTED_TEXT,
+                    1,
+                    cv2.LINE_AA,
+                )
+                self.click_targets[f"target_case:{index}"] = (430 + row_rect[0], row_rect[1], row_rect[2], row_rect[3])
+                y += row_h + 8
+        else:
+            paths = step_file_paths(self.args.workspace_root / "placeholder")
+            cv2.putText(middle, "Latest-state files per workspace:", (20, y + 16), cv2.FONT_HERSHEY_SIMPLEX, 0.58, ACCENT, 1, cv2.LINE_AA)
+            y += 46
+            for name in ("source_annotation", "target_annotation", "transform_spec"):
+                cv2.putText(middle, f"- {paths[name].name}", (28, y), cv2.FONT_HERSHEY_SIMPLEX, 0.48, MUTED_TEXT, 1, cv2.LINE_AA)
+                y += 22
 
         cv2.putText(right, "Target", (20, 34), cv2.FONT_HERSHEY_SIMPLEX, 0.72, TEXT_COLOR, 1, cv2.LINE_AA)
         target_mode_text = "nnUNet" if self.target_type == "nnunet" else "VTLN"
-        y = self._draw_field(right, label="Target Type", value=target_mode_text, x0=20, y0=60, w=470, h=58, field_name="target_type")
+        y = self._draw_field(right, label="Target Type", value=target_mode_text, x0=20, y0=60, w=470, h=58, field_name="target_type", global_x0=940)
         if self.target_type == "nnunet":
-            y = self._draw_field(right, label="Target Case", value=self.nnunet_case, x0=20, y0=y, w=470, h=58, field_name="nnunet_case")
-            y = self._draw_field(right, label="Target Frame", value=self.nnunet_frame, x0=20, y0=y, w=470, h=58, field_name="nnunet_frame")
+            y = self._draw_field(right, label="Target Case", value=self.nnunet_case, x0=20, y0=y, w=470, h=58, field_name="nnunet_case", global_x0=940)
+            y = self._draw_field(right, label="Target Frame", value=self.nnunet_frame, x0=20, y0=y, w=470, h=58, field_name="nnunet_frame", global_x0=940)
         else:
-            y = self._draw_field(right, label="VTLN Reference", value=self.vtln_reference, x0=20, y0=y, w=470, h=58, field_name="vtln_reference")
-            y = self._draw_field(right, label="VTLN Dir", value=self.vtln_dir, x0=20, y0=y, w=470, h=72, field_name="vtln_dir")
+            y = self._draw_field(right, label="VTLN Target", value=reference_name_for_case(target_case), x0=20, y0=y, w=470, h=58, field_name="target_case", global_x0=940)
+            y = self._draw_field(right, label="VTLN Dir", value=self.vtln_dir, x0=20, y0=y, w=470, h=72, field_name="vtln_dir", global_x0=940)
+            cv2.putText(
+                right,
+                "Use Up/Down or the middle list to change the VTLN target.",
+                (22, y + 20),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.42,
+                MUTED_TEXT,
+                1,
+                cv2.LINE_AA,
+            )
+            y += 32
 
         cv2.putText(right, "Focus:", (22, y + 26), cv2.FONT_HERSHEY_SIMPLEX, 0.54, ACCENT, 1, cv2.LINE_AA)
         cv2.putText(right, self.focus, (90, y + 26), cv2.FONT_HERSHEY_SIMPLEX, 0.54, TEXT_COLOR, 1, cv2.LINE_AA)
@@ -835,6 +1051,13 @@ class Cv2SelectionWindow:
                 1,
                 cv2.LINE_AA,
             )
+        if self.status_message:
+            message = self.status_message
+            if len(message) > 180:
+                message = message[:177] + "..."
+            cv2.rectangle(canvas, (20, canvas.shape[0] - 46), (canvas.shape[1] - 20, canvas.shape[0] - 14), (42, 42, 42), -1)
+            cv2.rectangle(canvas, (20, canvas.shape[0] - 46), (canvas.shape[1] - 20, canvas.shape[0] - 14), ACCENT, 1)
+            cv2.putText(canvas, message, (30, canvas.shape[0] - 24), cv2.FONT_HERSHEY_SIMPLEX, 0.5, TEXT_COLOR, 1, cv2.LINE_AA)
         return canvas
 
     def _on_mouse(self, event: int, x: int, y: int, _flags: int, _param) -> None:
@@ -843,10 +1066,16 @@ class Cv2SelectionWindow:
         for key, rect in self.click_targets.items():
             x0, y0, w, h = rect
             if x0 <= x < x0 + w and y0 <= y < y0 + h:
+                if key == "target_type":
+                    self.focus = "target_type"
+                    self._toggle_target_type()
+                    return
                 if key.startswith("speaker:"):
                     self.case_index = int(key.split(":")[1])
                     self.focus = "speaker"
-                    self.vtln_reference = reference_name_for_case(self._current_case())
+                elif key.startswith("target_case:"):
+                    self.target_case_index = int(key.split(":")[1])
+                    self.focus = "target_case"
                 else:
                     self.focus = key
                 return
@@ -856,7 +1085,7 @@ class Cv2SelectionWindow:
             target_type=self.target_type,
             nnunet_case=self.nnunet_case.strip() or self.args.default_target_case,
             nnunet_frame=max(1, int(self.nnunet_frame or self.args.default_target_frame)),
-            vtln_reference=(self.vtln_reference.strip() or reference_name_for_case(self._current_case())),
+            vtln_reference=reference_name_for_case(self._current_target_case()),
             vtln_dir=Path(self.vtln_dir.strip() or str(self.args.vtln_dir)),
         )
         return build_workspace_selection(
@@ -887,10 +1116,15 @@ class Cv2SelectionWindow:
                     return None
                 if key == KEY_ENTER:
                     selection = self._build_selection()
+                    self.status_message = ""
                     save_json(step_file_paths(selection.workspace_dir)["selection"], workspace_selection_to_payload(selection))
                     return selection
                 if key == KEY_TAB:
                     self._focus_next()
+                    continue
+                if key in (ord("t"), ord("T")):
+                    self.focus = "target_type"
+                    self._toggle_target_type()
                     continue
                 if self.focus == "speaker":
                     if key == KEY_UP:
@@ -899,20 +1133,27 @@ class Cv2SelectionWindow:
                     if key == KEY_DOWN:
                         self._cycle_case(1)
                         continue
+                if self.focus == "target_case" and self.target_type == "vtln":
+                    if key == KEY_UP:
+                        self._cycle_target_case(-1)
+                        continue
+                    if key == KEY_DOWN:
+                        self._cycle_target_case(1)
+                        continue
                 if self.focus == "target_type" and key in (KEY_LEFT, KEY_RIGHT, ord(" ")):
                     self._toggle_target_type()
                     continue
                 before = (
+                    self.target_case_index,
                     self.nnunet_case,
                     self.nnunet_frame,
-                    self.vtln_reference,
                     self.vtln_dir,
                 )
                 self._handle_text_input(key)
                 after = (
+                    self.target_case_index,
                     self.nnunet_case,
                     self.nnunet_frame,
-                    self.vtln_reference,
                     self.vtln_dir,
                 )
                 if after != before:
@@ -935,6 +1176,7 @@ class Cv2ContourEditorWindow:
         allow_back: bool,
         ui_config: UIConfig,
         args: argparse.Namespace,
+        on_save: Callable[[dict[str, np.ndarray]], str | None] | None = None,
     ) -> None:
         self.window_name = window_name
         self.image = np.asarray(image, dtype=np.uint8)
@@ -945,6 +1187,7 @@ class Cv2ContourEditorWindow:
         self.allow_back = allow_back
         self.ui_config = ui_config
         self.args = args
+        self.on_save = on_save
         self.saved_payload = load_annotation_state_if_available(save_path)
         starting_contours = self.saved_payload["contours"] if self.saved_payload is not None else contours
         self.original_contours = {name: np.asarray(points, dtype=float).copy() for name, points in starting_contours.items()}
@@ -1235,9 +1478,15 @@ class Cv2ContourEditorWindow:
                 self.current_contours = self._rebuild_contours_from_handles()
             self.active_handle = None
 
-    def _save(self) -> None:
-        save_annotation_state(self.save_path, self.metadata, self.current_contours)
-        self.status_message = f"Saved {self.save_path.name}"
+    def _save(self) -> bool:
+        try:
+            save_annotation_state(self.save_path, self.metadata, self.current_contours)
+            post_save_message = self.on_save(self.current_contours) if self.on_save is not None else None
+        except Exception as exc:
+            self.status_message = f"Save failed: {exc}"
+            return False
+        self.status_message = post_save_message or f"Saved {self.save_path.name}"
+        return True
 
     def run(self) -> tuple[str, dict[str, np.ndarray]]:
         cv2.namedWindow(self.window_name, cv2.WINDOW_NORMAL | getattr(cv2, "WINDOW_KEEPRATIO", 0))
@@ -1260,13 +1509,15 @@ class Cv2ContourEditorWindow:
                 if key == ord("s"):
                     self._save()
                 elif key == ord("n"):
-                    self._save()
+                    if not self._save():
+                        continue
                     return "next", self.current_contours
                 elif key in (ord("g"), ord("G")):
                     self.status_message = "Continuing to the next step without saving to disk."
                     return "next_no_save", self.current_contours
                 elif key == ord("b") and self.allow_back:
-                    self._save()
+                    if not self._save():
+                        continue
                     return "back", self.current_contours
                 elif key == ord("r"):
                     self.current_contours = {name: points.copy() for name, points in self.original_contours.items()}
@@ -1300,6 +1551,7 @@ class Cv2TransformReviewWindow:
         initial_source_landmark_overrides: dict[str, np.ndarray | None] | None = None,
         initial_target_landmark_overrides: dict[str, np.ndarray | None] | None = None,
         initial_dirty: bool = False,
+        initial_status_message: str | None = None,
     ) -> None:
         self.selection = selection
         self.source_image = np.asarray(source_image, dtype=np.uint8)
@@ -1308,6 +1560,7 @@ class Cv2TransformReviewWindow:
         self.target_contours = {name: np.asarray(points, dtype=float).copy() for name, points in target_contours.items()}
         self.ui_config = ui_config
         self.args = args
+        self.disabled_landmarks = {str(name) for name in getattr(args, "disabled_landmarks", ())}
         self.paths = step_file_paths(selection.workspace_dir)
 
         self.source_landmark_overrides: dict[str, np.ndarray | None] = {}
@@ -1324,6 +1577,8 @@ class Cv2TransformReviewWindow:
                     self.target_landmark_overrides[name] = None if value is None else np.asarray(value, dtype=float)
             except Exception:
                 pass
+
+        self._prune_disabled_overrides()
 
         self.bundle = self._recompute_bundle()
         self.pane_views = {
@@ -1358,7 +1613,19 @@ class Cv2TransformReviewWindow:
             "G = go to step 3 without saving | S = save only | B = save and go back to step 1 | "
             "0 = save and return to step 0 | N = save and go to step 3 | X = exit"
         )
+        if initial_status_message:
+            self.status_message = initial_status_message
         self._apply_stage_focus_views()
+
+    def _prune_disabled_overrides(self) -> None:
+        if not self.disabled_landmarks:
+            return
+        self.source_landmark_overrides = {
+            name: value for name, value in self.source_landmark_overrides.items() if name not in self.disabled_landmarks
+        }
+        self.target_landmark_overrides = {
+            name: value for name, value in self.target_landmark_overrides.items() if name not in self.disabled_landmarks
+        }
 
     def _warp_source_image(self, *, stage: str, spec: dict[str, object]) -> np.ndarray:
         target_shape = tuple(int(value) for value in spec["target_shape"])
@@ -1377,6 +1644,8 @@ class Cv2TransformReviewWindow:
             target_frame_number=self.selection.target.nnunet_frame if self.selection.target.target_type == "nnunet" else 0,
             source_landmark_overrides=self.source_landmark_overrides,
             target_landmark_overrides=self.target_landmark_overrides,
+            disabled_landmarks=self.disabled_landmarks,
+            top_axis_passes=int(getattr(self.args, "top_axis_smoothing_passes", 4)),
         )
         bundle["affine_warped_image"] = self._warp_source_image(stage="affine", spec=bundle["transform_spec"])
         bundle["final_warped_image"] = self._warp_source_image(stage="final", spec=bundle["transform_spec"])
@@ -1592,15 +1861,23 @@ class Cv2TransformReviewWindow:
             f"vert_axis_rms={final_metrics.get('vert_axis_rms')} "
             f"spine_rms={final_metrics.get('spine_rms')}"
         )
-        help_line = (
-            "Drag only in native panels | wheel zoom | right-drag image to pan | "
-            "1 reset source | 2 reset target | "
-            "G go step 3 no-save | S save only | B save and go back to step 1 | "
-            "0 save and return to step 0 | N save and go to step 3 | X exit"
-        )
-        cv2.putText(canvas, help_line, (12, footer_y + 26), cv2.FONT_HERSHEY_SIMPLEX, 0.46, TEXT_COLOR, 1, cv2.LINE_AA)
-        cv2.putText(canvas, metric_line[:180], (12, footer_y + 52), cv2.FONT_HERSHEY_SIMPLEX, 0.44, MUTED_TEXT, 1, cv2.LINE_AA)
-        draw_step2_marker_legend(canvas, 12, footer_y + 78)
+        help_lines = [
+            "Drag only in native panels | wheel zoom | right-drag image to pan | 1 reset source | 2 reset target",
+            "G go step 3 no-save | S save only | B save and go back to step 1 | 0 save and return to step 0 | N save and go to step 3 | X exit",
+        ]
+        for index, line in enumerate(help_lines):
+            cv2.putText(
+                canvas,
+                line,
+                (12, footer_y + 26 + 22 * index),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.44,
+                TEXT_COLOR,
+                1,
+                cv2.LINE_AA,
+            )
+        cv2.putText(canvas, metric_line[:180], (12, footer_y + 74), cv2.FONT_HERSHEY_SIMPLEX, 0.44, MUTED_TEXT, 1, cv2.LINE_AA)
+        draw_step2_marker_legend(canvas, 12, footer_y + 100)
         affine_lines = format_label_list("Affine anchors", list(self.bundle["transform_spec"]["step1_labels"]))
         step1_set = set(self.bundle["transform_spec"]["step1_labels"])
         tps_extra_labels = [label for label in self.bundle["transform_spec"]["step2_labels"] if label not in step1_set]
@@ -1609,8 +1886,8 @@ class Cv2TransformReviewWindow:
         start_x = 250
         for index, line in enumerate(label_lines):
             color = AFFINE_COLOR if index < len(affine_lines) else TPS_COLOR
-            cv2.putText(canvas, line, (start_x, footer_y + 82 + 22 * index), cv2.FONT_HERSHEY_SIMPLEX, 0.44, color, 1, cv2.LINE_AA)
-        button_y = footer_y + 84
+            cv2.putText(canvas, line, (start_x, footer_y + 104 + 22 * index), cv2.FONT_HERSHEY_SIMPLEX, 0.44, color, 1, cv2.LINE_AA)
+        button_y = footer_y + 102
         button_w = 240
         button_h = 56
         button_gap = 14
@@ -1804,6 +2081,7 @@ class Cv2ExportStepWindow:
             "",
             launch_line,
             "B = go back to step 2",
+            "0 = return to step 0",
             note_line,
         ]
         y = 86
@@ -1901,6 +2179,8 @@ class Cv2ExportStepWindow:
                     return "exit_all"
                 if key == ord("b"):
                     return "back"
+                if key == ord("0"):
+                    return "step0"
                 if key == ord("l"):
                     self._launch_export()
                     return "step0"
@@ -1914,14 +2194,242 @@ class Cv2AnnotationToGridTransformApp:
         self.ui_config: UIConfig = args.ui_config
         self.mapping = parse_mapping_doc(args.mapping_doc)
         self.cases = load_curated_cases(args.manifest_csv, args.vtln_dir)
+        self.case_by_reference_name = {reference_name_for_case(case): case for case in self.cases}
         self.context_cache = ContextLoadCache()
         self._selection_prewarm: Callable[[WorkspaceSelection], None] | None = None
         if self.args.cache_mode == "startup":
             self._selection_prewarm = self.context_cache.prewarm
 
+    @staticmethod
+    def _promotion_annotation_path(*, lane: str, reference_name: str) -> Path:
+        return (
+            DEFAULT_OUTPUT_DIR
+            / "annotation_to_grid_transform"
+            / "_vtln_promotions"
+            / lane
+            / sanitize_promotion_token(reference_name)
+            / "source_annotation.latest.json"
+        )
+
+    @staticmethod
+    def _source_like_target_metadata(
+        selection: WorkspaceSelection,
+        *,
+        target_case,
+        target_shape: tuple[int, int],
+    ) -> dict[str, object]:
+        return {
+            "role": "source",
+            "workspace_id": selection.workspace_id,
+            "artspeech_speaker": target_case.speaker,
+            "session": target_case.session,
+            "source_frame": int(target_case.frame_index_1based),
+            "time_sec": 0.0,
+            "reference_speaker": reference_name_for_case(target_case),
+            "source_shape": list(target_shape),
+            "correlation": None,
+            "word": "",
+            "phoneme": "",
+            "sentence": f"Promoted from Step 1B target editor in {selection.workspace_id}.",
+            "dataset_root": None,
+            "promoted_from_role": "target",
+        }
+
+    @staticmethod
+    def _write_vtln_zip(
+        *,
+        vtln_dir: Path,
+        reference_name: str,
+        contours: dict[str, np.ndarray],
+        source_shape: tuple[int, int],
+    ) -> None:
+        scaled_contours = build_vtln_data_bundle.scale_contours_to_triplet_space(
+            contours,
+            source_shape,
+            VTLN_TRIPLET_SHAPE,
+        )
+        build_vtln_data_bundle.write_annotation_zip(
+            vtln_dir / f"{reference_name}.zip",
+            reference_name,
+            scaled_contours,
+            dry_run=False,
+        )
+
+    def _sync_current_speaker_edits_to_vtln(
+        self,
+        *,
+        selection: WorkspaceSelection,
+        source_context: dict[str, object],
+        source_contours: dict[str, np.ndarray],
+        target_context: dict[str, object],
+        target_contours: dict[str, np.ndarray],
+    ) -> str:
+        paths = step_file_paths(selection.workspace_dir)
+        source_metadata = source_annotation_metadata(
+            selection,
+            source_context["snapshot"],
+            tuple(int(value) for value in source_context["source_frame"].shape[:2]),
+        )
+        save_annotation_state(paths["source_annotation"], source_metadata, source_contours)
+        save_annotation_state(
+            self._promotion_annotation_path(lane="source", reference_name=selection.reference_speaker),
+            source_metadata,
+            source_contours,
+        )
+        self._write_vtln_zip(
+            vtln_dir=selection.reference_bundle_dir,
+            reference_name=selection.reference_speaker,
+            contours=source_contours,
+            source_shape=tuple(int(value) for value in source_context["source_frame"].shape[:2]),
+        )
+
+        updated_refs = [selection.reference_speaker]
+
+        target_metadata = target_annotation_metadata(selection, tuple(int(value) for value in target_context["target_image"].shape[:2]))
+        save_annotation_state(paths["target_annotation"], target_metadata, target_contours)
+
+        if selection.target.target_type == "vtln":
+            target_reference = selection.target.vtln_reference
+            target_case = self.case_by_reference_name.get(target_reference)
+            if target_case is not None:
+                promoted_target_metadata = self._source_like_target_metadata(
+                    selection,
+                    target_case=target_case,
+                    target_shape=tuple(int(value) for value in target_context["target_image"].shape[:2]),
+                )
+                save_annotation_state(
+                    self._promotion_annotation_path(lane="target", reference_name=target_reference),
+                    promoted_target_metadata,
+                    target_contours,
+                )
+            self._write_vtln_zip(
+                vtln_dir=selection.target.vtln_dir,
+                reference_name=target_reference,
+                contours=target_contours,
+                source_shape=tuple(int(value) for value in target_context["target_image"].shape[:2]),
+            )
+            if (selection.target.vtln_dir != selection.reference_bundle_dir) or (target_reference != selection.reference_speaker):
+                updated_refs.append(target_reference)
+
+        self.context_cache.clear()
+        if len(updated_refs) == 1:
+            return f"Updated VTLN speaker: {updated_refs[0]}"
+        return f"Updated VTLN speakers: {', '.join(updated_refs)}"
+
+    def _save_source_editor_to_vtln(
+        self,
+        selection: WorkspaceSelection,
+        source_context: dict[str, object],
+        contours: dict[str, np.ndarray],
+    ) -> str:
+        source_metadata = source_annotation_metadata(
+            selection,
+            source_context["snapshot"],
+            tuple(int(value) for value in source_context["source_frame"].shape[:2]),
+        )
+        save_annotation_state(
+            self._promotion_annotation_path(lane="source", reference_name=selection.reference_speaker),
+            source_metadata,
+            contours,
+        )
+        self._write_vtln_zip(
+            vtln_dir=selection.reference_bundle_dir,
+            reference_name=selection.reference_speaker,
+            contours=contours,
+            source_shape=tuple(int(value) for value in source_context["source_frame"].shape[:2]),
+        )
+        self.context_cache.clear()
+        return f"Saved source and updated VTLN zip: {selection.reference_speaker}"
+
+    def _save_target_editor_to_vtln(
+        self,
+        selection: WorkspaceSelection,
+        target_context: dict[str, object],
+        contours: dict[str, np.ndarray],
+    ) -> str:
+        if selection.target.target_type != "vtln":
+            return "Saved target_annotation.latest.json"
+        target_reference = selection.target.vtln_reference
+        target_case = self.case_by_reference_name.get(target_reference)
+        if target_case is not None:
+            promoted_target_metadata = self._source_like_target_metadata(
+                selection,
+                target_case=target_case,
+                target_shape=tuple(int(value) for value in target_context["target_image"].shape[:2]),
+            )
+            save_annotation_state(
+                self._promotion_annotation_path(lane="target", reference_name=target_reference),
+                promoted_target_metadata,
+                contours,
+            )
+        self._write_vtln_zip(
+            vtln_dir=selection.target.vtln_dir,
+            reference_name=target_reference,
+            contours=contours,
+            source_shape=tuple(int(value) for value in target_context["target_image"].shape[:2]),
+        )
+        if target_case is not None:
+            source_case = target_case
+            if target_case.reference_bundle_dir is None or target_case.reference_bundle_name is None:
+                source_case = replace(
+                    target_case,
+                    reference_bundle_dir=selection.target.vtln_dir,
+                    reference_bundle_name=target_reference,
+                )
+            source_selection = build_workspace_selection(
+                case=source_case,
+                artspeech_root=self.args.artspeech_root,
+                target=selection.target,
+                workspace_root=self.args.workspace_root,
+                mapping=self.mapping,
+            )
+            source_context = load_source_context(source_selection)
+            source_metadata = source_annotation_metadata(
+                source_selection,
+                source_context["snapshot"],
+                tuple(int(value) for value in source_context["source_frame"].shape[:2]),
+            )
+            save_annotation_state(
+                self._promotion_annotation_path(lane="source", reference_name=target_reference),
+                source_metadata,
+                source_context["projected_contours"],
+            )
+        self.context_cache.clear()
+        return f"Saved target and updated VTLN zip/source state: {target_reference}"
+
     def _run_source_editor(self, selection: WorkspaceSelection, source_context: dict[str, object]) -> tuple[str, dict[str, np.ndarray]]:
         source_annotation_path = step_file_paths(selection.workspace_dir)["source_annotation"]
         metadata = source_annotation_metadata(selection, source_context["snapshot"], tuple(source_context["source_frame"].shape[:2]))
+        sync_note: str | None = None
+        workspace_payload = load_annotation_state_if_available(source_annotation_path)
+        workspace_payload_valid = source_annotation_payload_is_plausible(workspace_payload)
+        latest_payload = find_latest_source_annotation_for_selection(selection)
+        if latest_payload is not None:
+            latest_path = Path(str(latest_payload.get("path")))
+            latest_mtime = latest_path.stat().st_mtime if latest_path.is_file() else float("-inf")
+            workspace_mtime = source_annotation_path.stat().st_mtime if source_annotation_path.is_file() and workspace_payload_valid else float("-inf")
+            if latest_path != source_annotation_path and (not workspace_payload_valid or latest_mtime > workspace_mtime):
+                if source_annotation_path.is_file() and not workspace_payload_valid:
+                    backup_path = source_annotation_path.with_name("source_annotation.invalid_backup.json")
+                    shutil.copy2(source_annotation_path, backup_path)
+                save_annotation_state(source_annotation_path, metadata, latest_payload["contours"])
+                if workspace_payload is not None and not workspace_payload_valid:
+                    sync_note = f"repaired invalid source annotation from {latest_path.parent.name}/{latest_path.name}"
+                else:
+                    sync_note = f"synced latest source annotation from {latest_path.parent.name}/{latest_path.name}"
+        elif source_annotation_path.is_file() and not workspace_payload_valid:
+            backup_path = source_annotation_path.with_name("source_annotation.invalid_backup.json")
+            shutil.copy2(source_annotation_path, backup_path)
+            source_annotation_path.unlink(missing_ok=True)
+            sync_note = "ignored invalid saved source annotation and reverted to projected reference"
+        info_lines = source_text_block(source_context["snapshot"], selection.reference_speaker)
+        if sync_note is not None:
+            info_lines = [sync_note, *info_lines]
+        if not bool(source_context.get("source_has_video", True)):
+            info_lines = [
+                "source video: unavailable (reference-only source; Step 3 export disabled)",
+                *info_lines,
+            ]
         editor = Cv2ContourEditorWindow(
             window_name=WINDOW_NAME_STEP1,
             image=source_context["source_frame"],
@@ -1934,10 +2442,11 @@ class Cv2AnnotationToGridTransformApp:
                 "S = save only | N = save and continue to Step 1B | G = continue to Step 1B without saving",
                 "No direct jump to Step 0 from Step 1",
             ],
-            info_lines=source_text_block(source_context["snapshot"], selection.reference_speaker),
+            info_lines=info_lines,
             allow_back=False,
             ui_config=self.ui_config,
             args=self.args,
+            on_save=lambda contours: self._save_source_editor_to_vtln(selection, source_context, contours),
         )
         return editor.run()
 
@@ -1965,6 +2474,7 @@ class Cv2AnnotationToGridTransformApp:
             allow_back=True,
             ui_config=self.ui_config,
             args=self.args,
+            on_save=lambda contours: self._save_target_editor_to_vtln(selection, target_context, contours),
         )
         return editor.run()
 
@@ -2005,6 +2515,7 @@ class Cv2AnnotationToGridTransformApp:
                 pending_source_landmark_overrides: dict[str, np.ndarray | None] | None = None
                 pending_target_landmark_overrides: dict[str, np.ndarray | None] | None = None
                 pending_review_dirty = False
+                pending_review_status_message: str | None = None
                 while True:
                     review_window = Cv2TransformReviewWindow(
                         selection=selection,
@@ -2017,12 +2528,28 @@ class Cv2AnnotationToGridTransformApp:
                         initial_source_landmark_overrides=pending_source_landmark_overrides,
                         initial_target_landmark_overrides=pending_target_landmark_overrides,
                         initial_dirty=pending_review_dirty,
+                        initial_status_message=pending_review_status_message,
                     )
+                    pending_review_status_message = None
                     review_action = review_window.run()
                     if review_action == "exit_all":
                         return 0
                     if review_action == "step0":
-                        break
+                        try:
+                            selection_window.status_message = self._sync_current_speaker_edits_to_vtln(
+                                selection=selection,
+                                source_context=source_context,
+                                source_contours=source_contours,
+                                target_context=target_context,
+                                target_contours=target_contours,
+                            )
+                            break
+                        except Exception as exc:
+                            pending_source_landmark_overrides = copy_points_map(review_window.source_landmark_overrides)
+                            pending_target_landmark_overrides = copy_points_map(review_window.target_landmark_overrides)
+                            pending_review_dirty = review_window.dirty
+                            pending_review_status_message = f"VTLN update failed: {exc}"
+                            continue
                     if review_action == "back_step1":
                         target_action, target_contours = self._run_target_editor(selection, target_context)
                         if target_action == "exit_all":
@@ -2035,6 +2562,25 @@ class Cv2AnnotationToGridTransformApp:
                             if target_action == "exit_all":
                                 return 0
                         continue
+                    if review_action in {"step3", "step3_no_save"} and not bool(source_context.get("source_has_video", True)):
+                        try:
+                            sync_status = self._sync_current_speaker_edits_to_vtln(
+                                selection=selection,
+                                source_context=source_context,
+                                source_contours=source_contours,
+                                target_context=target_context,
+                                target_contours=target_contours,
+                            )
+                            selection_window.status_message = (
+                                f"{sync_status}. No source video for {selection.case.speaker}/{selection.case.session}; skipped Step 3."
+                            )
+                            break
+                        except Exception as exc:
+                            pending_source_landmark_overrides = copy_points_map(review_window.source_landmark_overrides)
+                            pending_target_landmark_overrides = copy_points_map(review_window.target_landmark_overrides)
+                            pending_review_dirty = review_window.dirty
+                            pending_review_status_message = f"VTLN update failed: {exc}"
+                            continue
 
                     export_window = Cv2ExportStepWindow(
                         selection=selection,
@@ -2050,6 +2596,20 @@ class Cv2AnnotationToGridTransformApp:
                             pending_source_landmark_overrides = copy_points_map(review_window.source_landmark_overrides)
                             pending_target_landmark_overrides = copy_points_map(review_window.target_landmark_overrides)
                             pending_review_dirty = review_window.dirty
+                        continue
+                    try:
+                        selection_window.status_message = self._sync_current_speaker_edits_to_vtln(
+                            selection=selection,
+                            source_context=source_context,
+                            source_contours=source_contours,
+                            target_context=target_context,
+                            target_contours=target_contours,
+                        )
+                    except Exception as exc:
+                        pending_source_landmark_overrides = copy_points_map(review_window.source_landmark_overrides)
+                        pending_target_landmark_overrides = copy_points_map(review_window.target_landmark_overrides)
+                        pending_review_dirty = review_window.dirty
+                        pending_review_status_message = f"VTLN update failed: {exc}"
                         continue
                     break
                 continue

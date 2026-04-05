@@ -25,6 +25,14 @@ cv2_annotation_to_grid_transform:
     default_target_case: "2008-003^01-1791/test"
     default_target_frame: 143020
 
+    # Landmarks disabled in the Step 2 review/warp pipeline.
+    # Disabled landmarks are hidden from the UI and excluded from affine/TPS fitting.
+    disabled_landmarks: ["I6", "I7"]
+
+    # Extra smoothing passes applied to the warped top axis in Step 2.
+    # 0 disables the additional top-axis smoothing.
+    top_axis_smoothing_passes: 4
+
     # Background export defaults for Step 3.
     # render_workers: integer in [1, 64]
     # render_prefetch: integer in [0, 1024]
@@ -61,4 +69,4 @@ cv2_annotation_to_grid_transform:
     review_pane_width: 480
     review_pane_height: 340
     pane_gap: 12
-    review_footer_height: 176
+    review_footer_height: 208
