@@ -340,18 +340,31 @@ def contour_bounds(contours: dict[str, np.ndarray] | dict[str, object]) -> tuple
     return min_x, min_y, max_x, max_y
 
 
-def source_annotation_payload_is_plausible(payload: dict[str, object] | None) -> bool:
+def parse_shape2d(shape_raw: object) -> tuple[int, int] | None:
+    try:
+        source_h = int(shape_raw[0])
+        source_w = int(shape_raw[1])
+    except (TypeError, ValueError, IndexError):
+        return None
+    if source_h <= 0 or source_w <= 0:
+        return None
+    return source_h, source_w
+
+
+def source_annotation_payload_is_plausible(
+    payload: dict[str, object] | None,
+    *,
+    current_source_shape: tuple[int, int] | None = None,
+) -> bool:
     if not payload:
         return False
     metadata = payload.get("metadata", {})
-    source_shape_raw = metadata.get("source_shape") or metadata.get("reference_shape")
-    if source_shape_raw is None:
+    resolved_shape = parse_shape2d(current_source_shape)
+    if resolved_shape is None:
+        resolved_shape = parse_shape2d(metadata.get("source_shape") or metadata.get("reference_shape"))
+    if resolved_shape is None:
         return True
-    try:
-        source_h = int(source_shape_raw[0])
-        source_w = int(source_shape_raw[1])
-    except (TypeError, ValueError, IndexError):
-        return True
+    source_h, source_w = resolved_shape
     bounds = contour_bounds(payload.get("contours", {}))
     if bounds is None:
         return True
@@ -379,7 +392,11 @@ def discover_saved_source_annotation_paths() -> list[Path]:
     return sorted(set(paths))
 
 
-def find_latest_source_annotation_for_selection(selection: WorkspaceSelection) -> dict[str, object] | None:
+def find_latest_source_annotation_for_selection(
+    selection: WorkspaceSelection,
+    *,
+    current_source_shape: tuple[int, int] | None = None,
+) -> dict[str, object] | None:
     best_payload: dict[str, object] | None = None
     best_mtime = float("-inf")
     expected_key = (
@@ -396,7 +413,7 @@ def find_latest_source_annotation_for_selection(selection: WorkspaceSelection) -
         # stored in target/VTLN coordinates and must never override Step 1A source loads.
         if str(metadata.get("promoted_from_role") or "").strip().lower() == "target":
             continue
-        if not source_annotation_payload_is_plausible(payload):
+        if not source_annotation_payload_is_plausible(payload, current_source_shape=current_source_shape):
             continue
         payload_key = (
             str(metadata.get("artspeech_speaker") or ""),
@@ -2401,9 +2418,16 @@ class Cv2AnnotationToGridTransformApp:
         source_annotation_path = step_file_paths(selection.workspace_dir)["source_annotation"]
         metadata = source_annotation_metadata(selection, source_context["snapshot"], tuple(source_context["source_frame"].shape[:2]))
         sync_note: str | None = None
+        current_source_shape = tuple(int(value) for value in source_context["source_frame"].shape[:2])
         workspace_payload = load_annotation_state_if_available(source_annotation_path)
-        workspace_payload_valid = source_annotation_payload_is_plausible(workspace_payload)
-        latest_payload = find_latest_source_annotation_for_selection(selection)
+        workspace_payload_valid = source_annotation_payload_is_plausible(
+            workspace_payload,
+            current_source_shape=current_source_shape,
+        )
+        latest_payload = find_latest_source_annotation_for_selection(
+            selection,
+            current_source_shape=current_source_shape,
+        )
         if latest_payload is not None:
             latest_path = Path(str(latest_payload.get("path")))
             latest_mtime = latest_path.stat().st_mtime if latest_path.is_file() else float("-inf")

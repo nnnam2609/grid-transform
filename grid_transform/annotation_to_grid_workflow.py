@@ -352,6 +352,8 @@ def _deform_grid_from_landmark_overrides(
     grid,
     raw_landmarks: dict[str, np.ndarray | None],
     updated_landmarks: dict[str, np.ndarray | None],
+    *,
+    top_axis_passes: int = 4,
 ):
     pairs = _single_point_landmark_pairs(raw_landmarks, updated_landmarks)
     if not pairs:
@@ -379,7 +381,7 @@ def _deform_grid_from_landmark_overrides(
         deformed_horiz_raw,
         updated_landmarks,
         grid.n_vert,
-        top_axis_passes=4,
+        top_axis_passes=top_axis_passes,
     )
 
     left_pts = np.asarray([line[0] for line in deformed_horiz], dtype=float) if deformed_horiz else None
@@ -458,8 +460,18 @@ def build_transform_bundle(
     target_landmarks_raw = _disable_landmarks(extract_true_landmarks(target_grid_base), disabled)
     source_landmarks = _disable_landmarks(_apply_overrides(source_landmarks_raw, source_landmark_overrides), disabled)
     target_landmarks = _disable_landmarks(_apply_overrides(target_landmarks_raw, target_landmark_overrides), disabled)
-    source_grid = _deform_grid_from_landmark_overrides(source_grid_base, source_landmarks_raw, source_landmarks)
-    target_grid = _deform_grid_from_landmark_overrides(target_grid_base, target_landmarks_raw, target_landmarks)
+    source_grid = _deform_grid_from_landmark_overrides(
+        source_grid_base,
+        source_landmarks_raw,
+        source_landmarks,
+        top_axis_passes=top_axis_passes,
+    )
+    target_grid = _deform_grid_from_landmark_overrides(
+        target_grid_base,
+        target_landmarks_raw,
+        target_landmarks,
+        top_axis_passes=top_axis_passes,
+    )
 
     step0_errors = compute_named_point_errors(source_landmarks, target_landmarks, LANDMARK_REPORT_ORDER)
     step0_metrics = compute_metrics(source_landmarks, target_landmarks)
