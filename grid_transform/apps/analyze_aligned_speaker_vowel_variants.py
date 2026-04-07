@@ -344,7 +344,7 @@ def save_ranked_variants_figure(
 
     ncols = max(len(group) for _, group in groups)
     fig, axes = plt.subplots(2, ncols, figsize=(3.3 * ncols, 6.8), dpi=150)
-    axes_arr = np.atleast_2d(axes)
+    axes_arr = np.asarray(axes, dtype=object).reshape(2, ncols)
 
     for row_axes in axes_arr:
         for ax in row_axes:
