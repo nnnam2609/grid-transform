@@ -81,6 +81,10 @@ def run_workspace_export(*, workspace_dir: Path, workers: int, prefetch: int, ma
 
     summary_path = export_dir / "workspace_export_summary.json"
     try:
+        if selection.dataset_root is None:
+            raise FileNotFoundError(
+                f"No ArtSpeech dataset root is available for {selection.case.speaker}/{selection.case.session}."
+            )
         session_data = load_session_data(selection.dataset_root, selection.case.speaker, selection.case.session)
     except Exception as exc:
         preview_path = export_dir / "preview_only.png"

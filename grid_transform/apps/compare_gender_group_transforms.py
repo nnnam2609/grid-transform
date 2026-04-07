@@ -160,6 +160,8 @@ def read_curated_specs(vtln_dir: Path) -> list[CuratedSpeakerSpec]:
             for row in reader:
                 basename = row["output_basename"].strip()
                 speaker_id = row["speaker"].strip().upper()
+                if speaker_id not in CURATED_SPEAKER_GENDER:
+                    continue
                 raw_subject = row.get("raw_subject", "").strip() or None
                 selected_source = row.get("selected_source", "").strip()
                 session = None
