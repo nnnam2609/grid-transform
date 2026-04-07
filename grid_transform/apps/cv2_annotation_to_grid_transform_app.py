@@ -2229,26 +2229,21 @@ class Cv2AnnotationToGridTransformApp:
         )
 
     @staticmethod
-    def _source_like_target_metadata(
+    def _target_promotion_metadata(
         selection: WorkspaceSelection,
         *,
         target_case,
         target_shape: tuple[int, int],
     ) -> dict[str, object]:
         return {
-            "role": "source",
+            "role": "target",
             "workspace_id": selection.workspace_id,
-            "artspeech_speaker": target_case.speaker,
-            "session": target_case.session,
-            "source_frame": int(target_case.frame_index_1based),
-            "time_sec": 0.0,
-            "reference_speaker": reference_name_for_case(target_case),
-            "source_shape": list(target_shape),
-            "correlation": None,
-            "word": "",
-            "phoneme": "",
+            "target_reference": reference_name_for_case(target_case),
+            "target_speaker": target_case.speaker,
+            "target_session": target_case.session,
+            "target_frame": int(target_case.frame_index_1based),
+            "target_shape": list(target_shape),
             "sentence": f"Promoted from Step 1B target editor in {selection.workspace_id}.",
-            "dataset_root": None,
             "promoted_from_role": "target",
         }
 
@@ -2280,36 +2275,47 @@ class Cv2AnnotationToGridTransformApp:
         source_contours: dict[str, np.ndarray],
         target_context: dict[str, object],
         target_contours: dict[str, np.ndarray],
+        sync_source: bool = True,
+        sync_target: bool = True,
     ) -> str:
         paths = step_file_paths(selection.workspace_dir)
-        source_metadata = source_annotation_metadata(
-            selection,
-            source_context["snapshot"],
-            tuple(int(value) for value in source_context["source_frame"].shape[:2]),
-        )
-        save_annotation_state(paths["source_annotation"], source_metadata, source_contours)
-        save_annotation_state(
-            self._promotion_annotation_path(lane="source", reference_name=selection.reference_speaker),
-            source_metadata,
-            source_contours,
-        )
-        self._write_vtln_zip(
-            vtln_dir=selection.reference_bundle_dir,
-            reference_name=selection.reference_speaker,
-            contours=source_contours,
-            source_shape=tuple(int(value) for value in source_context["source_frame"].shape[:2]),
-        )
+        updated_refs: list[str] = []
+        skipped_roles: list[str] = []
 
-        updated_refs = [selection.reference_speaker]
+        if sync_source:
+            source_metadata = source_annotation_metadata(
+                selection,
+                source_context["snapshot"],
+                tuple(int(value) for value in source_context["source_frame"].shape[:2]),
+            )
+            save_annotation_state(paths["source_annotation"], source_metadata, source_contours)
+            save_annotation_state(
+                self._promotion_annotation_path(lane="source", reference_name=selection.reference_speaker),
+                source_metadata,
+                source_contours,
+            )
+            self._write_vtln_zip(
+                vtln_dir=selection.reference_bundle_dir,
+                reference_name=selection.reference_speaker,
+                contours=source_contours,
+                source_shape=tuple(int(value) for value in source_context["source_frame"].shape[:2]),
+            )
+            updated_refs.append(selection.reference_speaker)
+        else:
+            skipped_roles.append("source")
 
-        target_metadata = target_annotation_metadata(selection, tuple(int(value) for value in target_context["target_image"].shape[:2]))
-        save_annotation_state(paths["target_annotation"], target_metadata, target_contours)
+        if sync_target:
+            target_metadata = target_annotation_metadata(
+                selection,
+                tuple(int(value) for value in target_context["target_image"].shape[:2]),
+            )
+            save_annotation_state(paths["target_annotation"], target_metadata, target_contours)
 
-        if selection.target.target_type == "vtln":
+        if selection.target.target_type == "vtln" and sync_target:
             target_reference = selection.target.vtln_reference
             target_case = self.case_by_reference_name.get(target_reference)
             if target_case is not None:
-                promoted_target_metadata = self._source_like_target_metadata(
+                promoted_target_metadata = self._target_promotion_metadata(
                     selection,
                     target_case=target_case,
                     target_shape=tuple(int(value) for value in target_context["target_image"].shape[:2]),
@@ -2327,11 +2333,19 @@ class Cv2AnnotationToGridTransformApp:
             )
             if (selection.target.vtln_dir != selection.reference_bundle_dir) or (target_reference != selection.reference_speaker):
                 updated_refs.append(target_reference)
+        elif not sync_target:
+            skipped_roles.append("target")
 
         self.context_cache.clear()
+        if not updated_refs:
+            return f"Skipped VTLN sync for unsaved {' and '.join(skipped_roles)} edits."
         if len(updated_refs) == 1:
-            return f"Updated VTLN speaker: {updated_refs[0]}"
-        return f"Updated VTLN speakers: {', '.join(updated_refs)}"
+            message = f"Updated VTLN speaker: {updated_refs[0]}"
+        else:
+            message = f"Updated VTLN speakers: {', '.join(updated_refs)}"
+        if skipped_roles:
+            message += f" | skipped unsaved {' and '.join(skipped_roles)} edits"
+        return message
 
     def _save_source_editor_to_vtln(
         self,
@@ -2369,7 +2383,7 @@ class Cv2AnnotationToGridTransformApp:
         target_reference = selection.target.vtln_reference
         target_case = self.case_by_reference_name.get(target_reference)
         if target_case is not None:
-            promoted_target_metadata = self._source_like_target_metadata(
+            promoted_target_metadata = self._target_promotion_metadata(
                 selection,
                 target_case=target_case,
                 target_shape=tuple(int(value) for value in target_context["target_image"].shape[:2]),
@@ -2524,15 +2538,18 @@ class Cv2AnnotationToGridTransformApp:
                 source_action, source_contours = self._run_source_editor(selection, source_context)
                 if source_action == "exit_all":
                     return 0
+                source_sync_allowed = source_action != "next_no_save"
 
                 while True:
                     target_action, target_contours = self._run_target_editor(selection, target_context)
                     if target_action == "exit_all":
                         return 0
+                    target_sync_allowed = target_action != "next_no_save"
                     if target_action == "back":
                         source_action, source_contours = self._run_source_editor(selection, source_context)
                         if source_action == "exit_all":
                             return 0
+                        source_sync_allowed = source_action != "next_no_save"
                         continue
                     break
 
@@ -2566,6 +2583,8 @@ class Cv2AnnotationToGridTransformApp:
                                 source_contours=source_contours,
                                 target_context=target_context,
                                 target_contours=target_contours,
+                                sync_source=source_sync_allowed,
+                                sync_target=target_sync_allowed,
                             )
                             break
                         except Exception as exc:
@@ -2578,13 +2597,16 @@ class Cv2AnnotationToGridTransformApp:
                         target_action, target_contours = self._run_target_editor(selection, target_context)
                         if target_action == "exit_all":
                             return 0
+                        target_sync_allowed = target_action != "next_no_save"
                         if target_action == "back":
                             source_action, source_contours = self._run_source_editor(selection, source_context)
                             if source_action == "exit_all":
                                 return 0
+                            source_sync_allowed = source_action != "next_no_save"
                             target_action, target_contours = self._run_target_editor(selection, target_context)
                             if target_action == "exit_all":
                                 return 0
+                            target_sync_allowed = target_action != "next_no_save"
                         continue
                     if review_action in {"step3", "step3_no_save"} and not bool(source_context.get("source_has_video", True)):
                         try:
@@ -2594,6 +2616,8 @@ class Cv2AnnotationToGridTransformApp:
                                 source_contours=source_contours,
                                 target_context=target_context,
                                 target_contours=target_contours,
+                                sync_source=source_sync_allowed,
+                                sync_target=target_sync_allowed,
                             )
                             selection_window.status_message = (
                                 f"{sync_status}. No source video for {selection.case.speaker}/{selection.case.session}; skipped Step 3."
@@ -2628,6 +2652,8 @@ class Cv2AnnotationToGridTransformApp:
                             source_contours=source_contours,
                             target_context=target_context,
                             target_contours=target_contours,
+                            sync_source=source_sync_allowed,
+                            sync_target=target_sync_allowed,
                         )
                     except Exception as exc:
                         pending_source_landmark_overrides = copy_points_map(review_window.source_landmark_overrides)
