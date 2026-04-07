@@ -71,9 +71,24 @@ class PairTransformResult:
     target_basename: str
     source_speaker_id: str
     target_speaker_id: str
+    source_gender: str
+    target_gender: str
     rms: float
     per_label_rms: dict[str, float]
     mapped_contours: dict[str, np.ndarray]
+
+
+@dataclass(frozen=True)
+class SourceSelectionSummary:
+    source_basename: str
+    source_speaker_id: str
+    source_gender: str
+    same_gender_mean_rms: float
+    all_target_mean_rms: float
+
+    @property
+    def improvement(self) -> float:
+        return self.all_target_mean_rms - self.same_gender_mean_rms
 
 
 def default_curated_vtln_dir() -> Path:
@@ -286,6 +301,8 @@ def compute_pair_transform(
         target_basename=target.spec.basename,
         source_speaker_id=source.spec.speaker_id,
         target_speaker_id=target.spec.speaker_id,
+        source_gender=source.spec.gender,
+        target_gender=target.spec.gender,
         rms=rms,
         per_label_rms=per_label_rms,
         mapped_contours=mapped_contours,
@@ -418,6 +435,13 @@ def grouped_pair_results_by_target(pair_results: list[PairTransformResult]) -> d
     return grouped
 
 
+def grouped_pair_results_by_source(pair_results: list[PairTransformResult]) -> dict[str, list[PairTransformResult]]:
+    grouped: dict[str, list[PairTransformResult]] = {}
+    for pair in pair_results:
+        grouped.setdefault(pair.source_basename, []).append(pair)
+    return grouped
+
+
 def cohort_target_mean_rms(pair_results: list[PairTransformResult]) -> dict[str, float]:
     grouped = grouped_pair_results_by_target(pair_results)
     return {
@@ -431,6 +455,120 @@ def cohort_label_mean_rms(pair_results: list[PairTransformResult], common_labels
         label: float(np.mean([pair.per_label_rms[label] for pair in pair_results]))
         for label in common_labels
     }
+
+
+def compute_source_selection_summaries(
+    same_gender_results: list[PairTransformResult],
+    all_target_results: list[PairTransformResult],
+    loaded_speakers: dict[str, LoadedSpeaker],
+) -> list[SourceSelectionSummary]:
+    same_gender_grouped = grouped_pair_results_by_source(same_gender_results)
+    all_target_grouped = grouped_pair_results_by_source(all_target_results)
+    summaries: list[SourceSelectionSummary] = []
+
+    for source_basename in sorted(same_gender_grouped):
+        same_gender_pairs = same_gender_grouped[source_basename]
+        all_target_pairs = all_target_grouped.get(source_basename, [])
+        if not same_gender_pairs or not all_target_pairs:
+            continue
+
+        source_speaker = loaded_speakers[source_basename]
+        summaries.append(
+            SourceSelectionSummary(
+                source_basename=source_basename,
+                source_speaker_id=source_speaker.spec.speaker_id,
+                source_gender=source_speaker.spec.gender,
+                same_gender_mean_rms=float(np.mean([pair.rms for pair in same_gender_pairs])),
+                all_target_mean_rms=float(np.mean([pair.rms for pair in all_target_pairs])),
+            )
+        )
+    return summaries
+
+
+def write_source_selection_summary_csv(
+    summaries: list[SourceSelectionSummary],
+    output_path: Path,
+) -> None:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with output_path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(
+            handle,
+            fieldnames=[
+                "source_basename",
+                "source_speaker_id",
+                "source_gender",
+                "same_gender_mean_rms",
+                "all_target_mean_rms",
+                "improvement",
+            ],
+        )
+        writer.writeheader()
+        for summary in summaries:
+            writer.writerow(
+                {
+                    "source_basename": summary.source_basename,
+                    "source_speaker_id": summary.source_speaker_id,
+                    "source_gender": summary.source_gender,
+                    "same_gender_mean_rms": f"{summary.same_gender_mean_rms:.6f}",
+                    "all_target_mean_rms": f"{summary.all_target_mean_rms:.6f}",
+                    "improvement": f"{summary.improvement:.6f}",
+                }
+            )
+
+
+def save_same_gender_vs_all_targets_summary(
+    summaries: list[SourceSelectionSummary],
+    output_path: Path,
+) -> None:
+    fig, axes = plt.subplots(1, 2, figsize=(18, 7.5))
+
+    ordered = sorted(summaries, key=lambda item: (item.source_gender, item.source_speaker_id))
+    speaker_labels = [summary.source_speaker_id for summary in ordered]
+    same_gender_values = [summary.same_gender_mean_rms for summary in ordered]
+    all_target_values = [summary.all_target_mean_rms for summary in ordered]
+    improvement_values = [summary.improvement for summary in ordered]
+    colors = ["#4c78a8" if summary.source_gender == "male" else "#f58518" for summary in ordered]
+
+    ax = axes[0]
+    x = np.arange(len(ordered))
+    width = 0.42
+    ax.bar(x - width / 2, same_gender_values, width=width, color=colors, edgecolor="black", alpha=0.85, label="same gender only")
+    ax.bar(x + width / 2, all_target_values, width=width, color="#7f7f7f", edgecolor="black", alpha=0.75, label="all targets")
+    ax.set_xticks(x)
+    ax.set_xticklabels(speaker_labels, rotation=25, ha="right")
+    ax.set_ylabel("Mean source->target RMS (px)")
+    ax.set_title("Per-source target-selection comparison", fontsize=13, fontweight="bold")
+    ax.grid(True, axis="y", alpha=0.25)
+    ax.legend(framealpha=0.95)
+
+    ax = axes[1]
+    y = np.arange(len(ordered))
+    ax.barh(y, improvement_values, color=colors, edgecolor="black", alpha=0.88)
+    ax.axvline(0.0, color="black", lw=1.0, alpha=0.7)
+    ax.set_yticks(y)
+    ax.set_yticklabels(speaker_labels)
+    ax.set_xlabel("all-target mean RMS - same-gender mean RMS (px)")
+    ax.set_title("Positive means same-gender targets are better", fontsize=13, fontweight="bold")
+    ax.grid(True, axis="x", alpha=0.25)
+    for yi, value in zip(y, improvement_values):
+        offset = 0.12 if value >= 0 else -0.12
+        ha = "left" if value >= 0 else "right"
+        ax.text(value + offset, yi, f"{value:.2f}", va="center", ha=ha, fontsize=8.5)
+
+    mean_improvement = float(np.mean(improvement_values)) if improvement_values else 0.0
+    median_improvement = float(np.median(improvement_values)) if improvement_values else 0.0
+    fig.suptitle(
+        (
+            "Same-gender vs all-target selection\n"
+            f"mean improvement = {mean_improvement:.2f} px | median improvement = {median_improvement:.2f} px"
+        ),
+        fontsize=15,
+        fontweight="bold",
+    )
+    plt.tight_layout(rect=(0, 0, 1, 0.93))
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output_path, dpi=220, bbox_inches="tight")
+    plt.close(fig)
 
 
 def save_cross_cohort_summary(
@@ -561,6 +699,29 @@ def run_cohort(
     return pair_results
 
 
+def run_all_target_baseline(
+    loaded_speakers: dict[str, LoadedSpeaker],
+    common_labels: list[str],
+    nc_template: int,
+) -> list[PairTransformResult]:
+    speakers = sorted(loaded_speakers.values(), key=lambda item: item.spec.basename)
+    results: list[PairTransformResult] = []
+    for source in speakers:
+        for target in speakers:
+            if source.spec.basename == target.spec.basename:
+                continue
+            results.append(
+                compute_pair_transform(
+                    cohort="all_targets",
+                    source=source,
+                    target=target,
+                    common_labels=common_labels,
+                    nc_template=nc_template,
+                )
+            )
+    return results
+
+
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     if not args.vtln_dir.is_dir():
@@ -592,6 +753,7 @@ def main(argv: list[str] | None = None) -> int:
 
     male_results = run_cohort("male_to_male", male_speakers, common_labels, args.output_dir, args.nc_template)
     female_results = run_cohort("female_to_female", female_speakers, common_labels, args.output_dir, args.nc_template)
+    all_target_results = run_all_target_baseline(loaded_speakers, common_labels, args.nc_template)
 
     summary_path = args.output_dir / "male_vs_female_summary.png"
     save_cross_cohort_summary(
@@ -602,6 +764,15 @@ def main(argv: list[str] | None = None) -> int:
         skipped_messages=skipped_messages,
         output_path=summary_path,
     )
+    source_selection_summaries = compute_source_selection_summaries(
+        same_gender_results=male_results + female_results,
+        all_target_results=all_target_results,
+        loaded_speakers=loaded_speakers,
+    )
+    source_selection_csv = args.output_dir / "same_gender_vs_all_targets_summary.csv"
+    write_source_selection_summary_csv(source_selection_summaries, source_selection_csv)
+    source_selection_figure = args.output_dir / "same_gender_vs_all_targets_summary.png"
+    save_same_gender_vs_all_targets_summary(source_selection_summaries, source_selection_figure)
 
     male_mean = float(np.mean([pair.rms for pair in male_results]))
     male_median = float(np.median([pair.rms for pair in male_results]))
@@ -622,7 +793,23 @@ def main(argv: list[str] | None = None) -> int:
     print(f"male->male RMS mean/median: {male_mean:.2f} / {male_median:.2f} px")
     print(f"female->female pairs: {len(female_results)}")
     print(f"female->female RMS mean/median: {female_mean:.2f} / {female_median:.2f} px")
+    print("Same-gender vs all-target baseline:")
+    for summary in source_selection_summaries:
+        print(
+            "  "
+            f"{summary.source_speaker_id} ({summary.source_gender}): "
+            f"same-gender={summary.same_gender_mean_rms:.2f} px | "
+            f"all-targets={summary.all_target_mean_rms:.2f} px | "
+            f"improvement={summary.improvement:.2f} px"
+        )
+    print(
+        "Overall improvement mean/median (all-target mean - same-gender mean): "
+        f"{float(np.mean([summary.improvement for summary in source_selection_summaries])):.2f} / "
+        f"{float(np.median([summary.improvement for summary in source_selection_summaries])):.2f} px"
+    )
     print(f"Saved summary: {summary_path}")
+    print(f"Saved summary: {source_selection_figure}")
+    print(f"Saved CSV: {source_selection_csv}")
     return 0
 
 

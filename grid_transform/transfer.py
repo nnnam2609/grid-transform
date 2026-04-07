@@ -25,6 +25,9 @@ DEFAULT_ARTICULATORS = (
 
 DEFAULT_SMOOTHING_PASSES = 3
 CONTOUR_SMOOTHING_PASSES = {
+    # Mandible is short and already tightly shaped by the source annotation.
+    # Post-transform smoothing here can visibly kink or over-round the curve.
+    "mandible-incisior": 0,
     "tongue": 5,
     "soft-palate": 4,
     "soft-palate-midline": 4,
