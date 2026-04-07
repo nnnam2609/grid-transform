@@ -19,6 +19,7 @@ from grid_transform.config import DEFAULT_OUTPUT_DIR, TONGUE_COLOR
 from grid_transform.io import load_frame_vtln
 from grid_transform.transfer import build_two_step_transform, smooth_transformed_contours, transform_contours
 from grid_transform.vt import build_grid
+from grid_transform.warp import warp_image_to_target_space
 
 
 CURATED_SPEAKER_DIRNAME = "data"
@@ -76,6 +77,7 @@ class PairTransformResult:
     rms: float
     per_label_rms: dict[str, float]
     mapped_contours: dict[str, np.ndarray]
+    warped_source_image: np.ndarray | None = None
 
 
 @dataclass(frozen=True)
@@ -257,6 +259,13 @@ def compute_global_common_labels(loaded_speakers: dict[str, LoadedSpeaker]) -> l
     return labels
 
 
+def speaker_id_sort_key(speaker_id: str) -> tuple[int, str]:
+    match = re.fullmatch(r"P(\d+)", speaker_id, re.IGNORECASE)
+    if match is None:
+        return (10_000, speaker_id)
+    return (int(match.group(1)), speaker_id)
+
+
 def plot_contours(ax, contours: dict[str, np.ndarray], labels: list[str], colors: dict[str, object], *, lw: float, alpha: float, linestyle: str = "-") -> None:
     for label in labels:
         pts = np.asarray(contours[label], dtype=float)
@@ -280,9 +289,11 @@ def compute_pair_transform(
     target: LoadedSpeaker,
     common_labels: list[str],
     nc_template: int,
+    *,
+    include_warped_image: bool = False,
 ) -> PairTransformResult:
-    transform = build_two_step_transform(source.grid, target.grid)
-    mapped_contours = transform_contours(source.contours, transform["apply_two_step"], common_labels)
+    forward_transform = build_two_step_transform(source.grid, target.grid)
+    mapped_contours = transform_contours(source.contours, forward_transform["apply_two_step"], common_labels)
     mapped_contours = smooth_transformed_contours(mapped_contours)
 
     source_shape = stack_resampled_contours(mapped_contours, common_labels, nc_template)
@@ -295,6 +306,15 @@ def compute_pair_transform(
         tgt_pts = resample_polyline(target.contours[label], nc_template)
         per_label_rms[label] = float(np.sqrt(np.mean((src_pts - tgt_pts) ** 2)))
 
+    warped_source_image = None
+    if include_warped_image:
+        inverse_transform = build_two_step_transform(target.grid, source.grid)
+        warped_source_image, _ = warp_image_to_target_space(
+            source.image,
+            np.asarray(target.image).shape,
+            inverse_transform["apply_two_step"],
+        )
+
     return PairTransformResult(
         cohort=cohort,
         source_basename=source.spec.basename,
@@ -306,6 +326,7 @@ def compute_pair_transform(
         rms=rms,
         per_label_rms=per_label_rms,
         mapped_contours=mapped_contours,
+        warped_source_image=warped_source_image,
     )
 
 
@@ -317,15 +338,19 @@ def save_pair_figure(
     colors: dict[str, object],
     output_path: Path,
 ) -> None:
-    fig, axes = plt.subplots(1, 3, figsize=(20, 7))
+    if result.warped_source_image is None:
+        raise ValueError("Pair figure rendering requires warped_source_image.")
 
-    format_target_frame(axes[0], source.image, f"Source\n{result.source_basename}")
+    fig, axes = plt.subplots(2, 2, figsize=(15.5, 13))
+    axes = axes.ravel()
+
+    format_target_frame(axes[0], source.image, "Source image + contours")
     plot_contours(axes[0], source.contours, common_labels, colors, lw=2.0, alpha=0.95)
 
-    format_target_frame(axes[1], target.image, f"Target\n{result.target_basename}")
+    format_target_frame(axes[1], target.image, "Target image + contours")
     plot_contours(axes[1], target.contours, common_labels, colors, lw=2.0, alpha=0.95)
 
-    format_target_frame(axes[2], target.image, "Transformed source in target space")
+    format_target_frame(axes[2], target.image, "Mapped contours in target space")
     plot_contours(axes[2], target.contours, common_labels, colors, lw=1.6, alpha=0.35)
     plot_contours(axes[2], result.mapped_contours, common_labels, colors, lw=2.4, alpha=0.98, linestyle="--")
     axes[2].text(
@@ -333,11 +358,9 @@ def save_pair_figure(
         0.02,
         "\n".join(
             [
-                f"cohort: {result.cohort}",
-                f"source: {result.source_speaker_id}",
-                f"target: {result.target_speaker_id}",
-                f"RMS: {result.rms:.2f} px",
-                f"labels: {len(common_labels)} shared",
+                "solid = target contours",
+                "dashed = mapped source contours",
+                f"shared labels = {len(common_labels)}",
             ]
         ),
         transform=axes[2].transAxes,
@@ -347,12 +370,47 @@ def save_pair_figure(
         bbox=dict(boxstyle="round,pad=0.35", fc="white", alpha=0.94),
     )
 
-    fig.suptitle(
-        f"{result.cohort}: {result.source_basename} -> {result.target_basename}",
-        fontsize=14,
+    format_target_frame(axes[3], result.warped_source_image, "Warped full source image")
+    axes[3].text(
+        0.02,
+        0.02,
+        "\n".join(
+            [
+                "full source image warped",
+                "into target geometry",
+                "center channel G=t",
+            ]
+        ),
+        transform=axes[3].transAxes,
+        ha="left",
+        va="bottom",
+        fontsize=9.5,
+        bbox=dict(boxstyle="round,pad=0.35", fc="white", alpha=0.94),
+    )
+
+    fig.text(
+        0.5,
+        0.985,
+        result.cohort.replace("_", " "),
+        ha="center",
+        va="top",
+        fontsize=16,
         fontweight="bold",
     )
-    plt.tight_layout()
+    fig.text(
+        0.5,
+        0.955,
+        (
+            f"{result.source_basename} -> {result.target_basename} | "
+            f"{result.source_speaker_id} -> {result.target_speaker_id} | "
+            f"RMS = {result.rms:.2f} px"
+        ),
+        ha="center",
+        va="top",
+        fontsize=11.5,
+        fontweight="bold",
+    )
+    plt.tight_layout(rect=(0, 0, 1, 0.92))
     output_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output_path, dpi=220, bbox_inches="tight")
     plt.close(fig)
@@ -466,7 +524,10 @@ def compute_source_selection_summaries(
     all_target_grouped = grouped_pair_results_by_source(all_target_results)
     summaries: list[SourceSelectionSummary] = []
 
-    for source_basename in sorted(same_gender_grouped):
+    for source_basename in sorted(
+        same_gender_grouped,
+        key=lambda basename: speaker_id_sort_key(loaded_speakers[basename].spec.speaker_id),
+    ):
         same_gender_pairs = same_gender_grouped[source_basename]
         all_target_pairs = all_target_grouped.get(source_basename, [])
         if not same_gender_pairs or not all_target_pairs:
@@ -518,54 +579,119 @@ def write_source_selection_summary_csv(
 
 def save_same_gender_vs_all_targets_summary(
     summaries: list[SourceSelectionSummary],
+    common_labels: list[str],
     output_path: Path,
 ) -> None:
-    fig, axes = plt.subplots(1, 2, figsize=(18, 7.5))
+    fig, axes = plt.subplots(2, 2, figsize=(18, 12))
 
-    ordered = sorted(summaries, key=lambda item: (item.source_gender, item.source_speaker_id))
+    ordered = sorted(
+        summaries,
+        key=lambda item: (
+            0 if item.source_gender == "male" else 1,
+            speaker_id_sort_key(item.source_speaker_id),
+        ),
+    )
     speaker_labels = [summary.source_speaker_id for summary in ordered]
     same_gender_values = [summary.same_gender_mean_rms for summary in ordered]
     all_target_values = [summary.all_target_mean_rms for summary in ordered]
     improvement_values = [summary.improvement for summary in ordered]
     colors = ["#4c78a8" if summary.source_gender == "male" else "#f58518" for summary in ordered]
 
-    ax = axes[0]
+    male_summaries = [summary for summary in ordered if summary.source_gender == "male"]
+    female_summaries = [summary for summary in ordered if summary.source_gender == "female"]
+    male_improvements = [summary.improvement for summary in male_summaries]
+    female_improvements = [summary.improvement for summary in female_summaries]
+
+    ax = axes[0, 0]
     x = np.arange(len(ordered))
-    width = 0.42
-    ax.bar(x - width / 2, same_gender_values, width=width, color=colors, edgecolor="black", alpha=0.85, label="same gender only")
-    ax.bar(x + width / 2, all_target_values, width=width, color="#7f7f7f", edgecolor="black", alpha=0.75, label="all targets")
+    width = 0.38
+    ax.bar(x - width / 2, same_gender_values, width=width, color="#16a085", edgecolor="black", alpha=0.88, label="same-gender")
+    ax.bar(x + width / 2, all_target_values, width=width, color="#7f8c8d", edgecolor="black", alpha=0.86, label="all-targets")
     ax.set_xticks(x)
     ax.set_xticklabels(speaker_labels, rotation=25, ha="right")
-    ax.set_ylabel("Mean source->target RMS (px)")
-    ax.set_title("Per-source target-selection comparison", fontsize=13, fontweight="bold")
+    ax.set_ylabel("Mean RMS per source (px)")
+    ax.set_title("Per-source mean RMS", fontsize=13, fontweight="bold")
+    ax.grid(True, axis="y", alpha=0.25)
+    ax.legend(framealpha=0.95)
+    for tick, color in zip(ax.get_xticklabels(), colors):
+        tick.set_color(color)
+
+    ax = axes[0, 1]
+    ax.bar(x, improvement_values, color=colors, edgecolor="black", alpha=0.86)
+    ax.axhline(0.0, color="black", lw=1.0, alpha=0.7)
+    ax.set_xticks(x)
+    ax.set_xticklabels(speaker_labels, rotation=25, ha="right")
+    ax.set_ylabel("Improvement (px)")
+    ax.set_title("All-target mean - same-gender mean", fontsize=13, fontweight="bold")
+    ax.grid(True, axis="y", alpha=0.25)
+    for tick, color in zip(ax.get_xticklabels(), colors):
+        tick.set_color(color)
+
+    ax = axes[1, 0]
+    cohort_names = ["male sources", "female sources"]
+    cohort_same = [
+        float(np.mean([summary.same_gender_mean_rms for summary in male_summaries])),
+        float(np.mean([summary.same_gender_mean_rms for summary in female_summaries])),
+    ]
+    cohort_all = [
+        float(np.mean([summary.all_target_mean_rms for summary in male_summaries])),
+        float(np.mean([summary.all_target_mean_rms for summary in female_summaries])),
+    ]
+    cohort_x = np.arange(len(cohort_names))
+    ax.bar(cohort_x - width / 2, cohort_same, width=width, color="#16a085", edgecolor="black", alpha=0.88, label="same-gender")
+    ax.bar(cohort_x + width / 2, cohort_all, width=width, color="#7f8c8d", edgecolor="black", alpha=0.86, label="all-targets")
+    ax.set_xticks(cohort_x)
+    ax.set_xticklabels(cohort_names)
+    ax.set_ylabel("Mean RMS (px)")
+    ax.set_title("Cohort mean RMS by target policy", fontsize=13, fontweight="bold")
     ax.grid(True, axis="y", alpha=0.25)
     ax.legend(framealpha=0.95)
 
-    ax = axes[1]
-    y = np.arange(len(ordered))
-    ax.barh(y, improvement_values, color=colors, edgecolor="black", alpha=0.88)
-    ax.axvline(0.0, color="black", lw=1.0, alpha=0.7)
-    ax.set_yticks(y)
-    ax.set_yticklabels(speaker_labels)
-    ax.set_xlabel("all-target mean RMS - same-gender mean RMS (px)")
-    ax.set_title("Positive means same-gender targets are better", fontsize=13, fontweight="bold")
-    ax.grid(True, axis="x", alpha=0.25)
-    for yi, value in zip(y, improvement_values):
-        offset = 0.12 if value >= 0 else -0.12
-        ha = "left" if value >= 0 else "right"
-        ax.text(value + offset, yi, f"{value:.2f}", va="center", ha=ha, fontsize=8.5)
-
     mean_improvement = float(np.mean(improvement_values)) if improvement_values else 0.0
     median_improvement = float(np.median(improvement_values)) if improvement_values else 0.0
-    fig.suptitle(
-        (
-            "Same-gender vs all-target selection\n"
-            f"mean improvement = {mean_improvement:.2f} px | median improvement = {median_improvement:.2f} px"
+    ax = axes[1, 1]
+    ax.boxplot([male_improvements, female_improvements], labels=["male sources", "female sources"])
+    ax.scatter(np.full(len(male_improvements), 1.0), male_improvements, color="#4c78a8", alpha=0.82, zorder=4)
+    ax.scatter(np.full(len(female_improvements), 2.0), female_improvements, color="#f58518", alpha=0.82, zorder=4)
+    ax.axhline(0.0, color="black", lw=1.0, alpha=0.7)
+    ax.set_ylabel("Improvement (px)")
+    ax.set_title("Improvement distribution by source gender", fontsize=13, fontweight="bold")
+    ax.grid(True, axis="y", alpha=0.25)
+    ax.text(
+        0.02,
+        0.02,
+        "\n".join(
+            [
+                f"male mean/median: {np.mean(male_improvements):.2f} / {np.median(male_improvements):.2f} px",
+                f"female mean/median: {np.mean(female_improvements):.2f} / {np.median(female_improvements):.2f} px",
+                f"all sources mean: {mean_improvement:.2f} px",
+                f"all sources median: {median_improvement:.2f} px",
+            ]
         ),
-        fontsize=15,
-        fontweight="bold",
+        transform=ax.transAxes,
+        ha="left",
+        va="bottom",
+        fontsize=9.5,
+        bbox=dict(boxstyle="round,pad=0.35", fc="white", alpha=0.96),
     )
-    plt.tight_layout(rect=(0, 0, 1, 0.93))
+
+    fig.suptitle("Same-gender target selection vs all-target baseline", fontsize=16, fontweight="bold")
+    fig.text(
+        0.02,
+        0.01,
+        "\n".join(
+            [
+                "Baseline policy: exhaustive mean over every valid non-self target.",
+                "Improvement = all-target mean RMS - same-gender mean RMS. Positive means same-gender is better.",
+                f"Common labels ({len(common_labels)}): {', '.join(common_labels)}",
+            ]
+        ),
+        ha="left",
+        va="bottom",
+        fontsize=9.5,
+        bbox=dict(boxstyle="round,pad=0.35", fc="white", alpha=0.96),
+    )
+    plt.tight_layout(rect=(0, 0.08, 1, 0.96))
     output_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output_path, dpi=220, bbox_inches="tight")
     plt.close(fig)
@@ -679,6 +805,7 @@ def run_cohort(
                 target=target,
                 common_labels=common_labels,
                 nc_template=nc_template,
+                include_warped_image=True,
             )
             pair_results.append(result)
             target_pair_results.append(result)
@@ -717,6 +844,7 @@ def run_all_target_baseline(
                     target=target,
                     common_labels=common_labels,
                     nc_template=nc_template,
+                    include_warped_image=False,
                 )
             )
     return results
@@ -736,13 +864,14 @@ def main(argv: list[str] | None = None) -> int:
 
     loaded_speakers, skipped_messages = load_available_speakers(specs, args.vtln_dir)
     common_labels = compute_global_common_labels(loaded_speakers)
+    all_speakers = sorted(loaded_speakers.values(), key=lambda item: item.spec.basename)
 
     male_speakers = sorted(
-        [speaker for speaker in loaded_speakers.values() if speaker.spec.gender == "male"],
+        [speaker for speaker in all_speakers if speaker.spec.gender == "male"],
         key=lambda item: item.spec.basename,
     )
     female_speakers = sorted(
-        [speaker for speaker in loaded_speakers.values() if speaker.spec.gender == "female"],
+        [speaker for speaker in all_speakers if speaker.spec.gender == "female"],
         key=lambda item: item.spec.basename,
     )
     if len(male_speakers) < 2 or len(female_speakers) < 2:
@@ -772,7 +901,11 @@ def main(argv: list[str] | None = None) -> int:
     source_selection_csv = args.output_dir / "same_gender_vs_all_targets_summary.csv"
     write_source_selection_summary_csv(source_selection_summaries, source_selection_csv)
     source_selection_figure = args.output_dir / "same_gender_vs_all_targets_summary.png"
-    save_same_gender_vs_all_targets_summary(source_selection_summaries, source_selection_figure)
+    save_same_gender_vs_all_targets_summary(
+        source_selection_summaries,
+        common_labels,
+        source_selection_figure,
+    )
 
     male_mean = float(np.mean([pair.rms for pair in male_results]))
     male_median = float(np.median([pair.rms for pair in male_results]))
@@ -780,7 +913,7 @@ def main(argv: list[str] | None = None) -> int:
     female_median = float(np.median([pair.rms for pair in female_results]))
 
     print("Loaded speakers:")
-    for speaker in sorted(loaded_speakers.values(), key=lambda item: item.spec.basename):
+    for speaker in all_speakers:
         print(f"  {speaker.spec.basename} ({speaker.spec.speaker_id}, {speaker.spec.gender})")
     print("Skipped speakers:")
     if skipped_messages:
