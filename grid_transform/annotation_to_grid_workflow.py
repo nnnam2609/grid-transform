@@ -77,7 +77,7 @@ class WorkspaceSelection:
     workspace_dir: Path
     case: BatchCase
     artspeech_root: Path
-    dataset_root: Path
+    dataset_root: Path | None
     reference_speaker: str
     reference_image_path: Path
     reference_zip_path: Path
@@ -128,7 +128,7 @@ def workspace_selection_to_payload(selection: WorkspaceSelection) -> dict[str, o
         "workspace_id": selection.workspace_id,
         "workspace_dir": str(selection.workspace_dir),
         "artspeech_root": str(selection.artspeech_root),
-        "dataset_root": str(selection.dataset_root),
+        "dataset_root": None if selection.dataset_root is None else str(selection.dataset_root),
         "reference_speaker": selection.reference_speaker,
         "reference_image_path": str(selection.reference_image_path),
         "reference_zip_path": str(selection.reference_zip_path),
@@ -178,7 +178,11 @@ def payload_to_workspace_selection(payload: dict[str, object]) -> WorkspaceSelec
         workspace_dir=Path(str(payload["workspace_dir"])),
         case=case,
         artspeech_root=Path(str(payload["artspeech_root"])),
-        dataset_root=Path(str(payload["dataset_root"])),
+        dataset_root=(
+            Path(str(payload["dataset_root"]))
+            if payload.get("dataset_root") not in (None, "")
+            else None
+        ),
         reference_speaker=str(payload["reference_speaker"]),
         reference_image_path=Path(str(payload["reference_image_path"])),
         reference_zip_path=Path(str(payload["reference_zip_path"])),
@@ -229,7 +233,10 @@ def build_workspace_selection(
     workspace_root: Path = DEFAULT_WORKSPACE_ROOT,
     mapping: MappingInfo | None = None,
 ) -> WorkspaceSelection:
-    dataset_root = resolve_speaker_root(artspeech_root, case.speaker)
+    try:
+        dataset_root = resolve_speaker_root(artspeech_root, case.speaker)
+    except FileNotFoundError:
+        dataset_root = None
     reference_speaker, reference_bundle_dir, reference_image_path, reference_zip_path = resolve_reference_bundle(case)
     mapping = mapping or parse_mapping_doc()
     alias = mapping.vtln_session_map.get(reference_speaker)
@@ -302,6 +309,19 @@ def _apply_overrides(
     return merged
 
 
+def _disable_landmarks(
+    landmarks: dict[str, np.ndarray | None],
+    disabled_landmarks: set[str] | None,
+) -> dict[str, np.ndarray | None]:
+    if not disabled_landmarks:
+        return _clone_landmarks(landmarks)
+    masked = _clone_landmarks(landmarks)
+    for name in disabled_landmarks:
+        if name in masked:
+            masked[name] = None
+    return masked
+
+
 def _single_point_landmark_pairs(
     src_landmarks: dict[str, np.ndarray | None],
     dst_landmarks: dict[str, np.ndarray | None],
@@ -332,6 +352,8 @@ def _deform_grid_from_landmark_overrides(
     grid,
     raw_landmarks: dict[str, np.ndarray | None],
     updated_landmarks: dict[str, np.ndarray | None],
+    *,
+    top_axis_passes: int = 4,
 ):
     pairs = _single_point_landmark_pairs(raw_landmarks, updated_landmarks)
     if not pairs:
@@ -359,7 +381,7 @@ def _deform_grid_from_landmark_overrides(
         deformed_horiz_raw,
         updated_landmarks,
         grid.n_vert,
-        top_axis_passes=4,
+        top_axis_passes=top_axis_passes,
     )
 
     left_pts = np.asarray([line[0] for line in deformed_horiz], dtype=float) if deformed_horiz else None
@@ -427,16 +449,29 @@ def build_transform_bundle(
     target_frame_number: int,
     source_landmark_overrides: dict[str, np.ndarray | None] | None = None,
     target_landmark_overrides: dict[str, np.ndarray | None] | None = None,
+    disabled_landmarks: set[str] | None = None,
+    top_axis_passes: int = 4,
 ) -> dict[str, object]:
     source_grid_base = build_grid(source_image, source_contours, n_vert=9, n_points=250, frame_number=source_frame_number)
     target_grid_base = build_grid(target_image, target_contours, n_vert=9, n_points=250, frame_number=target_frame_number)
 
-    source_landmarks_raw = extract_true_landmarks(source_grid_base)
-    target_landmarks_raw = extract_true_landmarks(target_grid_base)
-    source_landmarks = _apply_overrides(source_landmarks_raw, source_landmark_overrides)
-    target_landmarks = _apply_overrides(target_landmarks_raw, target_landmark_overrides)
-    source_grid = _deform_grid_from_landmark_overrides(source_grid_base, source_landmarks_raw, source_landmarks)
-    target_grid = _deform_grid_from_landmark_overrides(target_grid_base, target_landmarks_raw, target_landmarks)
+    disabled = {str(name) for name in (disabled_landmarks or set())}
+    source_landmarks_raw = _disable_landmarks(extract_true_landmarks(source_grid_base), disabled)
+    target_landmarks_raw = _disable_landmarks(extract_true_landmarks(target_grid_base), disabled)
+    source_landmarks = _disable_landmarks(_apply_overrides(source_landmarks_raw, source_landmark_overrides), disabled)
+    target_landmarks = _disable_landmarks(_apply_overrides(target_landmarks_raw, target_landmark_overrides), disabled)
+    source_grid = _deform_grid_from_landmark_overrides(
+        source_grid_base,
+        source_landmarks_raw,
+        source_landmarks,
+        top_axis_passes=top_axis_passes,
+    )
+    target_grid = _deform_grid_from_landmark_overrides(
+        target_grid_base,
+        target_landmarks_raw,
+        target_landmarks,
+        top_axis_passes=top_axis_passes,
+    )
 
     step0_errors = compute_named_point_errors(source_landmarks, target_landmarks, LANDMARK_REPORT_ORDER)
     step0_metrics = compute_metrics(source_landmarks, target_landmarks)
@@ -461,7 +496,7 @@ def build_transform_bundle(
         step1_horiz_raw,
         step1_landmarks,
         source_grid.n_vert,
-        top_axis_passes=4,
+        top_axis_passes=top_axis_passes,
     )
     step1_errors = compute_named_point_errors(step1_landmarks, target_landmarks, LANDMARK_REPORT_ORDER)
     step1_metrics = compute_metrics(step1_landmarks, target_landmarks)
@@ -482,7 +517,7 @@ def build_transform_bundle(
         final_horiz_raw,
         mapped_final,
         source_grid.n_vert,
-        top_axis_passes=4,
+        top_axis_passes=top_axis_passes,
     )
     final_errors = compute_named_point_errors(mapped_final, target_landmarks, LANDMARK_REPORT_ORDER)
     final_metrics = compute_metrics(mapped_final, target_landmarks)
@@ -617,7 +652,7 @@ def source_annotation_metadata(selection: WorkspaceSelection, snapshot: dict[str
         "word": snapshot["word"],
         "phoneme": snapshot["phoneme"],
         "sentence": snapshot["sentence"],
-        "dataset_root": str(selection.dataset_root),
+        "dataset_root": None if selection.dataset_root is None else str(selection.dataset_root),
     }
 
 
@@ -634,25 +669,72 @@ def target_annotation_metadata(selection: WorkspaceSelection, target_shape: tupl
     }
 
 
+def _reference_only_source_snapshot(frame_index1: int, reference_image) -> dict[str, object]:
+    frame = as_grayscale_uint8(reference_image)
+    projected_ref = projected_reference_frame(reference_image, tuple(frame.shape[:2]))
+    return {
+        "frame1": int(frame_index1),
+        "time_sec": 0.0,
+        "correlation": frame_correlation(projected_ref, frame),
+        "word": "",
+        "phoneme": "",
+        "sentence": "Reference-only source (no ArtSpeech session video available).",
+    }
+
+
 def load_source_context(selection: WorkspaceSelection) -> dict[str, object]:
-    session_data = load_session_data(selection.dataset_root, selection.case.speaker, selection.case.session)
+    reference_image, reference_contours = load_frame_vtln(
+        selection.reference_speaker,
+        selection.reference_bundle_dir,
+        validate_triplet_bundle=True,
+    )
+    reference_image_arr = as_grayscale_uint8(reference_image)
+    reference_shape = tuple(int(value) for value in reference_image_arr.shape[:2])
+    session_data = None
+    source_video_error: str | None = None
+
+    if selection.dataset_root is not None:
+        try:
+            session_data = load_session_data(selection.dataset_root, selection.case.speaker, selection.case.session)
+        except Exception as exc:
+            source_video_error = str(exc)
+    else:
+        source_video_error = (
+            f"No ArtSpeech dataset root found for {selection.case.speaker}/{selection.case.session} "
+            f"under {selection.artspeech_root}."
+        )
+
+    if session_data is None:
+        projected_contours = project_reference_annotation_to_source(reference_contours, reference_shape, reference_shape)
+        snapshot = _reference_only_source_snapshot(selection.case.frame_index_1based, reference_image_arr)
+        return {
+            "session_data": None,
+            "source_frame": reference_image_arr,
+            "reference_image": reference_image_arr.copy(),
+            "reference_contours": reference_contours,
+            "projected_contours": projected_contours,
+            "snapshot": snapshot,
+            "source_has_video": False,
+            "source_video_error": source_video_error,
+        }
+
     frame_index0 = selection.case.frame_index_1based - 1
     source_frame = normalize_frame(
         session_data.images[frame_index0],
         session_data.frame_min,
         session_data.frame_max,
     )
-    reference_image, reference_contours = load_frame_vtln(selection.reference_speaker, selection.reference_bundle_dir)
-    reference_shape = tuple(int(value) for value in np.asarray(reference_image).shape[:2])
     projected_contours = project_reference_annotation_to_source(reference_contours, reference_shape, tuple(source_frame.shape[:2]))
-    snapshot = source_snapshot_for_frame(session_data, selection.case.frame_index_1based, reference_image)
+    snapshot = source_snapshot_for_frame(session_data, selection.case.frame_index_1based, reference_image_arr)
     return {
         "session_data": session_data,
         "source_frame": source_frame,
-        "reference_image": np.asarray(reference_image, dtype=np.uint8),
+        "reference_image": reference_image_arr.copy(),
         "reference_contours": reference_contours,
         "projected_contours": projected_contours,
         "snapshot": snapshot,
+        "source_has_video": True,
+        "source_video_error": None,
     }
 
 
@@ -666,7 +748,11 @@ def load_target_context(selection: WorkspaceSelection) -> dict[str, object]:
         label = f"nnUNet {selection.target.nnunet_case} frame {int(selection.target.nnunet_frame)}"
         frame_number = int(selection.target.nnunet_frame)
     else:
-        image, contours = load_frame_vtln(selection.target.vtln_reference, selection.target.vtln_dir)
+        image, contours = load_frame_vtln(
+            selection.target.vtln_reference,
+            selection.target.vtln_dir,
+            validate_triplet_bundle=True,
+        )
         label = f"VTLN {selection.target.vtln_reference}"
         frame_number = 0
     image_arr = as_grayscale_uint8(image)

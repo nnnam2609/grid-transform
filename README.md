@@ -284,6 +284,7 @@ Review video: [P7_S2_warped_to_143020_review.mp4](docs/assets/github/p7-s2-warpe
 .\.venv\Scripts\python .\scripts\run\run_extract_all_speakers_vowel_variants.py --dataset-root <ARTSPEECH_ROOT> --samples-per-vowel 10
 .\.venv\Scripts\python .\scripts\run\run_extract_speaker_vowel_variants.py --speaker P7 --dataset-root <ARTSPEECH_ROOT> --samples-per-vowel 10
 .\.venv\Scripts\python .\scripts\run\run_analyze_aligned_speaker_vowel_variants.py --speaker P7 --samples-per-vowel 10
+.\.venv\Scripts\python .\scripts\run\run_average_speaker_and_variability.py --dataset-root <ARTSPEECH_ROOT>
 ```
 
 ## Full Command Inventory
@@ -329,6 +330,7 @@ The canonical CLI surface is the `scripts/run/` directory. Current tracked wrapp
 .\.venv\Scripts\python .\scripts\run\run_make_vowel_contact_sheets.py
 .\.venv\Scripts\python .\scripts\run\run_analyze_aligned_speaker_vowel_variants.py
 .\.venv\Scripts\python .\scripts\run\run_compare_gender_group_transforms.py
+.\.venv\Scripts\python .\scripts\run\run_average_speaker_and_variability.py
 ```
 
 ## Results Gallery
