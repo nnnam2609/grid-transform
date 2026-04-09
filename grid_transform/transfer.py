@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from grid_transform.apps.method4_transform import (
+from grid_transform.transform_helpers import (
     apply_tps,
     apply_transform,
     build_step1_anchors,
@@ -25,6 +25,9 @@ DEFAULT_ARTICULATORS = (
 
 DEFAULT_SMOOTHING_PASSES = 3
 CONTOUR_SMOOTHING_PASSES = {
+    # Mandible is short and already tightly shaped by the source annotation.
+    # Extra smoothing here tends to round off a curve we usually want to keep.
+    "mandible-incisior": 0,
     "tongue": 5,
     "soft-palate": 4,
     "soft-palate-midline": 4,

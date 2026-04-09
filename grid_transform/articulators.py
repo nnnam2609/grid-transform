@@ -8,7 +8,7 @@ import numpy as np
 from grid_transform.config import TONGUE_COLOR
 from grid_transform.figures import format_frame
 from grid_transform.transfer import DEFAULT_ARTICULATORS, resolve_common_articulators
-from grid_transform.apps.method4_transform import polyline_rms, resample_polyline
+from grid_transform.transform_helpers import polyline_rms, resample_polyline
 
 
 MOVED_SOURCE_COLOR = "#ef476f"

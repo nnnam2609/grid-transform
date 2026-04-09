@@ -10,6 +10,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
+from grid_transform.analysis_shared import choose_label_colors
 from grid_transform.config import (
     DEFAULT_OUTPUT_DIR,
     DEFAULT_VTLN_DIR,
@@ -19,7 +20,7 @@ from grid_transform.config import (
 )
 from grid_transform.io import load_frame_npy, load_frame_vtln
 from grid_transform.transfer import build_two_step_transform, smooth_transformed_contours, transform_contours
-from grid_transform.apps.method4_transform import format_target_frame, resample_polyline
+from grid_transform.transform_helpers import format_target_frame, resample_polyline
 from grid_transform.vt import build_grid
 
 
@@ -162,14 +163,6 @@ def compute_notebook_style_mean(contours_by_speaker: dict[str, dict[str, np.ndar
         "closest_to_mean": closest_to_mean,
         "pairwise": pairwise,
     }
-
-
-def choose_label_colors(labels):
-    cmap = plt.get_cmap("tab20")
-    colors = {}
-    for idx, label in enumerate(labels):
-        colors[label] = TONGUE_COLOR if label == "tongue" else cmap(idx % 20)
-    return colors
 
 
 def plot_contour_dict(ax, contour_dict, labels, colors, *, alpha=0.8, lw=2.0, linestyle="-", label_prefix=None):

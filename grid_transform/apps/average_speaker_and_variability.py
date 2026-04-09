@@ -3,7 +3,6 @@ from __future__ import annotations
 import argparse
 import csv
 import json
-from dataclasses import dataclass
 from pathlib import Path
 
 import matplotlib
@@ -27,54 +26,26 @@ from grid_transform.apps.average_speaker_grid_transform import (
 from grid_transform.apps.extract_speaker_vowel_variants import (
     main as extract_speaker_vowel_variants_main,
 )
-from grid_transform.apps.method4_transform import format_target_frame, resample_polyline
+from grid_transform.analysis_shared import (
+    CURATED_SPEAKER_GENDER,
+    CuratedSpeakerSpec,
+    LoadedSpeaker,
+    flatten_resampled_contours,
+    load_curated_speakers,
+    speaker_id_sort_key as speaker_sort_key,
+    stack_resampled_contours,
+)
 from grid_transform.config import DEFAULT_OUTPUT_DIR, PROJECT_DIR
-from grid_transform.io import load_frame_vtln
-from grid_transform.vt import build_grid
+from grid_transform.transform_helpers import format_target_frame, resample_polyline
 
 
 DEFAULT_SPEAKERS = ("P1", "P2", "P3", "P4", "P5", "P6", "P7", "P8", "P9", "P10")
 DEFAULT_VOWELS = ("a", "e", "i", "o", "u")
-CURATED_SPEAKER_GENDER = {
-    "P1": "male",
-    "P2": "male",
-    "P3": "male",
-    "P4": "female",
-    "P5": "male",
-    "P6": "male",
-    "P7": "female",
-    "P8": "female",
-    "P9": "female",
-    "P10": "female",
-}
-IMAGE_SUFFIXES = (".png", ".tif", ".tiff")
-DEFAULT_N_VERT = 9
-DEFAULT_N_POINTS = 250
 DEFAULT_RESAMPLE_POINTS = 80
 DEFAULT_TEMPLATE_POINTS = 80
 DEFAULT_MAX_SHIFT = 24
 DEFAULT_ALIGNMENT_PASSES = 2
 EPSILON = 1e-8
-
-
-@dataclass(frozen=True)
-class CuratedSpeakerSpec:
-    speaker_id: str
-    basename: str
-    raw_subject: str | None
-    session: str | None
-    frame: int | None
-    gender: str
-    image_path: Path
-    zip_path: Path
-
-
-@dataclass
-class LoadedSpeaker:
-    spec: CuratedSpeakerSpec
-    image: object
-    contours: dict[str, np.ndarray]
-    grid: object
 
 
 def default_vtln_dir() -> Path:
@@ -87,14 +58,6 @@ def default_dataset_root() -> Path:
 
 def default_output_dir() -> Path:
     return DEFAULT_OUTPUT_DIR / "average_speaker_and_variability"
-
-
-def speaker_sort_key(name: str) -> tuple[int, str]:
-    suffix = name[1:] if name.startswith("P") else name
-    try:
-        return int(suffix), name
-    except ValueError:
-        return 10**9, name
 
 
 def parse_csv_values(text: str) -> list[str]:
@@ -120,89 +83,6 @@ def parse_speakers(text: str) -> list[str]:
 
 def parse_vowels(text: str) -> list[str]:
     return parse_csv_values(text)
-
-
-def parse_selected_source(selected_source: str) -> tuple[str | None, int | None]:
-    parts = [part.strip() for part in selected_source.split("/") if part.strip()]
-    if len(parts) != 3:
-        return None, None
-    session = parts[1].upper()
-    frame_text = parts[2].upper()
-    if not frame_text.startswith("F") or not frame_text[1:].isdigit():
-        return session, None
-    return session, int(frame_text[1:])
-
-
-def resolve_image_path(vtln_dir: Path, basename: str) -> Path:
-    for suffix in IMAGE_SUFFIXES:
-        candidate = vtln_dir / f"{basename}{suffix}"
-        if candidate.is_file():
-            return candidate
-    return vtln_dir / f"{basename}.png"
-
-
-def read_curated_specs(vtln_dir: Path) -> dict[str, CuratedSpeakerSpec]:
-    manifest_path = vtln_dir / "selection_manifest.csv"
-    if not manifest_path.is_file():
-        raise FileNotFoundError(f"Curated manifest not found: {manifest_path}")
-
-    specs: dict[str, CuratedSpeakerSpec] = {}
-    with manifest_path.open("r", encoding="utf-8", newline="") as handle:
-        reader = csv.DictReader(handle)
-        for row in reader:
-            speaker_id = row["speaker"].strip().upper()
-            if speaker_id not in CURATED_SPEAKER_GENDER:
-                continue
-            if speaker_id in specs:
-                raise ValueError(f"Expected one curated row per speaker, found duplicate for {speaker_id}.")
-
-            basename = row["output_basename"].strip()
-            session, frame = parse_selected_source(row.get("selected_source", ""))
-            specs[speaker_id] = CuratedSpeakerSpec(
-                speaker_id=speaker_id,
-                basename=basename,
-                raw_subject=row.get("raw_subject", "").strip() or None,
-                session=session,
-                frame=frame,
-                gender=CURATED_SPEAKER_GENDER[speaker_id],
-                image_path=resolve_image_path(vtln_dir, basename),
-                zip_path=vtln_dir / f"{basename}.zip",
-            )
-    return specs
-
-
-def load_curated_speakers(vtln_dir: Path, requested_speakers: list[str]) -> dict[str, LoadedSpeaker]:
-    specs = read_curated_specs(vtln_dir)
-    missing = [speaker for speaker in requested_speakers if speaker not in specs]
-    if missing:
-        raise ValueError(f"Missing curated manifest rows for: {', '.join(missing)}")
-
-    loaded: dict[str, LoadedSpeaker] = {}
-    for speaker_id in requested_speakers:
-        spec = specs[speaker_id]
-        if not spec.image_path.is_file():
-            raise FileNotFoundError(f"Curated image not found for {speaker_id}: {spec.image_path}")
-        if not spec.zip_path.is_file():
-            raise FileNotFoundError(f"Curated ROI zip not found for {speaker_id}: {spec.zip_path}")
-
-        image, contours = load_frame_vtln(spec.basename, vtln_dir)
-        grid = build_grid(
-            image,
-            contours,
-            n_vert=DEFAULT_N_VERT,
-            n_points=DEFAULT_N_POINTS,
-            frame_number=0,
-        )
-        loaded[speaker_id] = LoadedSpeaker(spec=spec, image=image, contours=contours, grid=grid)
-    return loaded
-
-
-def stack_resampled_contours(contours: dict[str, np.ndarray], labels: list[str], nc_template: int) -> np.ndarray:
-    return np.vstack([resample_polyline(contours[label], nc_template) for label in labels])
-
-
-def flatten_resampled_contours(contours: dict[str, np.ndarray], labels: list[str], nc_template: int) -> np.ndarray:
-    return stack_resampled_contours(contours, labels, nc_template).reshape(-1)
 
 
 def serialize_contours(contours: dict[str, np.ndarray]) -> dict[str, list[list[float]]]:
