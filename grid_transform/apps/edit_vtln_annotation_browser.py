@@ -15,7 +15,7 @@ except ModuleNotFoundError:
 import numpy as np
 from roifile import ImagejRoi
 
-from grid_transform.apps.cv2_annotation_to_grid_transform_app import (
+from grid_transform.cv2_panels import (
     ACCENT,
     FOOTER_BG,
     KEY_DOWN,
@@ -40,7 +40,7 @@ from grid_transform.apps.cv2_annotation_to_grid_transform_app import (
     screen_to_world,
     world_to_screen,
 )
-from grid_transform.apps.edit_source_annotation import (
+from grid_transform.cv2_shared import (
     CONTOUR_COLORS,
     WINDOW_MARGIN,
     clamp_point,
@@ -49,8 +49,9 @@ from grid_transform.apps.edit_source_annotation import (
 )
 from grid_transform.config import DEFAULT_OUTPUT_DIR, DEFAULT_VTLN_DIR
 from grid_transform.image_utils import as_grayscale_uint8
-from grid_transform.io import load_frame_vtln
+from grid_transform.io import load_frame_npy, load_frame_vtln
 from grid_transform.source_annotation import LONG_CONTOUR_HANDLE_COUNTS
+from grid_transform.transform_helpers import resample_polyline
 from grid_transform.vt import build_grid
 
 
@@ -77,7 +78,7 @@ SOURCE_SPINE_COLOR = hex_to_bgr("#2a9d8f")
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Browse every VTLN ROI zip bundle, edit one speaker annotation at a time, "
+            "Browse every VTLN ROI zip bundle and bundled nnUNet contour case, edit one entry at a time, "
             "preview the live grid, then optionally overwrite the source zip after "
             "creating a timestamped backup."
         )
@@ -86,7 +87,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--vtln-dir",
         type=Path,
         default=DEFAULT_VTLN_DIR,
-        help="Folder containing VTLN PNG/TIF images plus ROI zip bundles.",
+        help="Folder containing VTLN PNG/TIF images, ROI zip bundles, and optional nnUNet cases.",
     )
     parser.add_argument(
         "--backup-root",
@@ -103,8 +104,63 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def discover_vtln_speakers(vtln_dir: Path) -> list[str]:
-    return sorted(path.stem for path in Path(vtln_dir).glob("*.zip"))
+@dataclass(frozen=True)
+class BrowserEntry:
+    entry_id: str
+    display_name: str
+    image_name: str
+    zip_path: Path
+    load_kind: str
+    data_dir: Path
+    contours_dir: Path | None = None
+
+    @property
+    def backup_stem(self) -> str:
+        safe = self.entry_id.replace("::", "__").replace("/", "_").replace("\\", "_").replace(":", "_")
+        return safe.replace("^", "_")
+
+
+def discover_vtln_entries(vtln_dir: Path) -> list[BrowserEntry]:
+    vtln_dir = Path(vtln_dir)
+    entries: list[BrowserEntry] = []
+
+    for zip_path in sorted(vtln_dir.glob("*.zip")):
+        speaker_id = zip_path.stem
+        entries.append(
+            BrowserEntry(
+                entry_id=speaker_id,
+                display_name=speaker_id,
+                image_name=speaker_id,
+                zip_path=zip_path,
+                load_kind="vtln",
+                data_dir=vtln_dir,
+            )
+        )
+
+    nnunet_root = vtln_dir / "nnunet_data_80"
+    if nnunet_root.is_dir():
+        for zip_path in sorted(nnunet_root.glob("**/contours/*.zip")):
+            contours_dir = zip_path.parent
+            data_dir = contours_dir.parent
+            if not (data_dir / "PNG_MR").is_dir():
+                continue
+            frame_name = zip_path.stem
+            case_rel = data_dir.relative_to(nnunet_root).as_posix()
+            entry_id = f"nnunet::{case_rel}::{frame_name}"
+            display_name = f"nnunet/{case_rel}:{frame_name}"
+            entries.append(
+                BrowserEntry(
+                    entry_id=entry_id,
+                    display_name=display_name,
+                    image_name=frame_name,
+                    zip_path=zip_path,
+                    load_kind="nnunet",
+                    data_dir=data_dir,
+                    contours_dir=contours_dir,
+                )
+            )
+
+    return entries
 
 
 def clone_contours(contours: dict[str, np.ndarray]) -> dict[str, np.ndarray]:
@@ -141,26 +197,6 @@ def build_handle_points(contours: dict[str, np.ndarray]) -> dict[str, np.ndarray
     return handles
 
 
-def resample_polyline(points: np.ndarray, n_samples: int) -> np.ndarray:
-    pts = np.asarray(points, dtype=float)
-    if len(pts) <= 1:
-        return np.repeat(pts[:1], n_samples, axis=0)
-    segment = np.linalg.norm(np.diff(pts, axis=0), axis=1)
-    keep = np.r_[True, segment > 1e-8]
-    pts = pts[keep]
-    if len(pts) <= 1:
-        return np.repeat(pts[:1], n_samples, axis=0)
-    arc = np.cumsum(np.r_[0.0, np.linalg.norm(np.diff(pts, axis=0), axis=1)])
-    arc /= max(float(arc[-1]), 1e-8)
-    sample_t = np.linspace(0.0, 1.0, n_samples)
-    return np.column_stack(
-        [
-            np.interp(sample_t, arc, pts[:, 0]),
-            np.interp(sample_t, arc, pts[:, 1]),
-        ]
-    )
-
-
 def rebuild_contours_from_handles(
     handles: dict[str, np.ndarray],
     point_counts: dict[str, int],
@@ -191,6 +227,8 @@ def write_annotation_zip(path: Path, basename: str, contours: dict[str, np.ndarr
 @dataclass
 class SpeakerState:
     speaker_id: str
+    display_name: str
+    image_name: str
     image: np.ndarray | None = None
     current_contours: dict[str, np.ndarray] = field(default_factory=dict)
     saved_contours: dict[str, np.ndarray] = field(default_factory=dict)
@@ -207,9 +245,11 @@ class SpeakerState:
 class VTLNAnnotationBrowser:
     def __init__(self, args: argparse.Namespace) -> None:
         self.args = args
-        self.speaker_ids = discover_vtln_speakers(args.vtln_dir)
-        if not self.speaker_ids:
-            raise FileNotFoundError(f"No VTLN ROI zip files found in {args.vtln_dir}")
+        self.entries = discover_vtln_entries(args.vtln_dir)
+        if not self.entries:
+            raise FileNotFoundError(f"No VTLN ROI zip files or nnUNet contour zips found in {args.vtln_dir}")
+        self.entry_by_id = {entry.entry_id: entry for entry in self.entries}
+        self.speaker_ids = [entry.entry_id for entry in self.entries]
 
         self.states: dict[str, SpeakerState] = {}
         self.selected_index = 0
@@ -247,16 +287,26 @@ class VTLNAnnotationBrowser:
     def current_state(self) -> SpeakerState:
         return self.load_state(self.current_speaker_id)
 
+    @property
+    def current_entry(self) -> BrowserEntry:
+        return self.entry_by_id[self.current_speaker_id]
+
     def load_state(self, speaker_id: str, *, force_reload: bool = False) -> SpeakerState:
         if not force_reload and speaker_id in self.states:
             return self.states[speaker_id]
 
+        entry = self.entry_by_id[speaker_id]
         state = SpeakerState(
             speaker_id=speaker_id,
-            zip_path=Path(self.args.vtln_dir) / f"{speaker_id}.zip",
+            display_name=entry.display_name,
+            image_name=entry.image_name,
+            zip_path=entry.zip_path,
         )
         try:
-            image, contours = load_frame_vtln(speaker_id, self.args.vtln_dir)
+            if entry.load_kind == "nnunet":
+                image, contours = load_frame_npy(int(entry.image_name), entry.data_dir, entry.contours_dir)
+            else:
+                image, contours = load_frame_vtln(entry.image_name, entry.data_dir)
             state.image = as_grayscale_uint8(image)
             state.current_contours = clone_contours(contours)
             state.saved_contours = clone_contours(contours)
@@ -329,8 +379,8 @@ class VTLNAnnotationBrowser:
         draw_header_text(
             panel,
             [
-                "VTLN bundles",
-                f"{len(self.speaker_ids)} speakers discovered",
+                "VTLN bundles + nnUNet",
+                f"{len(self.speaker_ids)} entries discovered",
                 "Up/Down or click to switch",
             ],
         )
@@ -340,7 +390,7 @@ class VTLNAnnotationBrowser:
             panel,
             "Current",
             [
-                f"speaker: {self.current_speaker_id}",
+                f"entry: {self.current_entry.display_name}",
                 f"state: {self._speaker_state_summary(self.current_speaker_id)}",
                 "grid: H1 tail uses I5->C1 chord clamp",
                 "midline: still contributes I6/I7 landmarks",
@@ -360,7 +410,7 @@ class VTLNAnnotationBrowser:
                 top,
             )
 
-        cv2.putText(panel, "Speaker List", (18, top + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, TEXT_COLOR, 1, cv2.LINE_AA)
+        cv2.putText(panel, "Entry List", (18, top + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, TEXT_COLOR, 1, cv2.LINE_AA)
         list_top = top + 36
         visible_count = max(1, (PANEL_HEIGHT - list_top - 18) // (LIST_ROW_HEIGHT + LIST_ROW_GAP))
         start = min(
@@ -372,6 +422,7 @@ class VTLNAnnotationBrowser:
 
         row_y = list_top
         for visible_index, speaker_id in enumerate(self.speaker_ids[start:stop], start=start):
+            entry = self.entry_by_id[speaker_id]
             rect = ClickTarget(x0=12, y0=row_y, width=LIST_PANEL_WIDTH - 24, height=LIST_ROW_HEIGHT)
             fill = ROW_SELECTED if visible_index == self.selected_index else ROW_BG
             cv2.rectangle(
@@ -391,10 +442,10 @@ class VTLNAnnotationBrowser:
             prefix = self._status_prefix(speaker_id)
             cv2.putText(
                 panel,
-                f"{prefix} {speaker_id}",
+                f"{prefix} {entry.display_name[:34]}",
                 (rect.x0 + 12, rect.y0 + 22),
                 cv2.FONT_HERSHEY_SIMPLEX,
-                0.56,
+                0.50,
                 TEXT_COLOR,
                 1,
                 cv2.LINE_AA,
@@ -428,7 +479,7 @@ class VTLNAnnotationBrowser:
                 EDITOR_PANEL_WIDTH,
                 [
                     "Editable annotation",
-                    self.current_speaker_id,
+                    self.current_entry.display_name,
                     "Load failed",
                 ],
                 [state.load_error or "Unknown load error"],
@@ -441,7 +492,7 @@ class VTLNAnnotationBrowser:
                 EDITOR_PANEL_WIDTH,
                 [
                     "Editable annotation",
-                    self.current_speaker_id,
+                    self.current_entry.display_name,
                     "View unavailable",
                 ],
                 ["Could not initialize image view."],
@@ -497,7 +548,7 @@ class VTLNAnnotationBrowser:
             panel,
             [
                 "Editable VTLN annotation",
-                self.current_speaker_id,
+                self.current_entry.display_name,
                 "Drag handles. Grid rebuild happens on mouse-up only.",
             ],
         )
@@ -513,7 +564,7 @@ class VTLNAnnotationBrowser:
                 GRID_PANEL_WIDTH,
                 [
                     "Live grid preview",
-                    self.current_speaker_id,
+                    self.current_entry.display_name,
                     "Load failed",
                 ],
                 [state.load_error or "Unknown load error"],
@@ -526,7 +577,7 @@ class VTLNAnnotationBrowser:
                 GRID_PANEL_WIDTH,
                 [
                     "Live grid preview",
-                    self.current_speaker_id,
+                    self.current_entry.display_name,
                     "View unavailable",
                 ],
                 ["Could not initialize image view."],
@@ -560,7 +611,7 @@ class VTLNAnnotationBrowser:
             panel,
             [
                 "Live no-mid-plane grid preview",
-                self.current_speaker_id,
+                self.current_entry.display_name,
                 "H1 tail: I5 -> C1 chord clamp",
             ],
         )
@@ -761,7 +812,7 @@ class VTLNAnnotationBrowser:
         self.pan_anchor = None
         self.load_state(self.current_speaker_id)
         self._reset_view()
-        self.status_message = f"Loaded {self.current_speaker_id}"
+        self.status_message = f"Loaded {self.current_entry.display_name}"
 
     def _save_current(self) -> None:
         state = self.current_state
@@ -775,18 +826,18 @@ class VTLNAnnotationBrowser:
             self.status_message = "No unsaved changes for the current speaker."
             return
 
-        backup_dir = self.args.backup_root / state.speaker_id
+        backup_dir = self.args.backup_root / self.current_entry.backup_stem
         backup_dir.mkdir(parents=True, exist_ok=True)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        backup_path = backup_dir / f"{state.speaker_id}_{timestamp}.zip"
+        backup_path = backup_dir / f"{self.current_entry.backup_stem}_{timestamp}.zip"
         if state.zip_path.is_file():
             shutil.copy2(state.zip_path, backup_path)
-        write_annotation_zip(state.zip_path, state.speaker_id, state.current_contours)
+        write_annotation_zip(state.zip_path, state.image_name, state.current_contours)
         state.saved_contours = clone_contours(state.current_contours)
         state.handle_points = build_handle_points(state.current_contours)
         state.dirty = False
         state.last_backup_path = backup_path
-        self.status_message = f"Saved {state.speaker_id}. Backup: {backup_path.name}"
+        self.status_message = f"Saved {state.display_name}. Backup: {backup_path.name}"
 
     def _reset_current(self) -> None:
         state = self.current_state

@@ -7,7 +7,7 @@ import shutil
 import subprocess
 import sys
 from concurrent.futures import Future, ThreadPoolExecutor
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
@@ -39,8 +39,8 @@ from grid_transform.annotation_to_grid_workflow import (
     target_annotation_metadata,
     workspace_selection_to_payload,
 )
+from grid_transform.curated_batch import DEFAULT_MANIFEST_CSV
 from grid_transform.image_utils import as_grayscale_uint8
-from grid_transform.io import VTLN_TRIPLET_SHAPE
 from grid_transform.cv2_annotation_app_config import (
     APP_CONFIG_PATH,
     RENDER_PREFETCH_RANGE,
@@ -56,7 +56,8 @@ from grid_transform.cv2_annotation_app_config import (
     resolve_config_path,
     resolve_config_str,
 )
-from grid_transform.apps.edit_source_annotation import (
+from grid_transform.cv2_config_helpers import VALID_CONFIG_LANDMARK_NAMES, resolve_disabled_landmarks_config
+from grid_transform.cv2_shared import (
     CONTOUR_COLORS,
     WINDOW_MARGIN,
     clamp_point,
@@ -64,10 +65,16 @@ from grid_transform.apps.edit_source_annotation import (
     scaled_window_size,
     source_text_block,
 )
-from grid_transform.apps import build_vtln_data_bundle
-from grid_transform.apps.run_curated_u_annotation_batch import DEFAULT_MANIFEST_CSV
-from grid_transform.config import DEFAULT_OUTPUT_DIR, PROJECT_DIR
+from grid_transform.config import DEFAULT_OUTPUT_DIR, DEFAULT_VTLN_DIR, PROJECT_DIR
 from grid_transform.source_annotation import LONG_CONTOUR_HANDLE_COUNTS
+from grid_transform.vtln_annotation_sync import (
+    annotation_shape_from_metadata,
+    delete_temp_annotation_file,
+    find_latest_source_annotation,
+    promote_temp_annotation_to_vtln,
+    resolve_vtln_data_dir,
+    write_source_annotation_to_vtln,
+)
 from grid_transform.warp import precompute_inverse_warp, warp_array_with_precomputed_inverse_warp
 
 
@@ -95,17 +102,6 @@ KEY_RIGHT = 2555904
 KEY_TAB = 9
 KEY_ENTER = 13
 KEY_BACKSPACE = 8
-
-VALID_CONFIG_LANDMARK_NAMES = frozenset(
-    {
-        *(f"I{i}" for i in range(1, 8)),
-        "P1",
-        *(f"C{i}" for i in range(1, 7)),
-        "M1",
-        "L6",
-    }
-)
-
 
 @dataclass
 class ViewState:
@@ -146,27 +142,6 @@ class ClickTarget:
 
     def contains(self, x: int, y: int) -> bool:
         return self.x0 <= x < self.x0 + self.width and self.y0 <= y < self.y0 + self.height
-
-
-def resolve_disabled_landmarks_config(value: object, *, config_path: Path) -> tuple[str, ...]:
-    if value in (None, "", []):
-        return ()
-    if isinstance(value, str):
-        raw_items = [item.strip() for item in value.replace(",", " ").split()]
-    elif isinstance(value, (list, tuple, set)):
-        raw_items = [str(item).strip() for item in value]
-    else:
-        raise SystemExit(
-            f"disabled_landmarks in config file {config_path} must be a string or a list of landmark names."
-        )
-    cleaned = [item.upper() for item in raw_items if item]
-    invalid = sorted({item for item in cleaned if item not in VALID_CONFIG_LANDMARK_NAMES})
-    if invalid:
-        raise SystemExit(
-            f"Invalid disabled_landmarks in config file {config_path}: {invalid}. "
-            f"Valid names: {sorted(VALID_CONFIG_LANDMARK_NAMES)}"
-        )
-    return tuple(dict.fromkeys(cleaned))
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -210,7 +185,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--vtln-dir",
         type=Path,
-        default=resolve_config_path(defaults_payload.get("vtln_dir"), default=PROJECT_DIR / "VTLN", config_path=pre_args.config),
+        default=resolve_config_path(defaults_payload.get("vtln_dir"), default=DEFAULT_VTLN_DIR, config_path=pre_args.config),
     )
     parser.add_argument("--default-target-case", default=resolve_config_str(defaults_payload.get("default_target_case"), default=DEFAULT_NNUNET_TARGET_CASE))
     parser.add_argument(
@@ -320,116 +295,17 @@ def sanitize_promotion_token(value: str) -> str:
     return cleaned.strip("._-") or "case"
 
 
-def contour_bounds(contours: dict[str, np.ndarray] | dict[str, object]) -> tuple[float, float, float, float] | None:
-    min_x = float("inf")
-    min_y = float("inf")
-    max_x = float("-inf")
-    max_y = float("-inf")
-    found = False
-    for points in contours.values():
-        array = np.asarray(points, dtype=float)
-        if array.ndim != 2 or array.shape[1] != 2 or len(array) == 0:
-            continue
-        found = True
-        min_x = min(min_x, float(array[:, 0].min()))
-        min_y = min(min_y, float(array[:, 1].min()))
-        max_x = max(max_x, float(array[:, 0].max()))
-        max_y = max(max_y, float(array[:, 1].max()))
-    if not found:
-        return None
-    return min_x, min_y, max_x, max_y
-
-
-def parse_shape2d(shape_raw: object) -> tuple[int, int] | None:
-    try:
-        source_h = int(shape_raw[0])
-        source_w = int(shape_raw[1])
-    except (TypeError, ValueError, IndexError):
-        return None
-    if source_h <= 0 or source_w <= 0:
-        return None
-    return source_h, source_w
-
-
-def source_annotation_payload_is_plausible(
-    payload: dict[str, object] | None,
-    *,
-    current_source_shape: tuple[int, int] | None = None,
-) -> bool:
-    if not payload:
-        return False
-    metadata = payload.get("metadata", {})
-    resolved_shape = parse_shape2d(current_source_shape)
-    if resolved_shape is None:
-        resolved_shape = parse_shape2d(metadata.get("source_shape") or metadata.get("reference_shape"))
-    if resolved_shape is None:
-        return True
-    source_h, source_w = resolved_shape
-    bounds = contour_bounds(payload.get("contours", {}))
-    if bounds is None:
-        return True
-    min_x, min_y, max_x, max_y = bounds
-    tolerance_px = 6.0
-    tolerance_scale = 1.15
-    return (
-        min_x >= -tolerance_px
-        and min_y >= -tolerance_px
-        and max_x <= source_w * tolerance_scale + tolerance_px
-        and max_y <= source_h * tolerance_scale + tolerance_px
-    )
-
-
-def discover_saved_source_annotation_paths() -> list[Path]:
-    patterns = (
-        (DEFAULT_OUTPUT_DIR / "annotation_to_grid_transform", "source_annotation.latest.json"),
-        (DEFAULT_OUTPUT_DIR / "source_annotation_edits", "edited_annotation.json"),
-    )
-    paths: list[Path] = []
-    for root, filename in patterns:
-        if not root.is_dir():
-            continue
-        paths.extend(root.rglob(filename))
-    return sorted(set(paths))
-
-
 def find_latest_source_annotation_for_selection(
     selection: WorkspaceSelection,
     *,
     current_source_shape: tuple[int, int] | None = None,
 ) -> dict[str, object] | None:
-    best_payload: dict[str, object] | None = None
-    best_mtime = float("-inf")
-    expected_key = (
-        str(selection.case.speaker),
-        str(selection.case.session),
-        int(selection.case.frame_index_1based),
+    return find_latest_source_annotation(
+        artspeech_speaker=selection.case.speaker,
+        session=selection.case.session,
+        source_frame=selection.case.frame_index_1based,
+        current_source_shape=current_source_shape,
     )
-    for path in discover_saved_source_annotation_paths():
-        payload = load_annotation_state_if_available(path)
-        if payload is None:
-            continue
-        metadata = payload.get("metadata", {})
-        # Target-promotion snapshots live under the same outputs tree, but they are
-        # stored in target/VTLN coordinates and must never override Step 1A source loads.
-        if str(metadata.get("promoted_from_role") or "").strip().lower() == "target":
-            continue
-        if not source_annotation_payload_is_plausible(payload, current_source_shape=current_source_shape):
-            continue
-        payload_key = (
-            str(metadata.get("artspeech_speaker") or ""),
-            str(metadata.get("session") or ""),
-            int(metadata.get("source_frame") or 0),
-        )
-        if payload_key != expected_key:
-            continue
-        try:
-            mtime = path.stat().st_mtime
-        except OSError:
-            continue
-        if mtime > best_mtime:
-            best_payload = payload
-            best_mtime = mtime
-    return best_payload
 
 
 def ensure_view_state(view: ViewState | None, image_shape: tuple[int, int]) -> ViewState:
@@ -1103,7 +979,7 @@ class Cv2SelectionWindow:
             nnunet_case=self.nnunet_case.strip() or self.args.default_target_case,
             nnunet_frame=max(1, int(self.nnunet_frame or self.args.default_target_frame)),
             vtln_reference=reference_name_for_case(self._current_target_case()),
-            vtln_dir=Path(self.vtln_dir.strip() or str(self.args.vtln_dir)),
+            vtln_dir=resolve_vtln_data_dir(Path(self.vtln_dir.strip() or str(self.args.vtln_dir))),
         )
         return build_workspace_selection(
             case=self._current_case(),
@@ -1186,7 +1062,7 @@ class Cv2ContourEditorWindow:
         window_name: str,
         image: np.ndarray,
         contours: dict[str, np.ndarray],
-        save_path: Path,
+        save_path: Path | None,
         metadata: dict[str, object],
         title_lines: list[str],
         info_lines: list[str],
@@ -1205,7 +1081,7 @@ class Cv2ContourEditorWindow:
         self.ui_config = ui_config
         self.args = args
         self.on_save = on_save
-        self.saved_payload = load_annotation_state_if_available(save_path)
+        self.saved_payload = load_annotation_state_if_available(save_path) if save_path is not None else None
         starting_contours = self.saved_payload["contours"] if self.saved_payload is not None else contours
         self.original_contours = {name: np.asarray(points, dtype=float).copy() for name, points in starting_contours.items()}
         self.original_point_counts = {name: int(len(points)) for name, points in self.original_contours.items()}
@@ -1497,12 +1373,18 @@ class Cv2ContourEditorWindow:
 
     def _save(self) -> bool:
         try:
-            save_annotation_state(self.save_path, self.metadata, self.current_contours)
+            if self.save_path is not None:
+                save_annotation_state(self.save_path, self.metadata, self.current_contours)
             post_save_message = self.on_save(self.current_contours) if self.on_save is not None else None
         except Exception as exc:
             self.status_message = f"Save failed: {exc}"
             return False
-        self.status_message = post_save_message or f"Saved {self.save_path.name}"
+        if post_save_message is not None:
+            self.status_message = post_save_message
+        elif self.save_path is not None:
+            self.status_message = f"Saved {self.save_path.name}"
+        else:
+            self.status_message = "Saved directly to VTLN/data"
         return True
 
     def run(self) -> tuple[str, dict[str, np.ndarray]]:
@@ -2228,26 +2110,6 @@ class Cv2AnnotationToGridTransformApp:
             / "source_annotation.latest.json"
         )
 
-    @staticmethod
-    def _target_promotion_metadata(
-        selection: WorkspaceSelection,
-        *,
-        target_case,
-        target_shape: tuple[int, int],
-    ) -> dict[str, object]:
-        return {
-            "role": "target",
-            "workspace_id": selection.workspace_id,
-            "target_reference": reference_name_for_case(target_case),
-            "target_speaker": target_case.speaker,
-            "target_session": target_case.session,
-            "target_frame": int(target_case.frame_index_1based),
-            "target_shape": list(target_shape),
-            "sentence": f"Promoted from Step 1B target editor in {selection.workspace_id}.",
-            "promoted_from_role": "target",
-        }
-
-    @staticmethod
     def _write_vtln_zip(
         *,
         vtln_dir: Path,
@@ -2255,17 +2117,108 @@ class Cv2AnnotationToGridTransformApp:
         contours: dict[str, np.ndarray],
         source_shape: tuple[int, int],
     ) -> None:
-        scaled_contours = build_vtln_data_bundle.scale_contours_to_triplet_space(
-            contours,
-            source_shape,
-            VTLN_TRIPLET_SHAPE,
+        write_source_annotation_to_vtln(
+            vtln_dir=vtln_dir,
+            reference_name=reference_name,
+            contours=contours,
+            source_shape=source_shape,
         )
-        build_vtln_data_bundle.write_annotation_zip(
-            vtln_dir / f"{reference_name}.zip",
-            reference_name,
-            scaled_contours,
-            dry_run=False,
+
+    def _cleanup_source_temp_files(self, selection: WorkspaceSelection) -> None:
+        paths = step_file_paths(selection.workspace_dir)
+        delete_temp_annotation_file(paths["source_annotation"])
+        delete_temp_annotation_file(
+            self._promotion_annotation_path(lane="source", reference_name=selection.reference_speaker)
         )
+
+    def _cleanup_target_temp_files(self, selection: WorkspaceSelection) -> None:
+        if selection.target.target_type != "vtln":
+            return
+        paths = step_file_paths(selection.workspace_dir)
+        delete_temp_annotation_file(paths["target_annotation"])
+        delete_temp_annotation_file(
+            self._promotion_annotation_path(lane="target", reference_name=selection.target.vtln_reference)
+        )
+
+    def _promote_temp_annotation_to_vtln(
+        self,
+        *,
+        path: Path,
+        reference_name: str,
+        vtln_dir: Path,
+        contours: dict[str, np.ndarray],
+        source_shape: tuple[int, int],
+    ) -> str | None:
+        if not path.is_file():
+            return None
+        promoted = promote_temp_annotation_to_vtln(
+            path=path,
+            reference_name=reference_name,
+            vtln_dir=vtln_dir,
+            contours=contours,
+            source_shape=source_shape,
+        )
+        if promoted:
+            return f"Promoted newer temp annotation into VTLN/data: {reference_name}"
+        return None
+
+    def _reconcile_source_annotation_to_vtln(self, selection: WorkspaceSelection) -> str | None:
+        latest_payload = find_latest_source_annotation_for_selection(selection)
+        if latest_payload is None:
+            return None
+        latest_path_raw = latest_payload.get("path")
+        if latest_path_raw in (None, ""):
+            return None
+        latest_path = Path(str(latest_path_raw))
+        metadata = dict(latest_payload.get("metadata", {}))
+        source_shape = annotation_shape_from_metadata(metadata, "source_shape", "reference_shape")
+        if source_shape is None:
+            return None
+        return self._promote_temp_annotation_to_vtln(
+            path=latest_path,
+            reference_name=selection.reference_speaker,
+            vtln_dir=selection.reference_bundle_dir,
+            contours=latest_payload["contours"],
+            source_shape=source_shape,
+        )
+
+    def _reconcile_target_annotation_to_vtln(self, selection: WorkspaceSelection) -> list[str]:
+        if selection.target.target_type != "vtln":
+            return []
+        messages: list[str] = []
+        candidate_paths = [
+            step_file_paths(selection.workspace_dir)["target_annotation"],
+            self._promotion_annotation_path(lane="target", reference_name=selection.target.vtln_reference),
+        ]
+        for path in candidate_paths:
+            payload = load_annotation_state_if_available(path)
+            if payload is None:
+                continue
+            metadata = dict(payload.get("metadata", {}))
+            target_shape = annotation_shape_from_metadata(metadata, "target_shape", "source_shape", "reference_shape")
+            if target_shape is None:
+                continue
+            message = self._promote_temp_annotation_to_vtln(
+                path=path,
+                reference_name=selection.target.vtln_reference,
+                vtln_dir=selection.target.vtln_dir,
+                contours=payload["contours"],
+                source_shape=target_shape,
+            )
+            if message is not None:
+                messages.append(message)
+        return messages
+
+    def _reconcile_selection_annotations_to_vtln(self, selection: WorkspaceSelection) -> str | None:
+        messages: list[str] = []
+        source_message = self._reconcile_source_annotation_to_vtln(selection)
+        if source_message is not None:
+            messages.append(source_message)
+        messages.extend(self._reconcile_target_annotation_to_vtln(selection))
+        if not messages:
+            return None
+        self.context_cache.clear()
+        return " | ".join(messages)
 
     def _sync_current_speaker_edits_to_vtln(
         self,
@@ -2278,59 +2231,30 @@ class Cv2AnnotationToGridTransformApp:
         sync_source: bool = True,
         sync_target: bool = True,
     ) -> str:
-        paths = step_file_paths(selection.workspace_dir)
         updated_refs: list[str] = []
         skipped_roles: list[str] = []
 
         if sync_source:
-            source_metadata = source_annotation_metadata(
-                selection,
-                source_context["snapshot"],
-                tuple(int(value) for value in source_context["source_frame"].shape[:2]),
-            )
-            save_annotation_state(paths["source_annotation"], source_metadata, source_contours)
-            save_annotation_state(
-                self._promotion_annotation_path(lane="source", reference_name=selection.reference_speaker),
-                source_metadata,
-                source_contours,
-            )
             self._write_vtln_zip(
                 vtln_dir=selection.reference_bundle_dir,
                 reference_name=selection.reference_speaker,
                 contours=source_contours,
                 source_shape=tuple(int(value) for value in source_context["source_frame"].shape[:2]),
             )
+            self._cleanup_source_temp_files(selection)
             updated_refs.append(selection.reference_speaker)
         else:
             skipped_roles.append("source")
 
-        if sync_target:
-            target_metadata = target_annotation_metadata(
-                selection,
-                tuple(int(value) for value in target_context["target_image"].shape[:2]),
-            )
-            save_annotation_state(paths["target_annotation"], target_metadata, target_contours)
-
         if selection.target.target_type == "vtln" and sync_target:
             target_reference = selection.target.vtln_reference
-            target_case = self.case_by_reference_name.get(target_reference)
-            if target_case is not None:
-                promoted_target_metadata = self._target_promotion_metadata(
-                    selection,
-                    target_case=target_case,
-                    target_shape=tuple(int(value) for value in target_context["target_image"].shape[:2]),
-                )
-                save_annotation_state(
-                    self._promotion_annotation_path(lane="target", reference_name=target_reference),
-                    promoted_target_metadata,
-                    target_contours,
-                )
             self._write_vtln_zip(
                 vtln_dir=selection.target.vtln_dir,
                 reference_name=target_reference,
                 contours=target_contours,
                 source_shape=tuple(int(value) for value in target_context["target_image"].shape[:2]),
             )
+            self._cleanup_target_temp_files(selection)
             if (selection.target.vtln_dir != selection.reference_bundle_dir) or (target_reference != selection.reference_speaker):
                 updated_refs.append(target_reference)
         elif not sync_target:
@@ -2353,24 +2277,15 @@ class Cv2AnnotationToGridTransformApp:
         source_context: dict[str, object],
         contours: dict[str, np.ndarray],
     ) -> str:
-        source_metadata = source_annotation_metadata(
-            selection,
-            source_context["snapshot"],
-            tuple(int(value) for value in source_context["source_frame"].shape[:2]),
-        )
-        save_annotation_state(
-            self._promotion_annotation_path(lane="source", reference_name=selection.reference_speaker),
-            source_metadata,
-            contours,
-        )
         self._write_vtln_zip(
             vtln_dir=selection.reference_bundle_dir,
             reference_name=selection.reference_speaker,
             contours=contours,
             source_shape=tuple(int(value) for value in source_context["source_frame"].shape[:2]),
         )
+        self._cleanup_source_temp_files(selection)
         self.context_cache.clear()
-        return f"Saved source and updated VTLN zip: {selection.reference_speaker}"
+        return f"Saved source directly to VTLN/data: {selection.reference_speaker}"
 
     def _save_target_editor_to_vtln(
         self,
@@ -2379,90 +2294,22 @@ class Cv2AnnotationToGridTransformApp:
         contours: dict[str, np.ndarray],
     ) -> str:
         if selection.target.target_type != "vtln":
-            return "Saved target_annotation.latest.json"
+            return "No VTLN save for non-vtln target"
         target_reference = selection.target.vtln_reference
-        target_case = self.case_by_reference_name.get(target_reference)
-        if target_case is not None:
-            promoted_target_metadata = self._target_promotion_metadata(
-                selection,
-                target_case=target_case,
-                target_shape=tuple(int(value) for value in target_context["target_image"].shape[:2]),
-            )
-            save_annotation_state(
-                self._promotion_annotation_path(lane="target", reference_name=target_reference),
-                promoted_target_metadata,
-                contours,
-            )
         self._write_vtln_zip(
             vtln_dir=selection.target.vtln_dir,
             reference_name=target_reference,
             contours=contours,
             source_shape=tuple(int(value) for value in target_context["target_image"].shape[:2]),
         )
-        if target_case is not None:
-            source_case = target_case
-            if target_case.reference_bundle_dir is None or target_case.reference_bundle_name is None:
-                source_case = replace(
-                    target_case,
-                    reference_bundle_dir=selection.target.vtln_dir,
-                    reference_bundle_name=target_reference,
-                )
-            source_selection = build_workspace_selection(
-                case=source_case,
-                artspeech_root=self.args.artspeech_root,
-                target=selection.target,
-                workspace_root=self.args.workspace_root,
-                mapping=self.mapping,
-            )
-            source_context = load_source_context(source_selection)
-            source_metadata = source_annotation_metadata(
-                source_selection,
-                source_context["snapshot"],
-                tuple(int(value) for value in source_context["source_frame"].shape[:2]),
-            )
-            save_annotation_state(
-                self._promotion_annotation_path(lane="source", reference_name=target_reference),
-                source_metadata,
-                source_context["projected_contours"],
-            )
+        self._cleanup_target_temp_files(selection)
         self.context_cache.clear()
-        return f"Saved target and updated VTLN zip/source state: {target_reference}"
+        return f"Saved target directly to VTLN/data: {target_reference}"
 
     def _run_source_editor(self, selection: WorkspaceSelection, source_context: dict[str, object]) -> tuple[str, dict[str, np.ndarray]]:
-        source_annotation_path = step_file_paths(selection.workspace_dir)["source_annotation"]
         metadata = source_annotation_metadata(selection, source_context["snapshot"], tuple(source_context["source_frame"].shape[:2]))
-        sync_note: str | None = None
-        current_source_shape = tuple(int(value) for value in source_context["source_frame"].shape[:2])
-        workspace_payload = load_annotation_state_if_available(source_annotation_path)
-        workspace_payload_valid = source_annotation_payload_is_plausible(
-            workspace_payload,
-            current_source_shape=current_source_shape,
-        )
-        latest_payload = find_latest_source_annotation_for_selection(
-            selection,
-            current_source_shape=current_source_shape,
-        )
-        if latest_payload is not None:
-            latest_path = Path(str(latest_payload.get("path")))
-            latest_mtime = latest_path.stat().st_mtime if latest_path.is_file() else float("-inf")
-            workspace_mtime = source_annotation_path.stat().st_mtime if source_annotation_path.is_file() and workspace_payload_valid else float("-inf")
-            if latest_path != source_annotation_path and (not workspace_payload_valid or latest_mtime > workspace_mtime):
-                if source_annotation_path.is_file() and not workspace_payload_valid:
-                    backup_path = source_annotation_path.with_name("source_annotation.invalid_backup.json")
-                    shutil.copy2(source_annotation_path, backup_path)
-                save_annotation_state(source_annotation_path, metadata, latest_payload["contours"])
-                if workspace_payload is not None and not workspace_payload_valid:
-                    sync_note = f"repaired invalid source annotation from {latest_path.parent.name}/{latest_path.name}"
-                else:
-                    sync_note = f"synced latest source annotation from {latest_path.parent.name}/{latest_path.name}"
-        elif source_annotation_path.is_file() and not workspace_payload_valid:
-            backup_path = source_annotation_path.with_name("source_annotation.invalid_backup.json")
-            shutil.copy2(source_annotation_path, backup_path)
-            source_annotation_path.unlink(missing_ok=True)
-            sync_note = "ignored invalid saved source annotation and reverted to projected reference"
         info_lines = source_text_block(source_context["snapshot"], selection.reference_speaker)
-        if sync_note is not None:
-            info_lines = [sync_note, *info_lines]
+        info_lines = ["Save updates VTLN/data directly.", *info_lines]
         if not bool(source_context.get("source_has_video", True)):
             info_lines = [
                 "source video: unavailable (reference-only source; Step 3 export disabled)",
@@ -2472,7 +2319,7 @@ class Cv2AnnotationToGridTransformApp:
             window_name=WINDOW_NAME_STEP1,
             image=source_context["source_frame"],
             contours=source_context["projected_contours"],
-            save_path=source_annotation_path,
+            save_path=None,
             metadata=metadata,
             title_lines=[
                 "Step 1A - Source annotation",
@@ -2496,11 +2343,13 @@ class Cv2AnnotationToGridTransformApp:
             f"label: {target_context['target_label']}",
             f"shape: {target_context['target_image'].shape[1]}x{target_context['target_image'].shape[0]}",
         ]
+        if selection.target.target_type == "vtln":
+            info_lines = ["Save updates VTLN/data directly.", *info_lines]
         editor = Cv2ContourEditorWindow(
             window_name=WINDOW_NAME_STEP1,
             image=target_context["target_image"],
             contours=target_context["target_contours"],
-            save_path=target_annotation_path,
+            save_path=None if selection.target.target_type == "vtln" else target_annotation_path,
             metadata=metadata,
             title_lines=[
                 "Step 1B - Target annotation",
@@ -2530,6 +2379,9 @@ class Cv2AnnotationToGridTransformApp:
                 if selection is None:
                     return 0
 
+                reconcile_message = self._reconcile_selection_annotations_to_vtln(selection)
+                if reconcile_message is not None:
+                    selection_window.status_message = reconcile_message
                 if self.args.cache_mode == "startup":
                     self.context_cache.prewarm(selection)
                 source_context = self.context_cache.get_source(selection)

@@ -7,7 +7,7 @@ from pathlib import Path
 
 import numpy as np
 
-from grid_transform.apps.method4_transform import (
+from grid_transform.transform_helpers import (
     LANDMARK_REPORT_ORDER,
     apply_tps,
     apply_transform,
@@ -21,7 +21,7 @@ from grid_transform.apps.method4_transform import (
     map_landmarks,
     smooth_transformed_grid,
 )
-from grid_transform.apps.run_curated_u_annotation_batch import (
+from grid_transform.curated_batch import (
     BatchCase,
     CURATED_VTLN_DIR,
     DEFAULT_MANIFEST_CSV,
@@ -42,6 +42,7 @@ from grid_transform.source_annotation import (
 )
 from grid_transform.transfer import DEFAULT_ARTICULATORS, resolve_common_articulators, smooth_transformed_contours, transform_contours
 from grid_transform.vt import build_grid
+from grid_transform.workspace_paths import sanitize_workspace_token, step_file_paths
 
 
 DEFAULT_WORKSPACE_ROOT = DEFAULT_OUTPUT_DIR / "annotation_to_grid_transform"
@@ -53,9 +54,6 @@ SPEAKER_ROW_RE = re.compile(r"\|\s*`(?P<raw>\d+)`\s*\|\s*`(?P<speaker>P\d+)`\s*\
 VTLN_SESSION_ROW_RE = re.compile(
     r"\|\s*`(?P<vtln>[0-9]+_s[0-9]+_[0-9]+)`\s*\|\s*`(?P<speaker>P\d+)`\s*\|\s*`(?P<session>S\d+)`\s*\|"
 )
-WORKSPACE_SAFE_RE = re.compile(r"[^A-Za-z0-9._-]+")
-
-
 @dataclass(frozen=True)
 class MappingInfo:
     speaker_map: dict[str, str]
@@ -84,13 +82,6 @@ class WorkspaceSelection:
     reference_bundle_dir: Path
     target: TargetSelection
     source_alias_note: str
-
-
-def sanitize_workspace_token(value: str) -> str:
-    cleaned = WORKSPACE_SAFE_RE.sub("_", value.strip())
-    return cleaned.strip("._-") or "workspace"
-
-
 def parse_mapping_doc(path: Path = DEFAULT_MAPPING_DOC) -> MappingInfo:
     text = path.read_text(encoding="utf-8")
     speaker_map: dict[str, str] = {}
@@ -483,7 +474,7 @@ def build_transform_bundle(
         "t": np.asarray(np.zeros(2), dtype=float),
     }
     if len(step1_src) >= 3:
-        from grid_transform.apps.method4_transform import estimate_affine
+        from grid_transform.transform_helpers import estimate_affine
 
         step1_affine = estimate_affine(step1_src, step1_dst)
 
@@ -603,7 +594,7 @@ def build_inverse_transform_spec(
     target_landmarks: dict[str, np.ndarray | None],
 ) -> dict[str, object]:
     inverse_src, inverse_dst, _ = build_step1_anchors(target_landmarks, source_landmarks)
-    from grid_transform.apps.method4_transform import estimate_affine
+    from grid_transform.transform_helpers import estimate_affine
 
     inverse_affine = estimate_affine(inverse_src, inverse_dst) if len(inverse_src) >= 3 else {
         "A": np.eye(2, dtype=float),
@@ -779,23 +770,6 @@ def load_annotation_state_if_available(path: Path) -> dict[str, object] | None:
         return load_source_annotation_json(path)
     except Exception:
         return None
-
-
-def step_file_paths(workspace_dir: Path) -> dict[str, Path]:
-    return {
-        "selection": workspace_dir / "workspace_selection.latest.json",
-        "source_annotation": workspace_dir / "source_annotation.latest.json",
-        "target_annotation": workspace_dir / "target_annotation.latest.json",
-        "landmark_overrides": workspace_dir / "landmark_overrides.latest.json",
-        "transform_spec": workspace_dir / "transform_spec.latest.json",
-        "transform_review": workspace_dir / "transform_review.latest.json",
-        "native_preview": workspace_dir / "step2_native.latest.png",
-        "affine_preview": workspace_dir / "step2_affine.latest.png",
-        "final_preview": workspace_dir / "step2_final.latest.png",
-        "overview_preview": workspace_dir / "step2_overview.latest.png",
-    }
-
-
 def load_workspace_selection_if_available(path: Path) -> WorkspaceSelection | None:
     if not path.is_file():
         return None
