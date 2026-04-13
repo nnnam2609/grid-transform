@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 
 import matplotlib
@@ -10,7 +11,12 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-from grid_transform.analysis_shared import choose_label_colors
+from grid_transform.analysis_shared import (
+    CURATED_PLUS_NNUNET_GENDER,
+    choose_label_colors,
+    read_curated_specs_map,
+    speaker_id_sort_key,
+)
 from grid_transform.config import (
     DEFAULT_OUTPUT_DIR,
     DEFAULT_VTLN_DIR,
@@ -20,7 +26,7 @@ from grid_transform.config import (
 )
 from grid_transform.io import load_frame_npy, load_frame_vtln
 from grid_transform.transfer import build_two_step_transform, smooth_transformed_contours, transform_contours
-from grid_transform.transform_helpers import format_target_frame, resample_polyline
+from grid_transform.transform_helpers import apply_transform, format_target_frame, resample_polyline
 from grid_transform.vt import build_grid
 
 
@@ -29,6 +35,11 @@ DEFAULT_SOURCE_FRAME = 143020
 DEFAULT_RESAMPLE_POINTS = 80
 DEFAULT_TEMPLATE_POINTS = 80
 DEFAULT_ALPHA = 0.22
+DEFAULT_STAGE_ALPHA = 0.28
+DEFAULT_STAGE_GRID_ALPHA = 0.24
+DEFAULT_STAGE_LINEWIDTH = 1.15
+DEFAULT_STAGE_HIGHLIGHT_LINEWIDTH = 2.8
+DEFAULT_COHORTS = ("all", "male", "female")
 
 
 def estimate_similarity_umeyama(src, dst):
@@ -188,6 +199,462 @@ def centered_contours(contours: dict[str, np.ndarray]) -> dict[str, np.ndarray]:
     all_pts = np.vstack([np.asarray(pts, dtype=float) for pts in contours.values()])
     center = all_pts.mean(axis=0)
     return {label: np.asarray(pts, dtype=float) - center for label, pts in contours.items()}
+
+
+def resolve_reference_speaker(requested_reference: str, speakers: dict[str, dict], default_reference: str) -> str:
+    """Resolve a reference speaker from a key or a display name."""
+    if requested_reference == "auto":
+        return default_reference
+    if requested_reference in speakers:
+        return requested_reference
+
+    requested_norm = requested_reference.strip().upper()
+    matches = [
+        speaker_id
+        for speaker_id, speaker in speakers.items()
+        if str(speaker.get("display_name") or speaker_id).upper() == requested_norm
+    ]
+    if len(matches) == 1:
+        return matches[0]
+    raise ValueError(f"Reference speaker '{requested_reference}' not found in the loaded population.")
+
+
+def speaker_display_name(speakers: dict[str, dict], speaker_id: str) -> str:
+    return str(speakers[speaker_id].get("display_name") or speaker_id)
+
+
+def speaker_order_key(speakers: dict[str, dict], speaker_id: str) -> tuple[int, str]:
+    return speaker_id_sort_key(speaker_display_name(speakers, speaker_id))
+
+
+def choose_speaker_colors(speakers: dict[str, dict]) -> dict[str, tuple[float, float, float, float]]:
+    """Assign one stable color per speaker across every overlay figure."""
+    cmap = plt.get_cmap("tab20")
+    ordered_ids = sorted(speakers, key=lambda speaker_id: speaker_order_key(speakers, speaker_id))
+    return {
+        speaker_id: cmap(index % 20)
+        for index, speaker_id in enumerate(ordered_ids)
+    }
+
+
+def format_white_canvas(ax, image, title: str) -> None:
+    image_arr = np.asarray(image)
+    height, width = image_arr.shape[:2]
+    ax.set_facecolor("white")
+    ax.set_title(title, fontsize=13, fontweight="bold")
+    ax.set_xlim(0, width)
+    ax.set_ylim(height, 0)
+    ax.set_aspect("equal")
+    ax.axis("off")
+
+
+def map_grid_lines(grid, mapping_fn) -> dict[str, list[np.ndarray]]:
+    """Map an existing grid line set without rebuilding the grid."""
+    return {
+        "horiz_lines": [np.asarray(mapping_fn(np.asarray(line, dtype=float)), dtype=float) for line in grid.horiz_lines],
+        "vert_lines": [np.asarray(mapping_fn(np.asarray(line, dtype=float)), dtype=float) for line in grid.vert_lines],
+    }
+
+
+def summarize_stage_population(
+    mapped_contours: dict[str, dict[str, np.ndarray]],
+    mapped_grids: dict[str, dict[str, list[np.ndarray]]],
+    common_labels: list[str],
+    reference_id: str,
+    nc_template: int,
+) -> dict[str, object]:
+    """Compute stage-level mean/median summaries without changing existing metrics code."""
+    mean_contours = {}
+    median_contours = {}
+    label_variability_to_median = {}
+    for label in common_labels:
+        stack = np.stack(
+            [resample_polyline(mapped_contours[speaker_id][label], nc_template) for speaker_id in sorted(mapped_contours)],
+            axis=0,
+        )
+        mean_contours[label] = np.mean(stack, axis=0)
+        median_contours[label] = np.median(stack, axis=0)
+        label_variability_to_median[label] = float(
+            np.mean(
+                np.sqrt(
+                    np.mean(
+                        np.sum((stack - median_contours[label][None, :, :]) ** 2, axis=2),
+                        axis=1,
+                    )
+                )
+            )
+        )
+
+    mean_shape = np.vstack([mean_contours[label] for label in common_labels])
+    median_shape = np.vstack([median_contours[label] for label in common_labels])
+    mean_rms = {}
+    median_rms = {}
+    for speaker_id in sorted(mapped_contours):
+        speaker_shape = np.vstack(
+            [resample_polyline(mapped_contours[speaker_id][label], nc_template) for label in common_labels]
+        )
+        mean_rms[speaker_id] = float(np.sqrt(np.mean((speaker_shape - mean_shape) ** 2)))
+        median_rms[speaker_id] = float(np.sqrt(np.mean((speaker_shape - median_shape) ** 2)))
+
+    median_speaker = min(median_rms, key=median_rms.get)
+    closest_to_mean = min(mean_rms, key=mean_rms.get)
+    return {
+        "reference_id": reference_id,
+        "mapped_contours": mapped_contours,
+        "mapped_grids": mapped_grids,
+        "mean_contours": mean_contours,
+        "median_contours": median_contours,
+        "mean_rms": mean_rms,
+        "median_rms": median_rms,
+        "median_speaker": median_speaker,
+        "closest_to_mean": closest_to_mean,
+        "label_variability_to_median": label_variability_to_median,
+        "nc_template": nc_template,
+    }
+
+
+def compute_stage_populations(
+    speakers: dict[str, dict],
+    common_labels: list[str],
+    reference_id: str,
+    nc_template: int,
+) -> dict[str, dict[str, object]]:
+    """Compute affine-only and affine+TPS populations in the same reference space."""
+    reference = speakers[reference_id]
+    mapped_payload = {
+        "affine": {"contours": {}, "grids": {}},
+        "tps": {"contours": {}, "grids": {}},
+    }
+
+    for speaker_id, speaker in speakers.items():
+        identity_map = lambda pts: np.asarray(pts, dtype=float)
+        if speaker_id == reference_id:
+            affine_contours = {label: np.asarray(speaker["contours"][label], dtype=float) for label in common_labels}
+            tps_contours = {label: np.asarray(speaker["contours"][label], dtype=float) for label in common_labels}
+            affine_grid = map_grid_lines(speaker["grid"], identity_map)
+            tps_grid = map_grid_lines(speaker["grid"], identity_map)
+        else:
+            transform = build_two_step_transform(speaker["grid"], reference["grid"])
+
+            def apply_affine_only(points, *, affine=transform["step1_affine"]):
+                return np.asarray(apply_transform(affine, np.asarray(points, dtype=float)), dtype=float)
+
+            affine_contours = transform_contours(speaker["contours"], apply_affine_only, common_labels)
+            tps_contours = transform_contours(speaker["contours"], transform["apply_two_step"], common_labels)
+            affine_grid = map_grid_lines(speaker["grid"], apply_affine_only)
+            tps_grid = map_grid_lines(speaker["grid"], transform["apply_two_step"])
+
+        mapped_payload["affine"]["contours"][speaker_id] = affine_contours
+        mapped_payload["affine"]["grids"][speaker_id] = affine_grid
+        mapped_payload["tps"]["contours"][speaker_id] = tps_contours
+        mapped_payload["tps"]["grids"][speaker_id] = tps_grid
+
+    return {
+        stage_name: summarize_stage_population(
+            stage_payload["contours"],
+            stage_payload["grids"],
+            common_labels,
+            reference_id,
+            nc_template,
+        )
+        for stage_name, stage_payload in mapped_payload.items()
+    }
+
+
+def plot_single_speaker_contours(
+    ax,
+    contour_dict: dict[str, np.ndarray],
+    labels: list[str],
+    color,
+    *,
+    alpha: float,
+    lw: float,
+    zorder: int,
+) -> None:
+    """Plot every contour for one speaker using one consistent color."""
+    for label in labels:
+        pts = np.asarray(contour_dict[label], dtype=float)
+        ax.plot(
+            pts[:, 0],
+            pts[:, 1],
+            color=color,
+            lw=lw * (1.12 if label == "tongue" else 1.0),
+            alpha=alpha,
+            zorder=zorder,
+        )
+
+
+def plot_single_speaker_grid(
+    ax,
+    grid_payload: dict[str, list[np.ndarray]],
+    color,
+    *,
+    alpha: float,
+    lw: float,
+    zorder: int,
+) -> None:
+    """Plot mapped grid lines for one speaker using one consistent color."""
+    horiz_lines = list(grid_payload["horiz_lines"])
+    vert_lines = list(grid_payload["vert_lines"])
+    for index, line in enumerate(horiz_lines):
+        boundary = index in {0, len(horiz_lines) - 1}
+        ax.plot(line[:, 0], line[:, 1], color=color, lw=lw * (1.2 if boundary else 1.0), alpha=alpha, zorder=zorder)
+    for index, line in enumerate(vert_lines):
+        boundary = index in {0, len(vert_lines) - 1}
+        ax.plot(line[:, 0], line[:, 1], color=color, lw=lw * (1.15 if boundary else 0.92), alpha=alpha, zorder=zorder)
+
+
+def add_speaker_legend(
+    fig,
+    speakers: dict[str, dict],
+    ordered_ids: list[str],
+    speaker_colors: dict[str, tuple[float, float, float, float]],
+    median_speaker: str,
+) -> None:
+    handles = []
+    labels = []
+    for speaker_id in ordered_ids:
+        is_median = speaker_id == median_speaker
+        handles.append(
+            plt.Line2D(
+                [0],
+                [0],
+                color=speaker_colors[speaker_id],
+                lw=3.2 if is_median else 1.8,
+                alpha=0.98 if is_median else 0.82,
+            )
+        )
+        label = speaker_display_name(speakers, speaker_id)
+        if is_median:
+            label += " (median)"
+        labels.append(label)
+    fig.legend(
+        handles,
+        labels,
+        loc="lower center",
+        ncol=min(6, len(handles)),
+        fontsize=9,
+        bbox_to_anchor=(0.5, -0.02),
+        framealpha=0.96,
+    )
+
+
+def save_stage_contour_overlay_figure(
+    speakers: dict[str, dict],
+    labels: list[str],
+    stage_payload: dict[str, object],
+    speaker_colors: dict[str, tuple[float, float, float, float]],
+    *,
+    stage_name: str,
+    cohort_name: str,
+    output_path: Path,
+) -> None:
+    reference = speakers[str(stage_payload["reference_id"])]
+    median_speaker = str(stage_payload["median_speaker"])
+    ordered_ids = sorted(stage_payload["mapped_contours"], key=lambda speaker_id: speaker_order_key(speakers, speaker_id))
+    draw_order = [speaker_id for speaker_id in ordered_ids if speaker_id != median_speaker] + [median_speaker]
+    stage_label = "Affine only" if stage_name == "affine" else "After TPS"
+    cohort_label = "all speakers" if cohort_name == "all" else f"{cohort_name} cohort"
+
+    fig, ax = plt.subplots(1, 1, figsize=(10, 10), dpi=180)
+    format_white_canvas(ax, reference["image"], f"{stage_label}: contour overlay ({cohort_label})")
+
+    for speaker_id in draw_order:
+        is_median = speaker_id == median_speaker
+        plot_single_speaker_contours(
+            ax,
+            stage_payload["mapped_contours"][speaker_id],
+            labels,
+            speaker_colors[speaker_id],
+            alpha=0.98 if is_median else DEFAULT_STAGE_ALPHA,
+            lw=DEFAULT_STAGE_HIGHLIGHT_LINEWIDTH if is_median else DEFAULT_STAGE_LINEWIDTH,
+            zorder=5 if is_median else 2,
+        )
+
+    ax.text(
+        0.02,
+        0.02,
+        "\n".join(
+            [
+                f"Speakers: {len(ordered_ids)}",
+                f"Reference: {speaker_display_name(speakers, str(stage_payload['reference_id']))}",
+                f"Median speaker: {speaker_display_name(speakers, median_speaker)}",
+            ]
+        ),
+        transform=ax.transAxes,
+        ha="left",
+        va="bottom",
+        fontsize=10,
+        bbox=dict(boxstyle="round,pad=0.35", fc="white", alpha=0.97),
+    )
+    add_speaker_legend(fig, speakers, ordered_ids, speaker_colors, median_speaker)
+    fig.tight_layout(rect=(0.0, 0.05, 1.0, 1.0))
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output_path, bbox_inches="tight")
+    plt.close(fig)
+
+
+def save_stage_grid_overlay_figure(
+    speakers: dict[str, dict],
+    stage_payload: dict[str, object],
+    speaker_colors: dict[str, tuple[float, float, float, float]],
+    *,
+    stage_name: str,
+    cohort_name: str,
+    output_path: Path,
+) -> None:
+    reference = speakers[str(stage_payload["reference_id"])]
+    median_speaker = str(stage_payload["median_speaker"])
+    ordered_ids = sorted(stage_payload["mapped_grids"], key=lambda speaker_id: speaker_order_key(speakers, speaker_id))
+    draw_order = [speaker_id for speaker_id in ordered_ids if speaker_id != median_speaker] + [median_speaker]
+    stage_label = "Affine only" if stage_name == "affine" else "After TPS"
+    cohort_label = "all speakers" if cohort_name == "all" else f"{cohort_name} cohort"
+
+    fig, ax = plt.subplots(1, 1, figsize=(10, 10), dpi=180)
+    format_white_canvas(ax, reference["image"], f"{stage_label}: grid overlay ({cohort_label})")
+
+    for speaker_id in draw_order:
+        is_median = speaker_id == median_speaker
+        plot_single_speaker_grid(
+            ax,
+            stage_payload["mapped_grids"][speaker_id],
+            speaker_colors[speaker_id],
+            alpha=0.98 if is_median else DEFAULT_STAGE_GRID_ALPHA,
+            lw=2.2 if is_median else 0.9,
+            zorder=5 if is_median else 2,
+        )
+
+    ax.text(
+        0.02,
+        0.02,
+        "\n".join(
+            [
+                f"Speakers: {len(ordered_ids)}",
+                f"Reference: {speaker_display_name(speakers, str(stage_payload['reference_id']))}",
+                f"Median speaker: {speaker_display_name(speakers, median_speaker)}",
+            ]
+        ),
+        transform=ax.transAxes,
+        ha="left",
+        va="bottom",
+        fontsize=10,
+        bbox=dict(boxstyle="round,pad=0.35", fc="white", alpha=0.97),
+    )
+    add_speaker_legend(fig, speakers, ordered_ids, speaker_colors, median_speaker)
+    fig.tight_layout(rect=(0.0, 0.05, 1.0, 1.0))
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output_path, bbox_inches="tight")
+    plt.close(fig)
+
+
+def export_stage_overlay_figures(
+    speakers: dict[str, dict],
+    *,
+    requested_reference: str,
+    nc_resample: int,
+    nc_template: int,
+    output_dir: Path,
+) -> dict[str, object]:
+    """Export white-background contour and grid overlays for all/male/female cohorts."""
+    stage_dir = output_dir / "stage_overlays"
+    stage_dir.mkdir(parents=True, exist_ok=True)
+    speaker_colors = choose_speaker_colors(speakers)
+    summary_payload: dict[str, object] = {
+        "nnunet_gender_assignment": CURATED_PLUS_NNUNET_GENDER["nnUNet_A"],
+        "cohorts": {},
+    }
+
+    for cohort_name in DEFAULT_COHORTS:
+        if cohort_name == "all":
+            cohort_speakers = dict(speakers)
+        else:
+            cohort_speakers = {
+                speaker_id: speaker
+                for speaker_id, speaker in speakers.items()
+                if speaker.get("gender") == cohort_name
+            }
+        if len(cohort_speakers) < 2:
+            continue
+
+        contours_by_speaker = {
+            speaker_id: speaker["contours"]
+            for speaker_id, speaker in cohort_speakers.items()
+        }
+        cohort_ms = compute_notebook_style_mean(contours_by_speaker, nc_resample=nc_resample)
+        reference_id = resolve_reference_speaker(requested_reference, cohort_speakers, str(cohort_ms["geometric_median"]))
+        stage_populations = compute_stage_populations(
+            cohort_speakers,
+            cohort_ms["common_labels"],
+            reference_id,
+            nc_template=nc_template,
+        )
+
+        cohort_summary = {
+            "speaker_count": len(cohort_speakers),
+            "speakers": [speaker_display_name(cohort_speakers, speaker_id) for speaker_id in sorted(cohort_speakers, key=lambda sid: speaker_order_key(cohort_speakers, sid))],
+            "reference_speaker": speaker_display_name(cohort_speakers, reference_id),
+            "common_labels": list(cohort_ms["common_labels"]),
+            "stages": {},
+        }
+
+        for stage_name in ("affine", "tps"):
+            contour_path = stage_dir / f"{cohort_name}_{stage_name}_contours_overlay.png"
+            grid_path = stage_dir / f"{cohort_name}_{stage_name}_grid_overlay.png"
+            save_stage_contour_overlay_figure(
+                cohort_speakers,
+                cohort_ms["common_labels"],
+                stage_populations[stage_name],
+                speaker_colors,
+                stage_name=stage_name,
+                cohort_name=cohort_name,
+                output_path=contour_path,
+            )
+            save_stage_grid_overlay_figure(
+                cohort_speakers,
+                stage_populations[stage_name],
+                speaker_colors,
+                stage_name=stage_name,
+                cohort_name=cohort_name,
+                output_path=grid_path,
+            )
+            cohort_summary["stages"][stage_name] = {
+                "median_speaker": speaker_display_name(cohort_speakers, str(stage_populations[stage_name]["median_speaker"])),
+                "closest_to_mean": speaker_display_name(cohort_speakers, str(stage_populations[stage_name]["closest_to_mean"])),
+                "contour_overlay": str(contour_path),
+                "grid_overlay": str(grid_path),
+            }
+
+        summary_payload["cohorts"][cohort_name] = cohort_summary
+
+    summary_json_path = stage_dir / "stage_overlay_summary.json"
+    summary_txt_path = stage_dir / "stage_overlay_summary.txt"
+    summary_json_path.write_text(json.dumps(summary_payload, indent=2, ensure_ascii=False), encoding="utf-8")
+
+    lines = [
+        "Average-Speaker Stage Overlay Summary",
+        "=====================================",
+        "nnUNet_A cohort assignment: female",
+        "",
+    ]
+    for cohort_name in DEFAULT_COHORTS:
+        cohort_summary = summary_payload["cohorts"].get(cohort_name)
+        if not cohort_summary:
+            continue
+        lines.append(f"[{cohort_name}] speakers ({cohort_summary['speaker_count']}): {', '.join(cohort_summary['speakers'])}")
+        lines.append(f"reference speaker: {cohort_summary['reference_speaker']}")
+        for stage_name in ("affine", "tps"):
+            stage_summary = cohort_summary["stages"][stage_name]
+            lines.append(
+                f"{stage_name}: median={stage_summary['median_speaker']} | "
+                f"closest_to_mean={stage_summary['closest_to_mean']}"
+            )
+            lines.append(f"  contour overlay: {stage_summary['contour_overlay']}")
+            lines.append(f"  grid overlay: {stage_summary['grid_overlay']}")
+        lines.append("")
+    summary_txt_path.write_text("\n".join(lines), encoding="utf-8")
+    summary_payload["summary_json"] = str(summary_json_path)
+    summary_payload["summary_txt"] = str(summary_txt_path)
+    return summary_payload
 
 
 def compute_transformed_population(speakers: dict[str, dict], common_labels: list[str], reference_id: str, nc_template: int):
@@ -404,9 +871,9 @@ def write_summary(path: Path, speakers: dict[str, dict], ms: dict, transformed: 
 
 
 def load_speakers(case: str, source_frame: int, vtln_dir: Path, include_nnunet: bool):
-    """Load the speaker set and keep only speakers that contain tongue."""
+    """Load the speaker set and record which speakers are missing tongue."""
     speakers = {}
-    excluded_no_tongue = []
+    missing_tongue = []
 
     if include_nnunet:
         image, contours = load_frame_npy(
@@ -414,23 +881,36 @@ def load_speakers(case: str, source_frame: int, vtln_dir: Path, include_nnunet: 
             VT_SEG_DATA_ROOT / case,
             VT_SEG_CONTOURS_ROOT / case,
         )
-        if "tongue" in contours:
-            speakers["nnUNet_A"] = {"image": image, "contours": contours, "source": "nnUNet"}
-        else:
-            excluded_no_tongue.append("nnUNet_A")
+        if "tongue" not in contours:
+            missing_tongue.append("nnUNet_A")
+        speakers["nnUNet_A"] = {
+            "image": image,
+            "contours": contours,
+            "source": "nnUNet",
+            "display_name": "nnUNet_A",
+            "gender": CURATED_PLUS_NNUNET_GENDER["nnUNet_A"],
+        }
 
-    for zip_path in sorted(vtln_dir.glob("*.zip")):
-        speaker_id = zip_path.stem
+    curated_specs = read_curated_specs_map(vtln_dir)
+    for speaker_code in sorted(curated_specs, key=speaker_id_sort_key):
+        spec = curated_specs[speaker_code]
+        speaker_id = spec.basename
         image, contours = load_frame_vtln(speaker_id, vtln_dir)
         if "tongue" not in contours:
-            excluded_no_tongue.append(speaker_id)
-            continue
-        speakers[speaker_id] = {"image": image, "contours": contours, "source": "VTLN"}
+            missing_tongue.append(speaker_code)
+        speakers[speaker_id] = {
+            "image": image,
+            "contours": contours,
+            "source": "VTLN",
+            "display_name": speaker_code,
+            "gender": spec.gender,
+            "basename": spec.basename,
+        }
 
     for speaker_id, speaker in speakers.items():
         speaker["grid"] = build_grid(speaker["image"], speaker["contours"], n_vert=9, n_points=250, frame_number=0 if speaker["source"] == "VTLN" else source_frame)
 
-    return speakers, excluded_no_tongue
+    return speakers, missing_tongue
 
 
 def build_parser():
@@ -452,7 +932,7 @@ def build_parser():
 
 def main(argv: list[str] | None = None):
     args = build_parser().parse_args(argv)
-    speakers, excluded_no_tongue = load_speakers(
+    speakers, missing_tongue = load_speakers(
         case=args.case,
         source_frame=args.source_frame,
         vtln_dir=args.vtln_dir,
@@ -464,14 +944,16 @@ def main(argv: list[str] | None = None):
     contours_by_speaker = {speaker_id: speaker["contours"] for speaker_id, speaker in speakers.items()}
     ms = compute_notebook_style_mean(contours_by_speaker, nc_resample=args.nc_resample)
 
-    if args.reference_speaker == "auto":
-        reference_id = ms["geometric_median"]
-    else:
-        reference_id = args.reference_speaker
-        if reference_id not in speakers:
-            raise ValueError(f"Reference speaker '{reference_id}' not found in the loaded population.")
+    reference_id = resolve_reference_speaker(args.reference_speaker, speakers, str(ms["geometric_median"]))
 
     transformed = compute_transformed_population(speakers, ms["common_labels"], reference_id, nc_template=args.nc_template)
+    stage_overlay_summary = export_stage_overlay_figures(
+        speakers,
+        requested_reference=args.reference_speaker,
+        nc_resample=args.nc_resample,
+        nc_template=args.nc_template,
+        output_dir=args.output_dir,
+    )
 
     output_dir = args.output_dir
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -483,15 +965,23 @@ def main(argv: list[str] | None = None):
     save_transformed_average_figure(speakers, ms, transformed, transformed_fig)
     write_summary(summary_txt, speakers, ms, transformed)
 
-    print("Excluded because tongue was missing:", ", ".join(excluded_no_tongue) if excluded_no_tongue else "none")
-    print("Speakers used:", ", ".join(sorted(speakers)))
+    print("Speakers missing tongue contour but still included:", ", ".join(missing_tongue) if missing_tongue else "none")
+    print(
+        "Speakers used:",
+        ", ".join(
+            speaker_display_name(speakers, speaker_id)
+            for speaker_id in sorted(speakers, key=lambda speaker_id: speaker_order_key(speakers, speaker_id))
+        ),
+    )
     print("Common labels:", ", ".join(ms["common_labels"]))
-    print("Geometric median speaker:", ms["geometric_median"])
-    print("Closest to notebook-style mean:", ms["closest_to_mean"])
-    print("Reference speaker for grid transform:", reference_id)
+    print("Geometric median speaker:", speaker_display_name(speakers, str(ms["geometric_median"])))
+    print("Closest to notebook-style mean:", speaker_display_name(speakers, str(ms["closest_to_mean"])))
+    print("Reference speaker for grid transform:", speaker_display_name(speakers, reference_id))
     print(f"Saved: {notebook_fig}")
     print(f"Saved: {transformed_fig}")
     print(f"Saved: {summary_txt}")
+    print(f"Saved: {stage_overlay_summary['summary_json']}")
+    print(f"Saved: {stage_overlay_summary['summary_txt']}")
 
 
 if __name__ == "__main__":
