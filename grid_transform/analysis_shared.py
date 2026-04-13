@@ -23,6 +23,12 @@ CURATED_SPEAKER_GENDER = {
     "P9": "female",
     "P10": "female",
 }
+NNUNET_AVERAGE_SPEAKER_ID = "nnUNet_A"
+CURATED_PLUS_NNUNET_GENDER = {
+    **CURATED_SPEAKER_GENDER,
+    # The bundled average-speaker nnUNet case is treated as a female cohort item.
+    NNUNET_AVERAGE_SPEAKER_ID: "female",
+}
 IMAGE_SUFFIXES = (".png", ".tif", ".tiff")
 CURATED_BASENAME_RE = re.compile(
     r"^(?P<raw_subject>\d+)_(?P<speaker>P\d+)_(?P<session>S\d+)_F(?P<frame>\d+)$",
