@@ -70,3 +70,77 @@ cv2_annotation_to_grid_transform:
     review_pane_height: 340
     pane_gap: 12
     review_footer_height: 208
+
+slide_p7_nnunet_exports:
+  palette:
+    source_grid: "#35c9ff"
+    target_grid: "#ffd166"
+    connector: "#f8fafc"
+    target_landmark: "#e5e7eb"
+    affine_anchor: "#fb8500"
+    tps_extra: "#80ed99"
+    other_landmark: "#ffd166"
+    rmse_text: "#f8fafc"
+
+  grid_build_landmarks:
+    font_size: 9.2
+    marker_edge_width: 1.2
+    default_offset: [10.0, -10.0]
+    point_offsets:
+      I1: [-18.0, -8.0]
+      I2: [-12.0, -10.0]
+      I3: [0.0, -12.0]
+      I4: [8.0, -10.0]
+      I5: [10.0, -2.0]
+      I6: [10.0, 6.0]
+      I7: [10.0, -6.0]
+      P1: [10.0, 10.0]
+      M1: [10.0, -8.0]
+      L6: [10.0, 10.0]
+      L3: [-12.0, 2.0]
+      L4: [-12.0, 2.0]
+      L5: [-12.0, 2.0]
+    point_sizes:
+      default: 62.0
+      P1: 78.0
+      L6: 72.0
+      L3: 54.0
+      L4: 54.0
+      L5: 54.0
+
+  step2_native:
+    marker_radius: 3
+    marker_highlight_radius: 4
+    label_font_scale: 0.45
+    label_thickness: 1
+    default_label_offset: [8, -8]
+    label_positions:
+      source_native: {}
+      target_native: {}
+    label_offsets:
+      source_native: {}
+      target_native: {}
+
+  transform_sequence:
+    connector_alpha: 0.22
+    connector_thickness: 1
+    grid_thickness_outer: 3
+    grid_thickness_inner: 1
+    target_marker_radius: 3
+    source_marker_radius: 3
+    show_labels: true
+    label_font_scale: 0.42
+    label_thickness: 1
+    default_label_offset: [7, -7]
+    label_positions:
+      raw_overlay: {}
+      affine_overlay: {}
+      tps_overlay: {}
+      affine_source_only: {}
+      tps_source_only: {}
+    label_offsets:
+      raw_overlay: {}
+      affine_overlay: {}
+      tps_overlay: {}
+      affine_source_only: {}
+      tps_source_only: {}

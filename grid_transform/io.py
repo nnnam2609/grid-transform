@@ -175,7 +175,33 @@ def _load_roi_contours_from_directory(contours_dir: Path, *, image_name: str) ->
     return contours
 
 
-def load_frame_npy(frame_number: int, data_dir: PathLike[str] | str, contours_dir: PathLike[str] | str):
+def _load_contours_from_masks(masks_dir: Path, frame_number: int) -> dict[str, np.ndarray]:
+    import cv2
+
+    contours: dict[str, np.ndarray] = {}
+    for mask_path in sorted(masks_dir.glob(f"{frame_number}_*.png")):
+        name = mask_path.stem.replace(f"{frame_number}_", "")
+        name = normalize_vtln_contour_name(name)
+        mask = cv2.imread(str(mask_path), cv2.IMREAD_GRAYSCALE)
+        if mask is None:
+            continue
+        found, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+        if not found:
+            continue
+        largest = max(found, key=cv2.contourArea)
+        pts = largest.squeeze(1).astype(float)  # (N, 2) as x, y
+        if len(pts) > 0:
+            contours[name] = pts
+    return contours
+
+
+def load_frame_npy(
+    frame_number: int,
+    data_dir: PathLike[str] | str,
+    contours_dir: PathLike[str] | str,
+    *,
+    use_predicted_masks: bool = False,
+):
     data_dir = Path(data_dir)
     contours_dir = Path(contours_dir)
     image_path = data_dir / "PNG_MR" / f"{frame_number}.png"
@@ -183,6 +209,14 @@ def load_frame_npy(frame_number: int, data_dir: PathLike[str] | str, contours_di
         raise FileNotFoundError(f"Image not found: {image_path}")
 
     image = Image.open(image_path)
+
+    if use_predicted_masks:
+        masks_dir = data_dir / "masks"
+        contours = _load_contours_from_masks(masks_dir, frame_number)
+        if contours:
+            return image, contours
+        raise FileNotFoundError(f"No mask files found in {masks_dir} for frame {frame_number}")
+
     contours = {}
     for npy_path in sorted(contours_dir.glob(f"{frame_number}_*.npy")):
         name = npy_path.stem.replace(f"{frame_number}_", "")

@@ -11,15 +11,22 @@ __pycache__/
 
 # Local-only workspace files
 AGENTS.md
+.agents/
+.miktex/
 logs/
 scripts/windows/
 local/report_tools/
+grid_transform/paper_summary_discovery.py
+scripts/run/run_find_next_unsummarized_paper.py
+scripts/run/run_refresh_papers_index.py
+tests/test_paper_summary_discovery.py
 
 # Local reference material
 docs/references/*.pdf
 
 # Generated artifacts
 outputs/
+experiments/report/
 experiments/report/figures/
 experiments/report/generated/
 experiments/p4_s10_video_sample/output/

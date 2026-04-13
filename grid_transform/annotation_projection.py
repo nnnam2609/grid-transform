@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from grid_transform.apps.method4_transform import apply_transform
+from grid_transform.transform_helpers import apply_transform
 
 
 def build_resize_affine(reference_shape: tuple[int, int], target_shape: tuple[int, int]) -> dict[str, np.ndarray]:

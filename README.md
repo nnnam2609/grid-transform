@@ -22,6 +22,8 @@ The repo is organized for reproducible experiments rather than a packaged librar
   Shared Python modules, path config, notebook bootstrap, and app entrypoints.
 - `scripts/run/`
   Official wrappers for the main workflows.
+- `tools/`
+  Local report/export and one-off utility modules. These are useful helpers, but they are not treated as a stable public interface.
 - `notebooks/`
   Exploration notebooks. Notebook outputs are intentionally not treated as versioned results.
 - `experiments/`
@@ -32,6 +34,8 @@ The repo is organized for reproducible experiments rather than a packaged librar
   Local default settings for the multi-step `cv2` annotation-to-grid-transform app. CLI flags still override the YAML values.
 - `VTLN/`
   Canonical bundled data now lives in `VTLN/data/`, including 480x480 RGB triplet references, scaled ROI zips, and the bundled nnUNet target case.
+
+`experiments/report/` is local-only for manuscript/slide work and should stay out of Git tracking.
 
 `scripts/run/` is the canonical interface. Root scripts such as `create_speaker_grid.py` remain available as convenience aliases for older commands.
 
@@ -98,7 +102,7 @@ Key behavior:
 
 - `config.yaml` defaults to `cache_mode: startup`, so the current selection is prewarmed from `Step 0`.
 - `Step 1` supports `S = save only`, `N = save and go next`, and `G = go next without saving`.
-- Saving in `Step 1A` updates the workspace copy under `outputs/annotation_to_grid_transform/.../source_annotation.latest.json`; that latest saved JSON is then eligible to overwrite/regenerate the canonical default annotation for the matching `(speaker, session, frame)` in the downstream bundle/sync commands.
+- Saving in `Step 1A` now updates the canonical `VTLN/data/<reference>.zip` bundle directly. If the app finds an older temporary annotation JSON for the same `(speaker, session, frame)` and it is newer than the bundle zip, it promotes that JSON into `VTLN/data` first and then deletes the temporary JSON.
 - `Step 2` supports `S = save only`, `G = go to Step 3 without saving`, `N = save and go to Step 3`, `B = save and go back to Step 1`, and `0 = save and return to Step 0`.
 - Dragging a landmark in `Step 2` now recomputes the corresponding native source/target grid immediately, so the native, affine, and final previews all track the updated grid state instead of only moving the landmark overlay.
 - `Step 2` includes `Reset source grid` and `Reset target grid` buttons, plus hotkeys `1` and `2`, to clear landmark overrides for one side and restore the grid rebuilt from that side's current annotation.
@@ -121,12 +125,13 @@ outputs/annotation_to_grid_transform/
 Latest-only files written per workspace:
 
 - `workspace_selection.latest.json`
-- `source_annotation.latest.json`
 - `target_annotation.latest.json`
 - `landmark_overrides.latest.json`
 - `transform_spec.latest.json`
 - `transform_review.latest.json`
 - preview PNGs and background render job files
+
+Note: `source_annotation.latest.json` is no longer the canonical source-annotation store for the multi-step cv2 app. Source and VTLN-target edits now round-trip directly through `VTLN/data`.
 
 ### VTLN Annotation Browser
 
@@ -168,7 +173,7 @@ Validation behavior:
 
 ### Interactive Source Annotation Editor
 
-The source-annotation editor opens a local `cv2` window, projects a VTLN reference contour set onto the best-matching ArtSpeech frame, lets you drag contour handles, then saves the edited annotation for reuse in the session warp pipeline and for promotion back into the canonical/default annotation bundle.
+The source-annotation editor opens a local `cv2` window, projects a VTLN reference contour set onto the best-matching ArtSpeech frame, lets you drag contour handles, then writes the edited contours straight back into the canonical `VTLN/data/<reference>.zip` bundle. If the matching temp JSON is newer than the bundle zip, the editor promotes that temp annotation first and then deletes the temp JSON.
 
 Zero-arg launch on this workspace:
 
@@ -201,17 +206,22 @@ Interactive controls:
 - Press `r` to reset back to the initial projected annotation.
 - Press `q` or `Esc` to close the editor.
 
-Default save location:
+Default output location for previews and summaries:
 
 ```text
 outputs/source_annotation_edits/p7_s2_frame_0829/
 ```
 
-Saving here does not edit `VTLN/data/` directly. The editor writes a latest saved annotation snapshot, and the bundle/sync maintenance commands decide when that snapshot overwrites the canonical defaults.
+Canonical annotation storage stays in:
+
+```text
+VTLN/data/<reference>.zip
+```
+
+Saving here updates `VTLN/data/<reference>.zip` directly. Preview images and summaries still go under the output directory, but the contour source of truth is the canonical VTLN bundle.
 
 Saved files:
 
-- `edited_annotation.json`: canonical contour coordinates plus source/target metadata.
 - `source_full_head_annotation.png`: source frame with the editable contour overlay.
 - `source_grid_annotation.png`: source grid rebuilt from the current annotation.
 - `source_to_target_preview.png`: fixed-frame warped preview in target space.
@@ -221,9 +231,9 @@ Saved files:
 
 Canonical overwrite flow:
 
-- The newest saved annotation for a given `(artspeech_speaker, session, source_frame)` wins, whether it came from `outputs/annotation_to_grid_transform/.../source_annotation.latest.json` or `outputs/source_annotation_edits/.../edited_annotation.json`.
-- `run_sync_latest_annotations_to_curated_vtln.py` overwrites the matching curated `VTLN/u_curated_selection_20260330/*.png` and `*.zip` files in place, after archiving the previous files.
-- `run_build_vtln_data_bundle.py` rebuilds the public `VTLN/data/` bundle from the current triplet manifest plus the newest saved annotations.
+- Saving in the editor writes the current contours straight into the canonical `VTLN/data/<reference>.zip`.
+- If an older workflow left behind `source_annotation.latest.json`, `edited_annotation.json`, or VTLN-target temp JSONs, `run_reconcile_vtln_temp_annotations.py` promotes the newer temp file into `VTLN/data` and deletes the temp JSON.
+- `run_sync_latest_annotations_to_curated_vtln.py` and `run_build_vtln_data_bundle.py` still exist for curated-bundle maintenance and rebundling, but they no longer need the source editor's temp JSON as an intermediate store.
 
 Useful options:
 
@@ -245,12 +255,13 @@ Promote the latest saved annotations into the canonical defaults:
 ```powershell
 .\.venv\Scripts\python .\scripts\run\run_sync_latest_annotations_to_curated_vtln.py
 .\.venv\Scripts\python .\scripts\run\run_build_vtln_data_bundle.py
+.\.venv\Scripts\python .\scripts\run\run_reconcile_vtln_temp_annotations.py
 ```
 
-Reuse a saved edited annotation in the warp pipeline:
+Reuse the canonical VTLN annotation in the warp pipeline:
 
 ```powershell
-.\.venv\Scripts\python .\scripts\run\run_warp_artspeech_session_to_target_video.py --artspeech-speaker P7 --session S2 --target-frame 143020 --source-annotation-json outputs\source_annotation_edits\p7_s2_frame_0829\edited_annotation.json --dataset-root <ARTSPEECH_ROOT> --output-mode both
+.\.venv\Scripts\python .\scripts\run\run_warp_artspeech_session_to_target_video.py --artspeech-speaker P7 --session S2 --annotation-speaker 1640_P7_S2_F0829 --target-frame 143020 --dataset-root <ARTSPEECH_ROOT> --output-mode both
 ```
 
 Current tracked example from the saved `P7/S2` annotation bundle:

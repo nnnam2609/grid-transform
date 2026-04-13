@@ -13,7 +13,6 @@ from grid_transform.annotation_projection import (
     build_resize_affine,
     transform_reference_contours,
 )
-from grid_transform.apps.method4_transform import apply_transform
 from grid_transform.artspeech_video import (
     IntervalCursor,
     downsample_waveform,
@@ -38,6 +37,7 @@ from grid_transform.transfer import (
     smooth_transformed_contours,
     transform_contours,
 )
+from grid_transform.transform_helpers import apply_transform
 from grid_transform.vt import build_grid
 from grid_transform.warp import (
     precompute_inverse_warp,

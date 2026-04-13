@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import argparse
-import ctypes
-import ctypes.wintypes
 import json
 import os
 import subprocess
@@ -27,7 +25,17 @@ from grid_transform.artspeech_video import (
     normalize_frame,
     resolve_default_dataset_root,
 )
-from grid_transform.config import PROJECT_DIR, TONGUE_COLOR, VT_SEG_CONTOURS_ROOT, VT_SEG_DATA_ROOT
+from grid_transform.config import DEFAULT_VTLN_DIR, PROJECT_DIR, TONGUE_COLOR, VT_SEG_CONTOURS_ROOT, VT_SEG_DATA_ROOT
+from grid_transform.cv2_shared import (
+    CONTOUR_COLORS,
+    SOURCE_GRID_STYLE,
+    TARGET_GRID_STYLE,
+    WINDOW_MARGIN,
+    clamp_point,
+    hex_to_bgr,
+    scaled_window_size,
+    source_text_block,
+)
 from grid_transform.io import load_frame_npy, load_frame_vtln
 from grid_transform.session_warp import run_session_warp_to_target
 from grid_transform.session_warp_threaded import run_session_warp_to_target_threaded
@@ -36,11 +44,9 @@ from grid_transform.source_annotation import (
     default_match_output_path,
     default_source_annotation_output_dir,
     frame_correlation,
-    load_source_annotation_json,
     load_or_compute_reference_session_match,
     projected_reference_frame,
     project_reference_annotation_to_source,
-    save_source_annotation_json,
 )
 from grid_transform.transfer import (
     DEFAULT_ARTICULATORS,
@@ -50,6 +56,15 @@ from grid_transform.transfer import (
     transform_contours,
 )
 from grid_transform.vt import build_grid, visualize_grid
+from grid_transform.vtln_annotation_sync import (
+    annotation_shape_from_metadata,
+    delete_temp_annotation_file,
+    find_latest_source_annotation,
+    promote_temp_annotation_to_vtln,
+    resolve_vtln_data_dir,
+    vtln_zip_path,
+    write_source_annotation_to_vtln,
+)
 from grid_transform.warp import precompute_inverse_warp, warp_array_with_precomputed_inverse_warp
 
 
@@ -60,52 +75,6 @@ FOOTER_HEIGHT = 78
 PANEL_BG = (24, 24, 24)
 FOOTER_BG = (16, 16, 16)
 TEXT_COLOR = (235, 235, 235)
-WINDOW_MARGIN = 36
-
-CONTOUR_COLORS = {
-    "c1": "#457b9d",
-    "c2": "#4d7ea8",
-    "c3": "#5c96bc",
-    "c4": "#7aa6c2",
-    "c5": "#90b8d8",
-    "c6": "#b8d8f2",
-    "incisior-hard-palate": "#ef476f",
-    "mandible-incisior": "#f4a261",
-    "pharynx": "#118ab2",
-    "soft-palate": "#fb8500",
-    "soft-palate-midline": "#8338ec",
-    "tongue": TONGUE_COLOR,
-}
-SOURCE_GRID_STYLE = {
-    "horiz_color": "#3a86ff",
-    "vert_color": "#ffbe0b",
-    "vt_color": "#8338ec",
-    "spine_color": "#2a9d8f",
-    "guide_color": "#fb5607",
-    "i_color": "#8338ec",
-    "c_color": "#2a9d8f",
-    "p1_color": "#fb5607",
-    "m1_color": "#8338ec",
-    "l6_color": "#80ed99",
-    "interp_color": "#3a86ff",
-    "mandible_color": "#e76f51",
-    "tongue_color": TONGUE_COLOR,
-}
-TARGET_GRID_STYLE = {
-    "horiz_color": "#20c997",
-    "vert_color": "#ffd166",
-    "vt_color": "#ef476f",
-    "spine_color": "#118ab2",
-    "guide_color": "#ff006e",
-    "i_color": "#ef476f",
-    "c_color": "#118ab2",
-    "p1_color": "#ff006e",
-    "m1_color": "#ef476f",
-    "l6_color": "#06d6a0",
-    "interp_color": "#20c997",
-    "mandible_color": "#f4a261",
-    "tongue_color": TONGUE_COLOR,
-}
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -126,7 +95,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--vtln-dir",
         type=Path,
-        default=PROJECT_DIR / "VTLN" / "data",
+        default=DEFAULT_VTLN_DIR,
         help="Folder containing VTLN images and ROI zip files. Defaults to the bundled VTLN/data folder.",
     )
     parser.add_argument("--output-dir", type=Path, help="Optional explicit output directory.")
@@ -160,78 +129,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def source_text_block(snapshot: dict[str, object], reference_speaker: str) -> list[str]:
-    sentence = " ".join(str(snapshot["sentence"]).split()) if snapshot.get("sentence") else "-"
-    if len(sentence) > 56:
-        sentence = sentence[:53] + "..."
-    return [
-        f"ref: {reference_speaker}",
-        f"frame: {snapshot['frame1']}  t={snapshot['time_sec']:.4f}s",
-        f"corr: {snapshot['correlation']:.4f}",
-        f"word: {snapshot['word'] or '-'}  phoneme: {snapshot['phoneme'] or '-'}",
-        f"sent: {sentence}",
-    ]
-
-
-def hex_to_bgr(color: str) -> tuple[int, int, int]:
-    stripped = color.lstrip("#")
-    if len(stripped) != 6:
-        return (255, 255, 255)
-    red = int(stripped[0:2], 16)
-    green = int(stripped[2:4], 16)
-    blue = int(stripped[4:6], 16)
-    return blue, green, red
-
-
-def clamp_point(point: np.ndarray, width: int, height: int) -> np.ndarray:
-    return np.array(
-        [
-            np.clip(float(point[0]), 0.0, float(width - 1)),
-            np.clip(float(point[1]), 0.0, float(height - 1)),
-        ],
-        dtype=float,
-    )
-
-
-def screen_work_area() -> tuple[int, int] | None:
-    if os.name == "nt":
-        try:
-            user32 = ctypes.windll.user32
-            rect = ctypes.wintypes.RECT()
-            if user32.SystemParametersInfoW(0x0030, 0, ctypes.byref(rect), 0):
-                return int(rect.right - rect.left), int(rect.bottom - rect.top)
-            return int(user32.GetSystemMetrics(0)), int(user32.GetSystemMetrics(1))
-        except Exception:
-            pass
-
-    try:
-        import tkinter as tk
-
-        root = tk.Tk()
-        root.withdraw()
-        width = int(root.winfo_screenwidth())
-        height = int(root.winfo_screenheight())
-        root.destroy()
-        return width, height
-    except Exception:
-        return None
-
-
-def scaled_window_size(canvas_width: int, canvas_height: int, *, margin: int = WINDOW_MARGIN) -> tuple[int, int]:
-    available = screen_work_area()
-    if available is None:
-        return min(1600, canvas_width), min(1200, canvas_height)
-
-    available_width = max(640, int(available[0] - margin))
-    available_height = max(640, int(available[1] - margin))
-    scale = min(available_width / max(canvas_width, 1), available_height / max(canvas_height, 1))
-    scale = max(scale, 0.5)
-    return max(640, int(round(canvas_width * scale))), max(640, int(round(canvas_height * scale)))
-
-
 class SourceAnnotationEditor:
     def __init__(self, args: argparse.Namespace) -> None:
         self.args = args
+        self.args.vtln_dir = resolve_vtln_data_dir(self.args.vtln_dir)
         self.dataset_root = args.dataset_root or resolve_default_dataset_root(args.artspeech_speaker)
         self.session_data = load_session_data(self.dataset_root, args.artspeech_speaker, args.session)
 
@@ -268,7 +169,8 @@ class SourceAnnotationEditor:
             args.session,
             self.source_frame_index1,
         )
-        self.annotation_json_path = self.output_dir / "edited_annotation.json"
+        self.legacy_annotation_json_path = self.output_dir / "edited_annotation.json"
+        self.vtln_zip_path = vtln_zip_path(args.vtln_dir, args.reference_speaker)
 
         self.target_image, self.target_contours = load_frame_npy(
             args.target_frame,
@@ -287,14 +189,20 @@ class SourceAnnotationEditor:
             frame_number=args.target_frame,
         )
 
-        projected_reference_contours = project_reference_annotation_to_source(
+        self.loaded_saved_annotation = False
+        self.saved_annotation_note = ""
+        self._reconcile_temp_annotation_to_vtln()
+        self.reference_image, self.reference_contours = load_frame_vtln(args.reference_speaker, args.vtln_dir)
+        self.reference_shape = tuple(int(value) for value in np.asarray(self.reference_image).shape[:2])
+        self.projected_reference_frame = projected_reference_frame(
+            self.reference_image,
+            tuple(int(value) for value in self.session_data.images.shape[1:]),
+        )
+        starting_contours = project_reference_annotation_to_source(
             self.reference_contours,
             self.reference_shape,
             self.source_shape,
         )
-        self.loaded_saved_annotation = False
-        self.saved_annotation_note = ""
-        starting_contours = self._load_saved_contours_if_available() or projected_reference_contours
         self.original_contours = {
             name: np.asarray(points, dtype=float).copy()
             for name, points in starting_contours.items()
@@ -315,9 +223,7 @@ class SourceAnnotationEditor:
 
         self.active_handle: tuple[str, int] | None = None
         self.active_handle_backup: np.ndarray | None = None
-        if self.loaded_saved_annotation:
-            self.status_message = "Loaded existing edited annotation. Keys: s save, v save+render, r reset, q next, x exit all."
-        elif self.saved_annotation_note:
+        if self.saved_annotation_note:
             self.status_message = f"{self.saved_annotation_note} Keys: s save, v save+render, r reset, q next, x exit all."
         else:
             self.status_message = "Ready. Drag handles in the source panel. Keys: s save, v save+render, r reset, q next, x exit all."
@@ -351,62 +257,31 @@ class SourceAnnotationEditor:
             return "color = latest saved annotation"
         return "gray = baseline  |  color = current"
 
-    def _saved_annotation_matches_current_case(self, metadata: dict[str, object]) -> tuple[bool, str]:
-        mismatches: list[str] = []
-        if metadata.get("artspeech_speaker") and str(metadata["artspeech_speaker"]) != self.args.artspeech_speaker:
-            mismatches.append("speaker")
-        if metadata.get("session") and str(metadata["session"]) != self.args.session:
-            mismatches.append("session")
-        if metadata.get("source_frame") and int(metadata["source_frame"]) != self.source_frame_index1:
-            mismatches.append("frame")
-        saved_shape = metadata.get("source_shape")
-        if saved_shape:
-            saved_shape_tuple = tuple(int(value) for value in saved_shape[:2])
-            if saved_shape_tuple != self.source_shape:
-                mismatches.append("shape")
-        if mismatches:
-            return False, ", ".join(mismatches)
-        return True, ""
-
-    def _contours_fit_source_shape(self, contours: dict[str, np.ndarray]) -> tuple[bool, str]:
-        width = float(self.source_shape[1] - 1)
-        height = float(self.source_shape[0] - 1)
-        tolerance = 1.0
-        for name, points in contours.items():
-            pts = np.asarray(points, dtype=float)
-            if pts.size == 0:
-                continue
-            xmin = float(np.min(pts[:, 0]))
-            xmax = float(np.max(pts[:, 0]))
-            ymin = float(np.min(pts[:, 1]))
-            ymax = float(np.max(pts[:, 1]))
-            if xmin < -tolerance or ymin < -tolerance or xmax > width + tolerance or ymax > height + tolerance:
-                return False, name
-        return True, ""
-
-    def _load_saved_contours_if_available(self) -> dict[str, np.ndarray] | None:
-        if not self.annotation_json_path.is_file():
-            return None
-        try:
-            payload = load_source_annotation_json(self.annotation_json_path)
-        except Exception as exc:
-            self.saved_annotation_note = f"Existing edited annotation could not be loaded: {exc}"
-            return None
-
-        matches, reason = self._saved_annotation_matches_current_case(payload.get("metadata", {}))
-        if not matches:
-            self.saved_annotation_note = f"Ignored existing edited annotation ({reason} mismatch)."
-            return None
-
-        contours_fit, contour_name = self._contours_fit_source_shape(payload["contours"])
-        if not contours_fit:
-            self.saved_annotation_note = (
-                f"Ignored existing edited annotation (contour {contour_name} falls outside source frame)."
-            )
-            return None
-
-        self.loaded_saved_annotation = True
-        return payload["contours"]
+    def _reconcile_temp_annotation_to_vtln(self) -> None:
+        latest_payload = find_latest_source_annotation(
+            artspeech_speaker=self.args.artspeech_speaker,
+            session=self.args.session,
+            source_frame=self.source_frame_index1,
+            current_source_shape=self.source_shape,
+        )
+        if latest_payload is None:
+            return
+        latest_path_raw = latest_payload.get("path")
+        if latest_path_raw in (None, ""):
+            return
+        latest_path = Path(str(latest_path_raw))
+        metadata = dict(latest_payload.get("metadata", {}))
+        source_shape = annotation_shape_from_metadata(metadata, "source_shape", "reference_shape") or self.source_shape
+        if promote_temp_annotation_to_vtln(
+            path=latest_path,
+            reference_name=self.args.reference_speaker,
+            vtln_dir=self.args.vtln_dir,
+            contours=latest_payload["contours"],
+            source_shape=source_shape,
+        ):
+            self.saved_annotation_note = f"Promoted newer temp annotation into VTLN/data: {self.args.reference_speaker}"
+        else:
+            self.saved_annotation_note = "Deleted stale temp annotation and kept canonical VTLN/data annotation."
 
     def _build_handle_points(self, contours: dict[str, np.ndarray]) -> dict[str, np.ndarray]:
         handles: dict[str, np.ndarray] = {}
@@ -687,13 +562,19 @@ class SourceAnnotationEditor:
 
     def save_bundle(self, *, render_video: bool, max_output_frames: int, output_mode: str) -> dict[str, object]:
         metadata = self._metadata_payload()
-        payload = save_source_annotation_json(self.annotation_json_path, metadata, self.current_contours)
+        write_source_annotation_to_vtln(
+            vtln_dir=self.args.vtln_dir,
+            reference_name=self.args.reference_speaker,
+            contours=self.current_contours,
+            source_shape=self.source_shape,
+        )
+        delete_temp_annotation_file(self.legacy_annotation_json_path, stop_root=self.output_dir)
         preview_paths = self._save_preview_images()
 
         result: dict[str, object] = {
-            "edited_annotation_json": str(self.annotation_json_path),
+            "vtln_zip": str(self.vtln_zip_path),
             "preview_paths": preview_paths,
-            "metadata": payload["metadata"],
+            "metadata": metadata,
         }
 
         if render_video:
@@ -708,7 +589,7 @@ class SourceAnnotationEditor:
                 if int(self.args.render_workers) > 1:
                     warp_summary = run_session_warp_to_target_threaded(
                         annotation_speaker=self.args.reference_speaker,
-                        source_annotation_json=self.annotation_json_path,
+                        source_annotation_json=None,
                         artspeech_speaker=self.args.artspeech_speaker,
                         session=self.args.session,
                         target_frame=self.args.target_frame,
@@ -724,7 +605,7 @@ class SourceAnnotationEditor:
                 else:
                     warp_summary = run_session_warp_to_target(
                         annotation_speaker=self.args.reference_speaker,
-                        source_annotation_json=self.annotation_json_path,
+                        source_annotation_json=None,
                         artspeech_speaker=self.args.artspeech_speaker,
                         session=self.args.session,
                         target_frame=self.args.target_frame,
@@ -760,8 +641,6 @@ class SourceAnnotationEditor:
             sys.executable,
             "-m",
             module_name,
-            "--source-annotation-json",
-            str(self.annotation_json_path),
             "--annotation-speaker",
             self.args.reference_speaker,
             "--artspeech-speaker",
@@ -1054,10 +933,7 @@ class SourceAnnotationEditor:
     def _handle_reset(self) -> None:
         self.handle_points = self._build_handle_points(self.original_contours)
         self._recompute_state()
-        if self.loaded_saved_annotation:
-            self.status_message = "Reset to the latest saved annotation."
-        else:
-            self.status_message = "Reset to the initial projected annotation."
+        self.status_message = "Reset to the current VTLN/data annotation."
         self._refresh_display(source_only=False)
 
     def _window_mode_label(self, *, fullscreen: bool) -> str:

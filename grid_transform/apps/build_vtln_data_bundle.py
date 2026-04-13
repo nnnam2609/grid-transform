@@ -4,18 +4,17 @@ import argparse
 import csv
 import json
 import shutil
-import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 
 import imageio.v2 as imageio
 import numpy as np
-from roifile import ImagejRoi
 
-from grid_transform.annotation_projection import build_resize_affine, transform_reference_contours
 from grid_transform.config import DEFAULT_OUTPUT_DIR, PROJECT_DIR
 from grid_transform.io import load_frame_vtln
 from grid_transform.source_annotation import load_source_annotation_json
+from grid_transform.vtln_annotation_sync import discover_saved_source_annotation_paths
+from grid_transform.vtln_bundle import scale_contours_to_triplet_space, write_annotation_zip
 
 
 TRIPLET_DIR_DEFAULT = PROJECT_DIR / "VTLN" / "u_curated_selection_20260330_rgb480_triplets"
@@ -106,15 +105,7 @@ def resolve_existing_dir(path: Path, *, leaf_name: str) -> Path:
 
 
 def discover_saved_annotation_paths() -> list[Path]:
-    candidates: list[Path] = []
-    search_specs = (
-        (DEFAULT_OUTPUT_DIR / "annotation_to_grid_transform", "source_annotation.latest.json"),
-        (DEFAULT_OUTPUT_DIR / "source_annotation_edits", "edited_annotation.json"),
-    )
-    for root, filename in search_specs:
-        if root.is_dir():
-            candidates.extend(root.rglob(filename))
-    return sorted(set(candidates))
+    return discover_saved_source_annotation_paths(output_root=DEFAULT_OUTPUT_DIR)
 
 
 def build_latest_annotation_map() -> dict[tuple[str, str, int], LatestAnnotation]:
@@ -141,24 +132,11 @@ def build_latest_annotation_map() -> dict[tuple[str, str, int], LatestAnnotation
     return latest
 
 
-def write_annotation_zip(path: Path, basename: str, contours: dict[str, np.ndarray], *, dry_run: bool) -> None:
-    if dry_run:
-        return
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-        for label, points in sorted(contours.items()):
-            pts = np.asarray(points, dtype=float)
-            if pts.ndim != 2 or pts.shape[1] != 2 or len(pts) == 0:
-                continue
-            roi_name = f"{basename}_{label}"
-            roi = ImagejRoi.frompoints(pts, name=roi_name)
-            zf.writestr(f"{roi_name}.roi", roi.tobytes())
-
-
 def contour_payload_for_row(
     row: TripletRow,
     *,
     latest_map: dict[tuple[str, str, int], LatestAnnotation],
+    canonical_dir: Path,
     curated_dir: Path,
 ) -> tuple[dict[str, np.ndarray] | None, tuple[int, int] | None, str, str]:
     latest = latest_map.get((row.speaker, row.session, row.center_frame_1based))
@@ -169,6 +147,13 @@ def contour_payload_for_row(
         source_shape = tuple(int(value) for value in source_shape_raw[:2])
         return latest.contours, source_shape, "scaled_latest_annotation", str(latest.json_path)
 
+    canonical_zip = canonical_dir / f"{row.output_basename}.zip"
+    canonical_png = canonical_dir / f"{row.output_basename}.png"
+    if canonical_zip.is_file() and canonical_png.is_file():
+        canonical_image, contours = load_frame_vtln(row.output_basename, canonical_dir)
+        source_shape = tuple(int(value) for value in np.asarray(canonical_image).shape[:2])
+        return contours, source_shape, "scaled_existing_canonical_zip", str(canonical_zip)
+
     fallback_zip = curated_dir / f"{row.output_basename}.zip"
     if fallback_zip.is_file():
         fallback_image, contours = load_frame_vtln(row.output_basename, curated_dir)
@@ -176,17 +161,6 @@ def contour_payload_for_row(
         return contours, source_shape, "scaled_curated_zip", str(fallback_zip)
 
     return None, None, "missing", ""
-
-
-def scale_contours_to_triplet_space(
-    contours: dict[str, np.ndarray],
-    source_shape: tuple[int, int],
-    target_shape: tuple[int, int],
-) -> dict[str, np.ndarray]:
-    affine = build_resize_affine(source_shape, target_shape)
-    return transform_reference_contours(contours, affine)
-
-
 def write_manifest(rows: list[dict[str, str]], path: Path, *, dry_run: bool) -> None:
     if dry_run or not rows:
         return
@@ -254,6 +228,7 @@ def main(argv: list[str] | None = None) -> int:
         contours, source_shape, annotation_status, annotation_origin = contour_payload_for_row(
             row,
             latest_map=latest_map,
+            canonical_dir=args.output_dir,
             curated_dir=args.curated_dir,
         )
 
