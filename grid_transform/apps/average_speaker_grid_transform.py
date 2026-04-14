@@ -40,6 +40,17 @@ DEFAULT_STAGE_GRID_ALPHA = 0.24
 DEFAULT_STAGE_LINEWIDTH = 1.15
 DEFAULT_STAGE_HIGHLIGHT_LINEWIDTH = 2.8
 DEFAULT_COHORTS = ("all", "male", "female")
+DEFAULT_STAGE_ORDER = ("init", "affine", "tps")
+
+
+def stage_display_name(stage_name: str) -> str:
+    if stage_name == "init":
+        return "Before affine (init)"
+    if stage_name == "affine":
+        return "Affine only"
+    if stage_name == "tps":
+        return "After TPS"
+    return stage_name
 
 
 def estimate_similarity_umeyama(src, dst):
@@ -319,15 +330,18 @@ def compute_stage_populations(
     reference_id: str,
     nc_template: int,
 ) -> dict[str, dict[str, object]]:
-    """Compute affine-only and affine+TPS populations in the same reference space."""
+    """Compute init, affine-only, and affine+TPS populations."""
     reference = speakers[reference_id]
     mapped_payload = {
+        "init": {"contours": {}, "grids": {}},
         "affine": {"contours": {}, "grids": {}},
         "tps": {"contours": {}, "grids": {}},
     }
 
     for speaker_id, speaker in speakers.items():
         identity_map = lambda pts: np.asarray(pts, dtype=float)
+        init_contours = {label: np.asarray(speaker["contours"][label], dtype=float) for label in common_labels}
+        init_grid = map_grid_lines(speaker["grid"], identity_map)
         if speaker_id == reference_id:
             affine_contours = {label: np.asarray(speaker["contours"][label], dtype=float) for label in common_labels}
             tps_contours = {label: np.asarray(speaker["contours"][label], dtype=float) for label in common_labels}
@@ -344,6 +358,8 @@ def compute_stage_populations(
             affine_grid = map_grid_lines(speaker["grid"], apply_affine_only)
             tps_grid = map_grid_lines(speaker["grid"], transform["apply_two_step"])
 
+        mapped_payload["init"]["contours"][speaker_id] = init_contours
+        mapped_payload["init"]["grids"][speaker_id] = init_grid
         mapped_payload["affine"]["contours"][speaker_id] = affine_contours
         mapped_payload["affine"]["grids"][speaker_id] = affine_grid
         mapped_payload["tps"]["contours"][speaker_id] = tps_contours
@@ -453,7 +469,7 @@ def save_stage_contour_overlay_figure(
     median_speaker = str(stage_payload["median_speaker"])
     ordered_ids = sorted(stage_payload["mapped_contours"], key=lambda speaker_id: speaker_order_key(speakers, speaker_id))
     draw_order = [speaker_id for speaker_id in ordered_ids if speaker_id != median_speaker] + [median_speaker]
-    stage_label = "Affine only" if stage_name == "affine" else "After TPS"
+    stage_label = stage_display_name(stage_name)
     cohort_label = "all speakers" if cohort_name == "all" else f"{cohort_name} cohort"
 
     fig, ax = plt.subplots(1, 1, figsize=(10, 10), dpi=180)
@@ -477,7 +493,11 @@ def save_stage_contour_overlay_figure(
         "\n".join(
             [
                 f"Speakers: {len(ordered_ids)}",
-                f"Reference: {speaker_display_name(speakers, str(stage_payload['reference_id']))}",
+                (
+                    f"Later reference: {speaker_display_name(speakers, str(stage_payload['reference_id']))}"
+                    if stage_name == "init"
+                    else f"Reference: {speaker_display_name(speakers, str(stage_payload['reference_id']))}"
+                ),
                 f"Median speaker: {speaker_display_name(speakers, median_speaker)}",
             ]
         ),
@@ -507,7 +527,7 @@ def save_stage_grid_overlay_figure(
     median_speaker = str(stage_payload["median_speaker"])
     ordered_ids = sorted(stage_payload["mapped_grids"], key=lambda speaker_id: speaker_order_key(speakers, speaker_id))
     draw_order = [speaker_id for speaker_id in ordered_ids if speaker_id != median_speaker] + [median_speaker]
-    stage_label = "Affine only" if stage_name == "affine" else "After TPS"
+    stage_label = stage_display_name(stage_name)
     cohort_label = "all speakers" if cohort_name == "all" else f"{cohort_name} cohort"
 
     fig, ax = plt.subplots(1, 1, figsize=(10, 10), dpi=180)
@@ -530,7 +550,11 @@ def save_stage_grid_overlay_figure(
         "\n".join(
             [
                 f"Speakers: {len(ordered_ids)}",
-                f"Reference: {speaker_display_name(speakers, str(stage_payload['reference_id']))}",
+                (
+                    f"Later reference: {speaker_display_name(speakers, str(stage_payload['reference_id']))}"
+                    if stage_name == "init"
+                    else f"Reference: {speaker_display_name(speakers, str(stage_payload['reference_id']))}"
+                ),
                 f"Median speaker: {speaker_display_name(speakers, median_speaker)}",
             ]
         ),
@@ -597,7 +621,7 @@ def export_stage_overlay_figures(
             "stages": {},
         }
 
-        for stage_name in ("affine", "tps"):
+        for stage_name in DEFAULT_STAGE_ORDER:
             contour_path = stage_dir / f"{cohort_name}_{stage_name}_contours_overlay.png"
             grid_path = stage_dir / f"{cohort_name}_{stage_name}_grid_overlay.png"
             save_stage_contour_overlay_figure(
@@ -618,6 +642,7 @@ def export_stage_overlay_figures(
                 output_path=grid_path,
             )
             cohort_summary["stages"][stage_name] = {
+                "stage_label": stage_display_name(stage_name),
                 "median_speaker": speaker_display_name(cohort_speakers, str(stage_populations[stage_name]["median_speaker"])),
                 "closest_to_mean": speaker_display_name(cohort_speakers, str(stage_populations[stage_name]["closest_to_mean"])),
                 "contour_overlay": str(contour_path),
@@ -642,10 +667,10 @@ def export_stage_overlay_figures(
             continue
         lines.append(f"[{cohort_name}] speakers ({cohort_summary['speaker_count']}): {', '.join(cohort_summary['speakers'])}")
         lines.append(f"reference speaker: {cohort_summary['reference_speaker']}")
-        for stage_name in ("affine", "tps"):
+        for stage_name in DEFAULT_STAGE_ORDER:
             stage_summary = cohort_summary["stages"][stage_name]
             lines.append(
-                f"{stage_name}: median={stage_summary['median_speaker']} | "
+                f"{stage_name} ({stage_summary['stage_label']}): median={stage_summary['median_speaker']} | "
                 f"closest_to_mean={stage_summary['closest_to_mean']}"
             )
             lines.append(f"  contour overlay: {stage_summary['contour_overlay']}")
