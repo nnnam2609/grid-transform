@@ -76,6 +76,31 @@ Large external datasets are not redistributed in this repository.
 .\.venv\Scripts\python .\scripts\run\run_warp_artspeech_session_to_target_video.py --annotation-speaker 1640_P7_S2_F0829 --artspeech-speaker P7 --session S10 --target-frame 143020 --dataset-root <ARTSPEECH_ROOT> --output-mode both
 ```
 
+### Versioned VTLN Release Bundle
+
+Use this when the current `VTLN/data/` tree should become one shared versioned snapshot across branches or GitHub release assets.
+
+Build local release artifacts for version `0.1.13`:
+
+```powershell
+.\.venv\Scripts\python .\scripts\run\run_build_vtln_release_bundle.py --version 0.1.13
+```
+
+Build and publish the same bundle as a GitHub Release tagged `vtln-data-v0.1.13`:
+
+```powershell
+.\.venv\Scripts\python .\scripts\run\run_build_vtln_release_bundle.py --version 0.1.13 --publish
+```
+
+The command writes:
+
+- `vtln-data-<version>.zip`
+- `vtln-data-<version>.manifest.json`
+- `vtln-data-<version>.sha256`
+- `vtln-data-<version>.release.md`
+
+under `outputs/release_assets/vtln_data/<version>/`.
+
 ### CV2 Annotation-To-Grid-Transform App
 
 This app is the current interactive workflow for the curated `10`-speaker setup. It reads defaults from `config.yaml` on startup, then walks through:
@@ -318,6 +343,7 @@ The canonical CLI surface is the `scripts/run/` directory. Current tracked wrapp
 ```powershell
 .\.venv\Scripts\python .\scripts\run\run_sync_latest_annotations_to_curated_vtln.py
 .\.venv\Scripts\python .\scripts\run\run_build_vtln_data_bundle.py
+.\.venv\Scripts\python .\scripts\run\run_build_vtln_release_bundle.py --version 0.1.13
 ```
 
 ### ArtSpeech and Projection Commands
