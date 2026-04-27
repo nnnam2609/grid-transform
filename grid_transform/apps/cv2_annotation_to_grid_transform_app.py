@@ -2110,6 +2110,7 @@ class Cv2AnnotationToGridTransformApp:
             / "source_annotation.latest.json"
         )
 
+    @staticmethod
     def _write_vtln_zip(
         *,
         vtln_dir: Path,
