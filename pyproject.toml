@@ -1,0 +1,58 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "grid-transform"
+version = "0.1.0"
+description = "Research utilities for vocal-tract grid construction, geometric transfer, and stagewise analysis."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "matplotlib>=3.8",
+    "numpy>=1.26",
+    "pillow>=10.0",
+    "roifile>=2024.3",
+    "scipy>=1.13",
+    "shapely>=2.0",
+    "opencv-python>=4.10",
+    "imageio>=2.34",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+notebook = [
+    "jupyter>=1.0",
+    "nbconvert>=7.0",
+    "ipykernel>=6.0",
+]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.8",
+]
+
+[tool.setuptools.packages.find]
+include = ["grid_transform*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-ra"
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+extend-exclude = [
+    ".venv",
+    ".tmp",
+    "VTLN/data",
+    "outputs",
+    "experiments/report",
+    "notebooks",
+]
+
+[tool.ruff.lint]
+# Start with fatal/suspicious checks so linting is useful without forcing a
+# repository-wide style cleanup in the same change.
+select = ["E9", "F63", "F7", "F82"]
+ignore = []

@@ -321,6 +321,27 @@ Review video: [P7_S2_warped_to_143020_review.mp4](docs/assets/github/p7-s2-warpe
 .\.venv\Scripts\python .\scripts\run\run_extract_speaker_vowel_variants.py --speaker P7 --dataset-root <ARTSPEECH_ROOT> --samples-per-vowel 10
 .\.venv\Scripts\python .\scripts\run\run_analyze_aligned_speaker_vowel_variants.py --speaker P7 --samples-per-vowel 10
 .\.venv\Scripts\python .\scripts\run\run_average_speaker_and_variability.py --dataset-root <ARTSPEECH_ROOT>
+.\.venv\Scripts\python .\scripts\run\run_average_speaker_roi_affine.py
+.\.venv\Scripts\python .\scripts\run\run_p3_stage_overlay_variance.py
+.\.venv\Scripts\python .\scripts\run\run_p10_stage_overlays_v2.py
+```
+
+Default output for the ROI-Dice affine average-speaker workflow:
+
+```text
+outputs/average_speaker_roi_affine/
+```
+
+Default output for the fixed-P3 stage overlay variance workflow:
+
+```text
+outputs/stage_overlays_v1/
+```
+
+Default output for the fixed-target P10 stage overlay workflow:
+
+```text
+outputs/stage_overlays_v2_dice/
 ```
 
 ## Full Command Inventory
@@ -368,6 +389,9 @@ The canonical CLI surface is the `scripts/run/` directory. Current tracked wrapp
 .\.venv\Scripts\python .\scripts\run\run_analyze_aligned_speaker_vowel_variants.py
 .\.venv\Scripts\python .\scripts\run\run_compare_gender_group_transforms.py
 .\.venv\Scripts\python .\scripts\run\run_average_speaker_and_variability.py
+.\.venv\Scripts\python .\scripts\run\run_average_speaker_roi_affine.py
+.\.venv\Scripts\python .\scripts\run\run_p3_stage_overlay_variance.py
+.\.venv\Scripts\python .\scripts\run\run_p10_stage_overlays_v2.py
 ```
 
 ## Results Gallery

@@ -8,12 +8,17 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+*.egg-info/
+.tmp/
 
 # Local-only workspace files
 AGENTS.md
 .agents/
+.iadi-mount.md
 .miktex/
+memory.md
 logs/
+local/
 scripts/windows/
 local/report_tools/
 grid_transform/paper_summary_discovery.py
