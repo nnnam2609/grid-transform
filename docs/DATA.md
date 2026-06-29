@@ -2,15 +2,15 @@
 
 This repository mixes three data tiers:
 
-1. lightweight bundled reference data in `VTLN/`
-2. lightweight bundled target-frame sample data in `VTLN/data/`
+1. lightweight bundled reference data in `VTLN/data/`
+2. bundled target-frame sample data under `VTLN/data/nnunet_data_80/`
 3. larger external ArtSpeech session data used by the video and vowel-analysis utilities
 
 The goal of this note is to document the **path contract** expected by the code, not to prescribe any machine-specific mount or download workflow.
 
 ## What Is Bundled In This Repo
 
-### `VTLN/`
+### `VTLN/data/`
 
 The repo bundles a canonical `VTLN/data/` folder used by the default examples.
 
@@ -35,17 +35,23 @@ The bundled default example uses target frame `143020` from case `2008-003^01-17
 
 ## Canonical Annotation Update Flow
 
-Interactive annotation edits are saved under `outputs/`, not written directly into `VTLN/data/`.
+Current interactive editors write canonical annotation changes directly into `VTLN/data/<reference>.zip` after creating review/backup material under `outputs/`.
 
-Current pipeline behavior:
+Current behavior:
 
-- `outputs/annotation_to_grid_transform/.../source_annotation.latest.json` stores the latest source annotation saved from the multi-step cv2 workflow.
-- `outputs/source_annotation_edits/.../edited_annotation.json` stores the latest source annotation saved from the standalone source-annotation editor.
-- For a given `(artspeech_speaker, session, source_frame)`, the newest saved JSON from those locations is treated as the authoritative annotation update.
-- `scripts/run/run_sync_latest_annotations_to_curated_vtln.py` applies that update back onto the canonical curated VTLN selection in place by overwriting the matching `*.png` and `*.zip` files after archiving the previous versions.
-- `scripts/run/run_build_vtln_data_bundle.py` rebuilds the public `VTLN/data/` bundle from the triplet manifest and those newest saved annotations. If no newer saved annotation exists for a row, the builder falls back to the curated ZIP already present in the curated VTLN folder.
+- The multi-step cv2 app and standalone source editor both round-trip source or VTLN-target edits through `VTLN/data/`.
+- If an older temporary JSON is newer than the bundle zip, the editor can promote that JSON into `VTLN/data` and then delete the stale temp file.
+- `outputs/annotation_to_grid_transform/.../source_annotation.latest.json` and `outputs/source_annotation_edits/.../edited_annotation.json` are legacy or review-side snapshots, not the current source of truth.
+- `scripts/run/run_reconcile_vtln_temp_annotations.py` remains useful for promoting or deleting leftover temp JSONs from older workflows.
+- `scripts/run/run_sync_latest_annotations_to_curated_vtln.py` and `scripts/run/run_build_vtln_data_bundle.py` remain maintenance commands for curated-bundle rebuilding and release preparation.
 
-In other words, the saved annotation snapshot becomes the new default/canonical annotation only when it is promoted through the sync/build maintenance commands.
+The current canonical contour source for bundled examples is therefore the zip next to the image in `VTLN/data/`.
+
+## Bundle Metadata
+
+`VTLN/data/selection_manifest.csv` and `VTLN/data/build_summary.json` describe the current bundled rows and their build-time origins. They include absolute provenance paths from the local machine that created the bundle, so they are useful for traceability but should not be treated as portable input paths.
+
+If the actual `*.png`/`*.zip` files and these metadata files disagree, verify the file state first and refresh the metadata before publishing a release asset.
 
 ## External ArtSpeech Dataset Contract
 

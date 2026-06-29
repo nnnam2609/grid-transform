@@ -8,6 +8,8 @@ Use this checklist before pushing a public update of the repository.
 - Search docs and README for machine-specific paths or private infrastructure references.
 - Review newly added assets for size and relevance.
 - If `VTLN/data/` changed intentionally, rebuild the matching versioned release asset and refresh its `manifest.json` plus `sha256`.
+- If transform anchors, stage ordering, closure rules, or metric formulas changed, update `docs/METHOD.md`.
+- If bundle files changed, confirm `VTLN/data/selection_manifest.csv` and `VTLN/data/build_summary.json` match the actual `*.png` and `*.zip` files.
 - Verify that every command documented in the README exists under `scripts/run/`.
 - Regenerate figures locally if a README asset or report figure was changed intentionally.
 - Review the final staged diff once `git` is available on the machine.

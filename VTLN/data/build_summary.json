@@ -4,8 +4,8 @@
   "curated_dir": "C:\\Users\\nhnguyen\\PhD_A2A\\backup\\grid_transform_cleanup_20260402\\u_curated_selection_20260330",
   "target_case": "2008-003^01-1791/test",
   "speaker_rows": 10,
-  "zip_rows": 8,
-  "missing_annotation_rows": 2,
+  "zip_rows": 10,
+  "missing_annotation_rows": 0,
   "nnunet_data_dst": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\nnunet_data_80\\2008-003^01-1791\\test",
   "nnunet_groundtruth_dir": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\nnunet_data_80\\2008-003^01-1791\\test\\contours",
   "rows": [
@@ -124,15 +124,18 @@
     {
       "output_basename": "1653_P8_S2_F0159",
       "png_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\1653_P8_S2_F0159.png",
-      "zip_path": "",
-      "annotation_status": "missing",
-      "annotation_origin_path": "",
-      "source_shape": null,
+      "zip_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\1653_P8_S2_F0159.zip",
+      "annotation_status": "scaled_existing_canonical_zip",
+      "annotation_origin_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\1653_P8_S2_F0159.zip",
+      "source_shape": [
+        480,
+        480
+      ],
       "target_shape": [
         480,
         480
       ],
-      "scaled_contour_count": 0
+      "scaled_contour_count": 14
     },
     {
       "output_basename": "1659_P9_S5_F0196",
@@ -153,15 +156,18 @@
     {
       "output_basename": "1662_P10_S14_F0110",
       "png_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\1662_P10_S14_F0110.png",
-      "zip_path": "",
-      "annotation_status": "missing",
-      "annotation_origin_path": "",
-      "source_shape": null,
+      "zip_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\1662_P10_S14_F0110.zip",
+      "annotation_status": "scaled_existing_canonical_zip",
+      "annotation_origin_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\1662_P10_S14_F0110.zip",
+      "source_shape": [
+        480,
+        480
+      ],
       "target_shape": [
         480,
         480
       ],
-      "scaled_contour_count": 0
+      "scaled_contour_count": 18
     }
   ]
 }

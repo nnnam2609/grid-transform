@@ -57,6 +57,8 @@ ArtSpeech session utilities require a separate external dataset root. The expect
 
 Large external datasets are not redistributed in this repository.
 
+For the current affine/TPS anchor set, stage definitions, visualization-only closure rules, and metric comparability contract, see [`docs/METHOD.md`](docs/METHOD.md).
+
 ## Quick Start
 
 ### Core Grid Transform Pipeline
@@ -430,6 +432,7 @@ The canonical CLI surface is the `scripts/run/` directory. Current tracked wrapp
 - `docs/assets/github/` contains the curated static images used by this README; it is the only tracked results-like asset folder.
 - The ArtSpeech projection workflow uses a fixed image-space resize from a VTLN reference; it is not a contour-derived per-frame warp.
 - The full-session ArtSpeech warp also assumes a fixed-session geometry for the source session; it does not estimate new ArtSpeech contours frame by frame.
+- Method-critical geometry assumptions are centralized in [`docs/METHOD.md`](docs/METHOD.md); update that note when anchor sets, transform ordering, closure rules, or metric definitions change.
 - Notebooks are exploratory and intentionally kept secondary to the reusable Python modules and wrapper scripts.
 
 ## Limitations
