@@ -4,7 +4,11 @@ import json
 import zipfile
 from pathlib import Path
 
-from grid_transform.vtln_release import build_vtln_release_bundle
+from grid_transform.vtln_release import build_vtln_release_bundle, default_release_title
+
+
+def test_default_release_title_uses_unambiguous_reference_data_name() -> None:
+    assert default_release_title("v0.1.17") == "Grid Transform Geometry Reference Data v0.1.17"
 
 
 def write_bytes(path: Path, payload: bytes) -> None:

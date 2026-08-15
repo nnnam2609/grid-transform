@@ -1,0 +1,329 @@
+{
+  "schema_version": 1,
+  "created_at_utc": "2026-08-15T23:17:31Z",
+  "run_id": "20260816_lower_incisor_geometry_v1",
+  "status": "PASS",
+  "applied": true,
+  "scope": "canonical geometry-reference lower-incisor ROI only",
+  "coordinate_mapping": "(x480,y480)=(x136,y136)*(480/136)",
+  "topology": "closed ImageJ FREEHAND ROI",
+  "p2_policy": "unchanged because no corrected prototype exists",
+  "updated_count": 9,
+  "rows": [
+    {
+      "speaker": "P1",
+      "session": "S16",
+      "frame": 952,
+      "basename": "1612_P1_S16_F0952",
+      "source_relative_to_inference": "P1/S16/contours/0952_lower-incisor.npy",
+      "source_sha256": "64d56498e711b984a6ee8c12b781450ad3e62d0bb341ecd1eda6a598b33f1d65",
+      "source_shape": [
+        136,
+        136
+      ],
+      "reference_shape": [
+        480,
+        480
+      ],
+      "scale_xy": [
+        3.5294117647058822,
+        3.5294117647058822
+      ],
+      "status": "PASS",
+      "zip": "1612_P1_S16_F0952.zip",
+      "member": "1612_P1_S16_F0952_mandible-incisior.roi",
+      "old_roi_type": "FREEHAND",
+      "old_point_count": 16,
+      "new_roi_type": "FREEHAND",
+      "new_point_count": 50,
+      "encoding_rms_px_480": 7.27786509817644e-06,
+      "zip_sha256_before": "37aa6e1aecee9e85d382ecbfab64e55d6ce1db3fc5cce25edb98140996829b46",
+      "zip_sha256_after": "3eb9f7eb498ea90a50d31da4c77551c044752c4f44dcb5246e6f1603db44f0f3",
+      "lower_roi_sha256_before": "96fa074b9db6e6c5b9dc5d8f907e10672d3f3bc0917002e0ec97330797b6fb7b",
+      "lower_roi_sha256_after": "fc537c54e3e837ed877fd6d2f920816c4de75ad5203307074a133e16ca355968",
+      "unchanged_member_count": 17,
+      "backup": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\geometry_reference_backups\\20260816_lower_incisor_geometry_v1\\1612_P1_S16_F0952.zip"
+    },
+    {
+      "speaker": "P2",
+      "session": "S9",
+      "frame": 1478,
+      "basename": "1617_P2_S9_F1478",
+      "status": "SKIPPED_NO_PROTOTYPE",
+      "zip_sha256": "3899df4660bebf3ef8a3109bb9870caffb25a16e2b964501c40434054b77ba02"
+    },
+    {
+      "speaker": "P3",
+      "session": "S14",
+      "frame": 1556,
+      "basename": "1618_P3_S14_F1556",
+      "source_relative_to_inference": "P3/S14/contours/1556_lower-incisor.npy",
+      "source_sha256": "2f005a76927a6b0bbcb1449ec161a6c9ea7beb920f4c390b4d4fecf0e57d8982",
+      "source_shape": [
+        136,
+        136
+      ],
+      "reference_shape": [
+        480,
+        480
+      ],
+      "scale_xy": [
+        3.5294117647058822,
+        3.5294117647058822
+      ],
+      "status": "PASS",
+      "zip": "1618_P3_S14_F1556.zip",
+      "member": "1618_P3_S14_F1556_mandible-incisior.roi",
+      "old_roi_type": "FREEHAND",
+      "old_point_count": 22,
+      "new_roi_type": "FREEHAND",
+      "new_point_count": 50,
+      "encoding_rms_px_480": 9.010333846833013e-06,
+      "zip_sha256_before": "7dce8da02ad8821d791fcd7b9e04b73f30362f1ca30ec3ddf12279c91f903215",
+      "zip_sha256_after": "fb376a86d6e966a082dd43f9631c0a0478671059622625e0f752d7ef4106cc64",
+      "lower_roi_sha256_before": "ebf12372f2c11bb66f459f94f1d807bfc266612e1dd51a2db042828dde3156e5",
+      "lower_roi_sha256_after": "29f80ac1e7161e49438b3d66691651fb35d2df347c3c9f47c3a7ecceacf2f5b9",
+      "unchanged_member_count": 17,
+      "backup": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\geometry_reference_backups\\20260816_lower_incisor_geometry_v1\\1618_P3_S14_F1556.zip"
+    },
+    {
+      "speaker": "P4",
+      "session": "S4",
+      "frame": 196,
+      "basename": "1628_P4_S4_F0196",
+      "source_relative_to_inference": "P4/S4/contours/0196_lower-incisor.npy",
+      "source_sha256": "f44759efb9e2ddcd092a38bfe63b18e4f3f315a6dee52b7bbb71726e00a64b92",
+      "source_shape": [
+        136,
+        136
+      ],
+      "reference_shape": [
+        480,
+        480
+      ],
+      "scale_xy": [
+        3.5294117647058822,
+        3.5294117647058822
+      ],
+      "status": "PASS",
+      "zip": "1628_P4_S4_F0196.zip",
+      "member": "1628_P4_S4_F0196_mandible-incisior.roi",
+      "old_roi_type": "FREEHAND",
+      "old_point_count": 37,
+      "new_roi_type": "FREEHAND",
+      "new_point_count": 50,
+      "encoding_rms_px_480": 7.239804241887265e-06,
+      "zip_sha256_before": "76a1996be3bbb8bdd725847c5fbbfc0fe8296ac3c4bf782fcfb2dbe723c6bbae",
+      "zip_sha256_after": "8e5298d744e9088cca026d40c2a1292864eba60561ee8ea9da07a1e90f1f1df3",
+      "lower_roi_sha256_before": "61026e65c70e4958a314bfe019c8d1578b55efc6793c154a39a958a6c43dc7fe",
+      "lower_roi_sha256_after": "98f82cdce5152e88e694c7d3f1eefcaab1db805c26ba2a496eb3160c1f46baee",
+      "unchanged_member_count": 13,
+      "backup": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\geometry_reference_backups\\20260816_lower_incisor_geometry_v1\\1628_P4_S4_F0196.zip"
+    },
+    {
+      "speaker": "P5",
+      "session": "S6",
+      "frame": 324,
+      "basename": "1635_P5_S6_F0324",
+      "source_relative_to_inference": "P5/S6/contours/0324_lower-incisor.npy",
+      "source_sha256": "c8d1a37c93cff86b32064aa1fb8dfa92f805f927d132855fb99792a93359306d",
+      "source_shape": [
+        136,
+        136
+      ],
+      "reference_shape": [
+        480,
+        480
+      ],
+      "scale_xy": [
+        3.5294117647058822,
+        3.5294117647058822
+      ],
+      "status": "PASS",
+      "zip": "1635_P5_S6_F0324.zip",
+      "member": "1635_P5_S6_F0324_mandible-incisior.roi",
+      "old_roi_type": "FREEHAND",
+      "old_point_count": 24,
+      "new_roi_type": "FREEHAND",
+      "new_point_count": 50,
+      "encoding_rms_px_480": 8.073197571275443e-06,
+      "zip_sha256_before": "831f0a960a8e1d4ca98e582191b034c26c530b573a2e1f03fa5a0562ab076d26",
+      "zip_sha256_after": "a50a2b6e95a71e9bd850b650c43229908acd59e5e1294b377fa5cc9b3d71585d",
+      "lower_roi_sha256_before": "0937e6ef93c7a30db34295c90413f48f9297f5532a1b6de98fb4facaa525a6e8",
+      "lower_roi_sha256_after": "8fa35e46cf6f88b5c624ced649415c54144a9c183ff3917b2928be2708066215",
+      "unchanged_member_count": 17,
+      "backup": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\geometry_reference_backups\\20260816_lower_incisor_geometry_v1\\1635_P5_S6_F0324.zip"
+    },
+    {
+      "speaker": "P6",
+      "session": "S8",
+      "frame": 138,
+      "basename": "1638_P6_S8_F0138",
+      "source_relative_to_inference": "P6/S8/contours/0138_lower-incisor.npy",
+      "source_sha256": "cadaebc48984763edc27f0c766da5b2ab0fcce7e484f7c59d6052d28f0486d72",
+      "source_shape": [
+        136,
+        136
+      ],
+      "reference_shape": [
+        480,
+        480
+      ],
+      "scale_xy": [
+        3.5294117647058822,
+        3.5294117647058822
+      ],
+      "status": "PASS",
+      "zip": "1638_P6_S8_F0138.zip",
+      "member": "1638_P6_S8_F0138_mandible-incisior.roi",
+      "old_roi_type": "FREEHAND",
+      "old_point_count": 27,
+      "new_roi_type": "FREEHAND",
+      "new_point_count": 50,
+      "encoding_rms_px_480": 7.980969042693742e-06,
+      "zip_sha256_before": "47d8059b2bd38822b9a425a1a6d75b8e9eb45f20f9eaf37c5df328d19f50ff66",
+      "zip_sha256_after": "e7a7befba4b97ed3a29a821b50ea9d8c12d4da57d7661471dd826f2dea5fc40f",
+      "lower_roi_sha256_before": "687a93c8b5954454e4d8d7b60df7386022ffff214743c047d226b0548422e4e0",
+      "lower_roi_sha256_after": "829f5907a1e755a43e928f8aa92364631b57baa03dbe924f1f5b1a91acaf5106",
+      "unchanged_member_count": 17,
+      "backup": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\geometry_reference_backups\\20260816_lower_incisor_geometry_v1\\1638_P6_S8_F0138.zip"
+    },
+    {
+      "speaker": "P7",
+      "session": "S2",
+      "frame": 829,
+      "basename": "1640_P7_S2_F0829",
+      "source_relative_to_inference": "P7/S2/contours/0829_lower-incisor.npy",
+      "source_sha256": "d2878ed7428a249a786429c01288012fddac80cd6d597f4381dcaafcdf1b128c",
+      "source_shape": [
+        136,
+        136
+      ],
+      "reference_shape": [
+        480,
+        480
+      ],
+      "scale_xy": [
+        3.5294117647058822,
+        3.5294117647058822
+      ],
+      "status": "PASS",
+      "zip": "1640_P7_S2_F0829.zip",
+      "member": "1640_P7_S2_F0829_mandible-incisior.roi",
+      "old_roi_type": "FREEHAND",
+      "old_point_count": 47,
+      "new_roi_type": "FREEHAND",
+      "new_point_count": 50,
+      "encoding_rms_px_480": 7.079877726262724e-06,
+      "zip_sha256_before": "498abf3bb62aee89476fc28631ef5c93671c413da2e291c575e17ad3170722ed",
+      "zip_sha256_after": "21c88f7447341eaff7934d7d0bbeefc31422f76a007fa662be9f55d081a3f4bb",
+      "lower_roi_sha256_before": "3513cb49b45f73217d8360748839d7b975226f2ae82400c31a3b3d2d4921c713",
+      "lower_roi_sha256_after": "ef91c43caf7d2b062df79a58e60bc0e13dbdc9ca9d77fae3d705304d08ea8174",
+      "unchanged_member_count": 10,
+      "backup": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\geometry_reference_backups\\20260816_lower_incisor_geometry_v1\\1640_P7_S2_F0829.zip"
+    },
+    {
+      "speaker": "P8",
+      "session": "S2",
+      "frame": 159,
+      "basename": "1653_P8_S2_F0159",
+      "source_relative_to_inference": "P8/S2/contours/0159_lower-incisor.npy",
+      "source_sha256": "0c65c21524836bb743eb121216af6524ebfd880c8403ec51600a9720088200e1",
+      "source_shape": [
+        136,
+        136
+      ],
+      "reference_shape": [
+        480,
+        480
+      ],
+      "scale_xy": [
+        3.5294117647058822,
+        3.5294117647058822
+      ],
+      "status": "PASS",
+      "zip": "1653_P8_S2_F0159.zip",
+      "member": "1653_P8_S2_F0159_mandible-incisior.roi",
+      "old_roi_type": "FREEHAND",
+      "old_point_count": 27,
+      "new_roi_type": "FREEHAND",
+      "new_point_count": 50,
+      "encoding_rms_px_480": 7.305265955676207e-06,
+      "zip_sha256_before": "81cd268fbd23d9817da006046a26969ee769eb84ae324f5bfb9b662aae55a1a9",
+      "zip_sha256_after": "939016f008b40664c3f4b6f7e7d7fd4f40fcb8a690537c2e423558072746f44e",
+      "lower_roi_sha256_before": "65907aa7486541bd2666147ad83d30aa8a44a021dc649e08a46ed2a8533d21d9",
+      "lower_roi_sha256_after": "e66c9aa7f26126a55d8364e3d51575bdf0f36bc4d2b4aea8bc3305ec7cbb4d71",
+      "unchanged_member_count": 13,
+      "backup": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\geometry_reference_backups\\20260816_lower_incisor_geometry_v1\\1653_P8_S2_F0159.zip"
+    },
+    {
+      "speaker": "P9",
+      "session": "S5",
+      "frame": 196,
+      "basename": "1659_P9_S5_F0196",
+      "source_relative_to_inference": "P9/S5/contours/0196_lower-incisor.npy",
+      "source_sha256": "c61fc790b1623376066294c641ad63619104a567917620e988d4f9291007adcd",
+      "source_shape": [
+        136,
+        136
+      ],
+      "reference_shape": [
+        480,
+        480
+      ],
+      "scale_xy": [
+        3.5294117647058822,
+        3.5294117647058822
+      ],
+      "status": "PASS",
+      "zip": "1659_P9_S5_F0196.zip",
+      "member": "1659_P9_S5_F0196_mandible-incisior.roi",
+      "old_roi_type": "FREEHAND",
+      "old_point_count": 30,
+      "new_roi_type": "FREEHAND",
+      "new_point_count": 50,
+      "encoding_rms_px_480": 8.426501335889009e-06,
+      "zip_sha256_before": "94d89cebc5a01afbd6f1c21bd5a63a34eab3f0d5eac9e2e3e1c72a86b449d4d7",
+      "zip_sha256_after": "bb6521ef4a46c3357df7b23924c46ec8c68e145c95488fc2cdcb0fdee3e47546",
+      "lower_roi_sha256_before": "d21498055eee8409fc4d4087a829e30824887a7c3e6f068d62243b863ff1cf35",
+      "lower_roi_sha256_after": "b47a9b5f1db6a780d3178f5e4847602b26b51a684bfab7935d3fd63ebace307c",
+      "unchanged_member_count": 17,
+      "backup": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\geometry_reference_backups\\20260816_lower_incisor_geometry_v1\\1659_P9_S5_F0196.zip"
+    },
+    {
+      "speaker": "P10",
+      "session": "S14",
+      "frame": 110,
+      "basename": "1662_P10_S14_F0110",
+      "source_relative_to_inference": "P10/S14/contours/0110_lower-incisor.npy",
+      "source_sha256": "c9a28ba8a781f5e2dcee1dab7785350a6f35b53145b0082b159ebf974afc1603",
+      "source_shape": [
+        136,
+        136
+      ],
+      "reference_shape": [
+        480,
+        480
+      ],
+      "scale_xy": [
+        3.5294117647058822,
+        3.5294117647058822
+      ],
+      "status": "PASS",
+      "zip": "1662_P10_S14_F0110.zip",
+      "member": "1662_P10_S14_F0110_mandible-incisior.roi",
+      "old_roi_type": "FREEHAND",
+      "old_point_count": 27,
+      "new_roi_type": "FREEHAND",
+      "new_point_count": 50,
+      "encoding_rms_px_480": 8.654242347699958e-06,
+      "zip_sha256_before": "c7a24afbdf7d4549bdc3c7461d6d221ab461a8b9b346885f3dede3d81229fdf9",
+      "zip_sha256_after": "f83e93406f21a816937fb74474d275ba09b4096e3d5d31c1bd71e5d3401a87cd",
+      "lower_roi_sha256_before": "3d85299d351ba78e9067174e663ec3aa0d8f88d90b2f5bc2baf2142a8a6d886a",
+      "lower_roi_sha256_after": "56518c42a6580827459e7cc535ddba9a4779bc6121068a763f28ad0fee6f3527",
+      "unchanged_member_count": 17,
+      "backup": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\geometry_reference_backups\\20260816_lower_incisor_geometry_v1\\1662_P10_S14_F0110.zip"
+    }
+  ],
+  "errors": []
+}

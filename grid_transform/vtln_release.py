@@ -53,7 +53,7 @@ def default_release_tag(version: str) -> str:
 
 
 def default_release_title(version: str) -> str:
-    return f"VTLN data v{normalize_release_version(version)}"
+    return f"Grid Transform Geometry Reference Data v{normalize_release_version(version)}"
 
 
 def default_release_output_dir(version: str) -> Path:
@@ -170,8 +170,14 @@ def summarize_entry_groups(entries: list[ReleaseFileEntry]) -> dict[str, int]:
     roi_zip_count = 0
     nnunet_file_count = 0
     metadata_file_count = 0
+    review_workspace_file_count = 0
+    review_workspace_case_count = 0
     for entry in entries:
-        if entry.relative_path.startswith("nnunet_data_80/"):
+        if entry.relative_path.startswith("review_s5_pourri2/"):
+            review_workspace_file_count += 1
+            if entry.relative_path.endswith("/metadata.json"):
+                review_workspace_case_count += 1
+        elif entry.relative_path.startswith("nnunet_data_80/"):
             nnunet_file_count += 1
         elif entry.relative_path.endswith(".png"):
             png_count += 1
@@ -184,6 +190,8 @@ def summarize_entry_groups(entries: list[ReleaseFileEntry]) -> dict[str, int]:
         "roi_zip_count": roi_zip_count,
         "nnunet_file_count": nnunet_file_count,
         "metadata_file_count": metadata_file_count,
+        "review_workspace_file_count": review_workspace_file_count,
+        "review_workspace_case_count": review_workspace_case_count,
     }
 
 
@@ -205,7 +213,7 @@ def build_release_notes(
         [
             f"# {title}",
             "",
-            "Versioned shared release bundle for the canonical `VTLN/data` tree.",
+            "Versioned shared release bundle for the canonical `VTLN/data` tree and additive review workspaces.",
             "",
             "## Contents",
             f"- archive root: `{archive_root}`",
@@ -213,6 +221,8 @@ def build_release_notes(
             f"- ROI annotation zips: `{counts['roi_zip_count']}`",
             f"- bundled nnUNet target files: `{counts['nnunet_file_count']}`",
             f"- metadata/support files: `{counts['metadata_file_count']}`",
+            f"- S5 pourri #2 review cases: `{counts['review_workspace_case_count']}`",
+            f"- S5 pourri #2 review-workspace files: `{counts['review_workspace_file_count']}`",
             f"- total files: `{len(entries)}`",
             "",
             "## Install",

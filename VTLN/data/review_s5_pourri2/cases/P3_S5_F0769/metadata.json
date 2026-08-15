@@ -1,0 +1,79 @@
+{
+  "case": "P3_S5_F0769",
+  "speaker": "P3",
+  "session": "S5",
+  "frame": 769,
+  "phone_selection": "pourri/r2/sole_u/midpoint",
+  "alignment_source": "incoming_*_c",
+  "coordinate_space": "native_136x136_xy",
+  "contour_order": [
+    "arytenoid-cartilage",
+    "epiglottis",
+    "lower-incisor",
+    "lower-lip",
+    "pharynx",
+    "soft-palate-midline",
+    "thyroid-cartilage",
+    "tongue",
+    "upper-incisor",
+    "upper-lip",
+    "vocal-folds"
+  ],
+  "point_count_per_contour": 50,
+  "source_contour_dir": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P3\\S5\\contours",
+  "source_video": "C:\\Users\\nhnguyen\\PhD_A2A\\Data\\Need-to-verify-alignment\\P3\\S5\\VIDEO_P3_S5.avi",
+  "source_sha256": {
+    "arytenoid-cartilage": "26c6659d2e8ecece63855f032faf0fbf766830a6a01c54a04ad2209f94614d95",
+    "epiglottis": "24e1675832988b2c03d9c3111de26b67781084878376cf9f7022b904c283fbef",
+    "lower-incisor": "87018b86dc9e7be8a7e95073ccab8d2be24edb59cdda896b7d55bab14d6e8d74",
+    "lower-lip": "490bad6f699018b0459ef1ae8a2e5a3ef6299d17a81a9ea6676ea0813b3be37e",
+    "pharynx": "4557ee3ec52401065ed966ca14734a21d1eafbaf15ea2bc8d1f49e2e9f5e1529",
+    "soft-palate-midline": "2d123855c14b8942dd6e3bc998e314736f666a35923c22da0d4c3aa2eb8d9d86",
+    "thyroid-cartilage": "04e6ff85dcdb857a6678822c4e1ab2cd858caffd6fd0fafe571ed43383991ac3",
+    "tongue": "bb5190c6ee0407c17fcff8588da9cb8ac2f770d0d83175352f8b25617835b588",
+    "upper-incisor": "3cfd288ef59a06207f5eeed029b8dffaf478fb98bb942e7db14e37a240aa8670",
+    "upper-lip": "0d95cef06c295be5d2ed9e4791f4f3371e51efa47395cdc8421ab14e8aab3259",
+    "vocal-folds": "600c7b647f61f51bee1e6d965ec312627e0a95c26f69f0056da70c2ef8e5e2b7"
+  },
+  "snapshot_sha256": {
+    "arytenoid-cartilage": "26c6659d2e8ecece63855f032faf0fbf766830a6a01c54a04ad2209f94614d95",
+    "epiglottis": "24e1675832988b2c03d9c3111de26b67781084878376cf9f7022b904c283fbef",
+    "lower-incisor": "87018b86dc9e7be8a7e95073ccab8d2be24edb59cdda896b7d55bab14d6e8d74",
+    "lower-lip": "490bad6f699018b0459ef1ae8a2e5a3ef6299d17a81a9ea6676ea0813b3be37e",
+    "pharynx": "4557ee3ec52401065ed966ca14734a21d1eafbaf15ea2bc8d1f49e2e9f5e1529",
+    "soft-palate-midline": "2d123855c14b8942dd6e3bc998e314736f666a35923c22da0d4c3aa2eb8d9d86",
+    "thyroid-cartilage": "04e6ff85dcdb857a6678822c4e1ab2cd858caffd6fd0fafe571ed43383991ac3",
+    "tongue": "bb5190c6ee0407c17fcff8588da9cb8ac2f770d0d83175352f8b25617835b588",
+    "upper-incisor": "3cfd288ef59a06207f5eeed029b8dffaf478fb98bb942e7db14e37a240aa8670",
+    "upper-lip": "0d95cef06c295be5d2ed9e4791f4f3371e51efa47395cdc8421ab14e8aab3259",
+    "vocal-folds": "600c7b647f61f51bee1e6d965ec312627e0a95c26f69f0056da70c2ef8e5e2b7"
+  },
+  "mri_png_sha256": "12ab5d3526456ef5ff1eb86454a0a95690c7d3f5b1d6f121bb7043dc5c17ac84",
+  "preview_sha256": "ec912c65544848fef7c3b273e845a3c7a85645bc9c8bb0f811233db7c83aab89",
+  "imagej_roi_zip_sha256": "d3061c75196182059e9a26660fd5c7b770c7e3f319946643f7c5753e1f64793e",
+  "imagej_import_history": [
+    {
+      "timestamp_utc": "2026-08-15T19:36:36.128693+00:00",
+      "input_roi_zip": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\review_s5_pourri2\\cases\\P3_S5_F0769\\RoiSet.zip",
+      "input_roi_sha256": "e4461d3a0074d65cea6d030ed2fa7f150095d7f27d47c246de77ae63907b239c",
+      "changed_labels": [
+        "lower-incisor",
+        "upper-incisor"
+      ],
+      "backup_dir": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\review_s5_pourri2\\imagej_imports\\20260815T193636_003677Z\\backup\\P3_S5_F0769"
+    }
+  ],
+  "current_snapshot_sha256": {
+    "arytenoid-cartilage": "26c6659d2e8ecece63855f032faf0fbf766830a6a01c54a04ad2209f94614d95",
+    "epiglottis": "24e1675832988b2c03d9c3111de26b67781084878376cf9f7022b904c283fbef",
+    "lower-incisor": "e0ab58d68bbffcc1b9f57847b6878179225b469bbc7fcf8a21ba5a593f57e0ee",
+    "lower-lip": "490bad6f699018b0459ef1ae8a2e5a3ef6299d17a81a9ea6676ea0813b3be37e",
+    "pharynx": "4557ee3ec52401065ed966ca14734a21d1eafbaf15ea2bc8d1f49e2e9f5e1529",
+    "soft-palate-midline": "2d123855c14b8942dd6e3bc998e314736f666a35923c22da0d4c3aa2eb8d9d86",
+    "thyroid-cartilage": "04e6ff85dcdb857a6678822c4e1ab2cd858caffd6fd0fafe571ed43383991ac3",
+    "tongue": "bb5190c6ee0407c17fcff8588da9cb8ac2f770d0d83175352f8b25617835b588",
+    "upper-incisor": "e1f463749b3728e6932b90928efff1be87ccceb2a58b6875a62afea23cb44504",
+    "upper-lip": "0d95cef06c295be5d2ed9e4791f4f3371e51efa47395cdc8421ab14e8aab3259",
+    "vocal-folds": "600c7b647f61f51bee1e6d965ec312627e0a95c26f69f0056da70c2ef8e5e2b7"
+  }
+}

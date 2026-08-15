@@ -48,7 +48,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--title",
         default=None,
-        help="Optional GitHub release title. Defaults to 'VTLN data v<version>'.",
+        help="Optional GitHub release title. Defaults to 'Grid Transform Geometry Reference Data v<version>'.",
     )
     parser.add_argument(
         "--overwrite",

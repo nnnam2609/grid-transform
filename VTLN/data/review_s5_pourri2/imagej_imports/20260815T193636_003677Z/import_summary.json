@@ -1,0 +1,803 @@
+{
+  "status": "PASS",
+  "timestamp_utc": "2026-08-15T19:36:36.769255+00:00",
+  "workspace": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\review_s5_pourri2",
+  "case_count": 9,
+  "validated_contour_count": 99,
+  "changed_contour_count": 14,
+  "backup_dir": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\review_s5_pourri2\\imagej_imports\\20260815T193636_003677Z\\backup",
+  "rows": [
+    {
+      "case": "P1_S5_F0970",
+      "label": "arytenoid-cartilage",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P1\\S5\\contours\\0970_arytenoid-cartilage.npy"
+    },
+    {
+      "case": "P1_S5_F0970",
+      "label": "epiglottis",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P1\\S5\\contours\\0970_epiglottis.npy"
+    },
+    {
+      "case": "P1_S5_F0970",
+      "label": "lower-incisor",
+      "changed": true,
+      "rms_displacement_px": 0.6047624855296496,
+      "max_displacement_px": 3.0824263003778243,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P1\\S5\\contours\\0970_lower-incisor.npy"
+    },
+    {
+      "case": "P1_S5_F0970",
+      "label": "lower-lip",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P1\\S5\\contours\\0970_lower-lip.npy"
+    },
+    {
+      "case": "P1_S5_F0970",
+      "label": "pharynx",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P1\\S5\\contours\\0970_pharynx.npy"
+    },
+    {
+      "case": "P1_S5_F0970",
+      "label": "soft-palate-midline",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P1\\S5\\contours\\0970_soft-palate-midline.npy"
+    },
+    {
+      "case": "P1_S5_F0970",
+      "label": "thyroid-cartilage",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P1\\S5\\contours\\0970_thyroid-cartilage.npy"
+    },
+    {
+      "case": "P1_S5_F0970",
+      "label": "tongue",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P1\\S5\\contours\\0970_tongue.npy"
+    },
+    {
+      "case": "P1_S5_F0970",
+      "label": "upper-incisor",
+      "changed": true,
+      "rms_displacement_px": 3.162277630804098,
+      "max_displacement_px": 3.162279828758954,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P1\\S5\\contours\\0970_upper-incisor.npy"
+    },
+    {
+      "case": "P1_S5_F0970",
+      "label": "upper-lip",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P1\\S5\\contours\\0970_upper-lip.npy"
+    },
+    {
+      "case": "P1_S5_F0970",
+      "label": "vocal-folds",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P1\\S5\\contours\\0970_vocal-folds.npy"
+    },
+    {
+      "case": "P3_S5_F0769",
+      "label": "arytenoid-cartilage",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P3\\S5\\contours\\0769_arytenoid-cartilage.npy"
+    },
+    {
+      "case": "P3_S5_F0769",
+      "label": "epiglottis",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P3\\S5\\contours\\0769_epiglottis.npy"
+    },
+    {
+      "case": "P3_S5_F0769",
+      "label": "lower-incisor",
+      "changed": true,
+      "rms_displacement_px": 1.409435486161771,
+      "max_displacement_px": 5.220314015917422,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P3\\S5\\contours\\0769_lower-incisor.npy"
+    },
+    {
+      "case": "P3_S5_F0769",
+      "label": "lower-lip",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P3\\S5\\contours\\0769_lower-lip.npy"
+    },
+    {
+      "case": "P3_S5_F0769",
+      "label": "pharynx",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P3\\S5\\contours\\0769_pharynx.npy"
+    },
+    {
+      "case": "P3_S5_F0769",
+      "label": "soft-palate-midline",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P3\\S5\\contours\\0769_soft-palate-midline.npy"
+    },
+    {
+      "case": "P3_S5_F0769",
+      "label": "thyroid-cartilage",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P3\\S5\\contours\\0769_thyroid-cartilage.npy"
+    },
+    {
+      "case": "P3_S5_F0769",
+      "label": "tongue",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P3\\S5\\contours\\0769_tongue.npy"
+    },
+    {
+      "case": "P3_S5_F0769",
+      "label": "upper-incisor",
+      "changed": true,
+      "rms_displacement_px": 0.3860363303782363,
+      "max_displacement_px": 1.0356067067314592,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P3\\S5\\contours\\0769_upper-incisor.npy"
+    },
+    {
+      "case": "P3_S5_F0769",
+      "label": "upper-lip",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P3\\S5\\contours\\0769_upper-lip.npy"
+    },
+    {
+      "case": "P3_S5_F0769",
+      "label": "vocal-folds",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P3\\S5\\contours\\0769_vocal-folds.npy"
+    },
+    {
+      "case": "P4_S5_F0787",
+      "label": "arytenoid-cartilage",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P4\\S5\\contours\\0787_arytenoid-cartilage.npy"
+    },
+    {
+      "case": "P4_S5_F0787",
+      "label": "epiglottis",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P4\\S5\\contours\\0787_epiglottis.npy"
+    },
+    {
+      "case": "P4_S5_F0787",
+      "label": "lower-incisor",
+      "changed": true,
+      "rms_displacement_px": 0.5506698656476664,
+      "max_displacement_px": 3.4691774475442663,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P4\\S5\\contours\\0787_lower-incisor.npy"
+    },
+    {
+      "case": "P4_S5_F0787",
+      "label": "lower-lip",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P4\\S5\\contours\\0787_lower-lip.npy"
+    },
+    {
+      "case": "P4_S5_F0787",
+      "label": "pharynx",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P4\\S5\\contours\\0787_pharynx.npy"
+    },
+    {
+      "case": "P4_S5_F0787",
+      "label": "soft-palate-midline",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P4\\S5\\contours\\0787_soft-palate-midline.npy"
+    },
+    {
+      "case": "P4_S5_F0787",
+      "label": "thyroid-cartilage",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P4\\S5\\contours\\0787_thyroid-cartilage.npy"
+    },
+    {
+      "case": "P4_S5_F0787",
+      "label": "tongue",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P4\\S5\\contours\\0787_tongue.npy"
+    },
+    {
+      "case": "P4_S5_F0787",
+      "label": "upper-incisor",
+      "changed": false,
+      "rms_displacement_px": 1.242464202665215e-06,
+      "max_displacement_px": 2.0595925525570968e-06,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P4\\S5\\contours\\0787_upper-incisor.npy"
+    },
+    {
+      "case": "P4_S5_F0787",
+      "label": "upper-lip",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P4\\S5\\contours\\0787_upper-lip.npy"
+    },
+    {
+      "case": "P4_S5_F0787",
+      "label": "vocal-folds",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P4\\S5\\contours\\0787_vocal-folds.npy"
+    },
+    {
+      "case": "P5_S5_F0809",
+      "label": "arytenoid-cartilage",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P5\\S5\\contours\\0809_arytenoid-cartilage.npy"
+    },
+    {
+      "case": "P5_S5_F0809",
+      "label": "epiglottis",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P5\\S5\\contours\\0809_epiglottis.npy"
+    },
+    {
+      "case": "P5_S5_F0809",
+      "label": "lower-incisor",
+      "changed": true,
+      "rms_displacement_px": 0.23015910173068757,
+      "max_displacement_px": 0.9718934422639295,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P5\\S5\\contours\\0809_lower-incisor.npy"
+    },
+    {
+      "case": "P5_S5_F0809",
+      "label": "lower-lip",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P5\\S5\\contours\\0809_lower-lip.npy"
+    },
+    {
+      "case": "P5_S5_F0809",
+      "label": "pharynx",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P5\\S5\\contours\\0809_pharynx.npy"
+    },
+    {
+      "case": "P5_S5_F0809",
+      "label": "soft-palate-midline",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P5\\S5\\contours\\0809_soft-palate-midline.npy"
+    },
+    {
+      "case": "P5_S5_F0809",
+      "label": "thyroid-cartilage",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P5\\S5\\contours\\0809_thyroid-cartilage.npy"
+    },
+    {
+      "case": "P5_S5_F0809",
+      "label": "tongue",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P5\\S5\\contours\\0809_tongue.npy"
+    },
+    {
+      "case": "P5_S5_F0809",
+      "label": "upper-incisor",
+      "changed": true,
+      "rms_displacement_px": 0.17742298033723056,
+      "max_displacement_px": 1.0003688555838928,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P5\\S5\\contours\\0809_upper-incisor.npy"
+    },
+    {
+      "case": "P5_S5_F0809",
+      "label": "upper-lip",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P5\\S5\\contours\\0809_upper-lip.npy"
+    },
+    {
+      "case": "P5_S5_F0809",
+      "label": "vocal-folds",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P5\\S5\\contours\\0809_vocal-folds.npy"
+    },
+    {
+      "case": "P6_S5_F1117",
+      "label": "arytenoid-cartilage",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P6\\S5\\contours\\1117_arytenoid-cartilage.npy"
+    },
+    {
+      "case": "P6_S5_F1117",
+      "label": "epiglottis",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P6\\S5\\contours\\1117_epiglottis.npy"
+    },
+    {
+      "case": "P6_S5_F1117",
+      "label": "lower-incisor",
+      "changed": true,
+      "rms_displacement_px": 1.0060768286224016,
+      "max_displacement_px": 1.1691509377090565,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P6\\S5\\contours\\1117_lower-incisor.npy"
+    },
+    {
+      "case": "P6_S5_F1117",
+      "label": "lower-lip",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P6\\S5\\contours\\1117_lower-lip.npy"
+    },
+    {
+      "case": "P6_S5_F1117",
+      "label": "pharynx",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P6\\S5\\contours\\1117_pharynx.npy"
+    },
+    {
+      "case": "P6_S5_F1117",
+      "label": "soft-palate-midline",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P6\\S5\\contours\\1117_soft-palate-midline.npy"
+    },
+    {
+      "case": "P6_S5_F1117",
+      "label": "thyroid-cartilage",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P6\\S5\\contours\\1117_thyroid-cartilage.npy"
+    },
+    {
+      "case": "P6_S5_F1117",
+      "label": "tongue",
+      "changed": false,
+      "rms_displacement_px": 1.206313194339134e-06,
+      "max_displacement_px": 3.814697265625e-06,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P6\\S5\\contours\\1117_tongue.npy"
+    },
+    {
+      "case": "P6_S5_F1117",
+      "label": "upper-incisor",
+      "changed": false,
+      "rms_displacement_px": 1.3742506982134563e-06,
+      "max_displacement_px": 2.38188254399e-06,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P6\\S5\\contours\\1117_upper-incisor.npy"
+    },
+    {
+      "case": "P6_S5_F1117",
+      "label": "upper-lip",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P6\\S5\\contours\\1117_upper-lip.npy"
+    },
+    {
+      "case": "P6_S5_F1117",
+      "label": "vocal-folds",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P6\\S5\\contours\\1117_vocal-folds.npy"
+    },
+    {
+      "case": "P7_S5_F0864",
+      "label": "arytenoid-cartilage",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P7\\S5\\contours\\0864_arytenoid-cartilage.npy"
+    },
+    {
+      "case": "P7_S5_F0864",
+      "label": "epiglottis",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P7\\S5\\contours\\0864_epiglottis.npy"
+    },
+    {
+      "case": "P7_S5_F0864",
+      "label": "lower-incisor",
+      "changed": true,
+      "rms_displacement_px": 0.5823503885349873,
+      "max_displacement_px": 2.704549233663328,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P7\\S5\\contours\\0864_lower-incisor.npy"
+    },
+    {
+      "case": "P7_S5_F0864",
+      "label": "lower-lip",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P7\\S5\\contours\\0864_lower-lip.npy"
+    },
+    {
+      "case": "P7_S5_F0864",
+      "label": "pharynx",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P7\\S5\\contours\\0864_pharynx.npy"
+    },
+    {
+      "case": "P7_S5_F0864",
+      "label": "soft-palate-midline",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P7\\S5\\contours\\0864_soft-palate-midline.npy"
+    },
+    {
+      "case": "P7_S5_F0864",
+      "label": "thyroid-cartilage",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P7\\S5\\contours\\0864_thyroid-cartilage.npy"
+    },
+    {
+      "case": "P7_S5_F0864",
+      "label": "tongue",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P7\\S5\\contours\\0864_tongue.npy"
+    },
+    {
+      "case": "P7_S5_F0864",
+      "label": "upper-incisor",
+      "changed": false,
+      "rms_displacement_px": 1.4088424938283458e-06,
+      "max_displacement_px": 2.3430714969033983e-06,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P7\\S5\\contours\\0864_upper-incisor.npy"
+    },
+    {
+      "case": "P7_S5_F0864",
+      "label": "upper-lip",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P7\\S5\\contours\\0864_upper-lip.npy"
+    },
+    {
+      "case": "P7_S5_F0864",
+      "label": "vocal-folds",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P7\\S5\\contours\\0864_vocal-folds.npy"
+    },
+    {
+      "case": "P8_S5_F0792",
+      "label": "arytenoid-cartilage",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P8\\S5\\contours\\0792_arytenoid-cartilage.npy"
+    },
+    {
+      "case": "P8_S5_F0792",
+      "label": "epiglottis",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P8\\S5\\contours\\0792_epiglottis.npy"
+    },
+    {
+      "case": "P8_S5_F0792",
+      "label": "lower-incisor",
+      "changed": true,
+      "rms_displacement_px": 2.1302811214516666,
+      "max_displacement_px": 3.352584316801538,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P8\\S5\\contours\\0792_lower-incisor.npy"
+    },
+    {
+      "case": "P8_S5_F0792",
+      "label": "lower-lip",
+      "changed": true,
+      "rms_displacement_px": 2.0,
+      "max_displacement_px": 2.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P8\\S5\\contours\\0792_lower-lip.npy"
+    },
+    {
+      "case": "P8_S5_F0792",
+      "label": "pharynx",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P8\\S5\\contours\\0792_pharynx.npy"
+    },
+    {
+      "case": "P8_S5_F0792",
+      "label": "soft-palate-midline",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P8\\S5\\contours\\0792_soft-palate-midline.npy"
+    },
+    {
+      "case": "P8_S5_F0792",
+      "label": "thyroid-cartilage",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P8\\S5\\contours\\0792_thyroid-cartilage.npy"
+    },
+    {
+      "case": "P8_S5_F0792",
+      "label": "tongue",
+      "changed": false,
+      "rms_displacement_px": 9.344061823971474e-07,
+      "max_displacement_px": 3.814697265625e-06,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P8\\S5\\contours\\0792_tongue.npy"
+    },
+    {
+      "case": "P8_S5_F0792",
+      "label": "upper-incisor",
+      "changed": false,
+      "rms_displacement_px": 1.4147956106172466e-06,
+      "max_displacement_px": 2.3606217670556198e-06,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P8\\S5\\contours\\0792_upper-incisor.npy"
+    },
+    {
+      "case": "P8_S5_F0792",
+      "label": "upper-lip",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P8\\S5\\contours\\0792_upper-lip.npy"
+    },
+    {
+      "case": "P8_S5_F0792",
+      "label": "vocal-folds",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P8\\S5\\contours\\0792_vocal-folds.npy"
+    },
+    {
+      "case": "P9_S5_F0704",
+      "label": "arytenoid-cartilage",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P9\\S5\\contours\\0704_arytenoid-cartilage.npy"
+    },
+    {
+      "case": "P9_S5_F0704",
+      "label": "epiglottis",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P9\\S5\\contours\\0704_epiglottis.npy"
+    },
+    {
+      "case": "P9_S5_F0704",
+      "label": "lower-incisor",
+      "changed": true,
+      "rms_displacement_px": 1.2253857539733306,
+      "max_displacement_px": 2.725050967922949,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P9\\S5\\contours\\0704_lower-incisor.npy"
+    },
+    {
+      "case": "P9_S5_F0704",
+      "label": "lower-lip",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P9\\S5\\contours\\0704_lower-lip.npy"
+    },
+    {
+      "case": "P9_S5_F0704",
+      "label": "pharynx",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P9\\S5\\contours\\0704_pharynx.npy"
+    },
+    {
+      "case": "P9_S5_F0704",
+      "label": "soft-palate-midline",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P9\\S5\\contours\\0704_soft-palate-midline.npy"
+    },
+    {
+      "case": "P9_S5_F0704",
+      "label": "thyroid-cartilage",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P9\\S5\\contours\\0704_thyroid-cartilage.npy"
+    },
+    {
+      "case": "P9_S5_F0704",
+      "label": "tongue",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P9\\S5\\contours\\0704_tongue.npy"
+    },
+    {
+      "case": "P9_S5_F0704",
+      "label": "upper-incisor",
+      "changed": true,
+      "rms_displacement_px": 1.4142137584094514,
+      "max_displacement_px": 1.414216182301343,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P9\\S5\\contours\\0704_upper-incisor.npy"
+    },
+    {
+      "case": "P9_S5_F0704",
+      "label": "upper-lip",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P9\\S5\\contours\\0704_upper-lip.npy"
+    },
+    {
+      "case": "P9_S5_F0704",
+      "label": "vocal-folds",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P9\\S5\\contours\\0704_vocal-folds.npy"
+    },
+    {
+      "case": "P10_S5_F0859",
+      "label": "arytenoid-cartilage",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P10\\S5\\contours\\0859_arytenoid-cartilage.npy"
+    },
+    {
+      "case": "P10_S5_F0859",
+      "label": "epiglottis",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P10\\S5\\contours\\0859_epiglottis.npy"
+    },
+    {
+      "case": "P10_S5_F0859",
+      "label": "lower-incisor",
+      "changed": true,
+      "rms_displacement_px": 0.1812551361185821,
+      "max_displacement_px": 0.5228193682214242,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P10\\S5\\contours\\0859_lower-incisor.npy"
+    },
+    {
+      "case": "P10_S5_F0859",
+      "label": "lower-lip",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P10\\S5\\contours\\0859_lower-lip.npy"
+    },
+    {
+      "case": "P10_S5_F0859",
+      "label": "pharynx",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P10\\S5\\contours\\0859_pharynx.npy"
+    },
+    {
+      "case": "P10_S5_F0859",
+      "label": "soft-palate-midline",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P10\\S5\\contours\\0859_soft-palate-midline.npy"
+    },
+    {
+      "case": "P10_S5_F0859",
+      "label": "thyroid-cartilage",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P10\\S5\\contours\\0859_thyroid-cartilage.npy"
+    },
+    {
+      "case": "P10_S5_F0859",
+      "label": "tongue",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P10\\S5\\contours\\0859_tongue.npy"
+    },
+    {
+      "case": "P10_S5_F0859",
+      "label": "upper-incisor",
+      "changed": false,
+      "rms_displacement_px": 1.7801502348657323e-06,
+      "max_displacement_px": 3.6886634227527904e-06,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P10\\S5\\contours\\0859_upper-incisor.npy"
+    },
+    {
+      "case": "P10_S5_F0859",
+      "label": "upper-lip",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P10\\S5\\contours\\0859_upper-lip.npy"
+    },
+    {
+      "case": "P10_S5_F0859",
+      "label": "vocal-folds",
+      "changed": false,
+      "rms_displacement_px": 0.0,
+      "max_displacement_px": 0.0,
+      "source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P10\\S5\\contours\\0859_vocal-folds.npy"
+    }
+  ]
+}
