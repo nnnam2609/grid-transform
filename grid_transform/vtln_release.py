@@ -49,19 +49,19 @@ def normalize_release_version(version: str) -> str:
 
 
 def default_release_tag(version: str) -> str:
-    return f"vtln-data-v{normalize_release_version(version)}"
+    return f"gtgrd-v{normalize_release_version(version)}"
 
 
 def default_release_title(version: str) -> str:
-    return f"Grid Transform Geometry Reference Data v{normalize_release_version(version)}"
+    return f"GTGRD v{normalize_release_version(version)}"
 
 
 def default_release_output_dir(version: str) -> Path:
-    return DEFAULT_OUTPUT_DIR / "release_assets" / "vtln_data" / normalize_release_version(version)
+    return DEFAULT_OUTPUT_DIR / "release_assets" / "gtgrd" / normalize_release_version(version)
 
 
 def default_asset_stem(version: str) -> str:
-    return f"vtln-data-{normalize_release_version(version)}"
+    return f"gtgrd-{normalize_release_version(version)}"
 
 
 def resolve_release_paths(
@@ -175,7 +175,13 @@ def summarize_entry_groups(entries: list[ReleaseFileEntry]) -> dict[str, int]:
     for entry in entries:
         if entry.relative_path.startswith("review_s5_pourri2/"):
             review_workspace_file_count += 1
-            if entry.relative_path.endswith("/metadata.json"):
+            parts = Path(entry.relative_path).parts
+            if (
+                len(parts) == 4
+                and parts[0] == "review_s5_pourri2"
+                and parts[1] == "cases"
+                and parts[3] == "metadata.json"
+            ):
                 review_workspace_case_count += 1
         elif entry.relative_path.startswith("nnunet_data_80/"):
             nnunet_file_count += 1
@@ -213,7 +219,8 @@ def build_release_notes(
         [
             f"# {title}",
             "",
-            "Versioned shared release bundle for the canonical `VTLN/data` tree and additive review workspaces.",
+            "GTGRD means Grid Transform Geometry Reference Data.",
+            "This is the versioned shared release bundle for the canonical `VTLN/data` compatibility tree and additive review workspaces.",
             "",
             "## Contents",
             f"- archive root: `{archive_root}`",
@@ -268,7 +275,7 @@ def build_vtln_release_bundle(
     built_from_commit = resolve_git_head(repo_root)
     summary_groups = summarize_entry_groups(entries)
     manifest = {
-        "bundle_name": "vtln-data",
+        "bundle_name": "gtgrd",
         "version": paths.version,
         "tag": paths.tag,
         "title": paths.title,

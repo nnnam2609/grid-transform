@@ -4,11 +4,18 @@ import json
 import zipfile
 from pathlib import Path
 
-from grid_transform.vtln_release import build_vtln_release_bundle, default_release_title
+from grid_transform.vtln_release import (
+    build_vtln_release_bundle,
+    default_asset_stem,
+    default_release_tag,
+    default_release_title,
+)
 
 
 def test_default_release_title_uses_unambiguous_reference_data_name() -> None:
-    assert default_release_title("v0.1.17") == "Grid Transform Geometry Reference Data v0.1.17"
+    assert default_release_title("v0.1.17") == "GTGRD v0.1.17"
+    assert default_release_tag("v0.1.17") == "gtgrd-v0.1.17"
+    assert default_asset_stem("v0.1.17") == "gtgrd-0.1.17"
 
 
 def write_bytes(path: Path, payload: bytes) -> None:
@@ -22,6 +29,14 @@ def test_build_vtln_release_bundle_creates_deterministic_asset(tmp_path: Path) -
     write_bytes(data_dir / "1612_example.zip", b"roi-data")
     write_bytes(data_dir / "selection_manifest.csv", b"manifest-data")
     write_bytes(data_dir / "nnunet_data_80" / "case" / "frame.png", b"nnunet-data")
+    write_bytes(
+        data_dir / "review_s5_pourri2" / "cases" / "P1_case" / "metadata.json",
+        b"case-metadata",
+    )
+    write_bytes(
+        data_dir / "review_s5_pourri2" / "imagej_imports" / "backup" / "metadata.json",
+        b"backup-metadata",
+    )
 
     manifest_first = build_vtln_release_bundle(
         version="0.1.13",
@@ -36,16 +51,18 @@ def test_build_vtln_release_bundle_creates_deterministic_asset(tmp_path: Path) -
         overwrite=True,
     )
 
-    assert manifest_first["file_count"] == 4
+    assert manifest_first["file_count"] == 6
     assert manifest_first["png_count"] == 1
     assert manifest_first["roi_zip_count"] == 1
     assert manifest_first["nnunet_file_count"] == 1
+    assert manifest_first["review_workspace_case_count"] == 1
+    assert manifest_first["review_workspace_file_count"] == 2
     assert manifest_first["asset_zip_sha256"] == manifest_second["asset_zip_sha256"]
 
     manifest_path = Path(str(manifest_first["manifest_json"]))
     payload = json.loads(manifest_path.read_text(encoding="utf-8"))
     assert payload["archive_root"] == "VTLN/data"
-    assert payload["file_count"] == 4
+    assert payload["file_count"] == 6
 
     with zipfile.ZipFile(Path(str(manifest_first["asset_zip"])), "r") as archive:
         names = sorted(archive.namelist())
@@ -53,5 +70,7 @@ def test_build_vtln_release_bundle_creates_deterministic_asset(tmp_path: Path) -
         "VTLN/data/1612_example.png",
         "VTLN/data/1612_example.zip",
         "VTLN/data/nnunet_data_80/case/frame.png",
+        "VTLN/data/review_s5_pourri2/cases/P1_case/metadata.json",
+        "VTLN/data/review_s5_pourri2/imagej_imports/backup/metadata.json",
         "VTLN/data/selection_manifest.csv",
     ]
