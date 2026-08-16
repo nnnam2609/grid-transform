@@ -1,13 +1,14 @@
-# VTLN/data
+# GTGRD v0.1.18
 
-Canonical bundle for the current pipeline.
+GTGRD means Grid Transform Geometry Reference Data. `VTLN/data` remains the
+runtime compatibility path.
 
-- `*.png`: 480x480 RGB triplets with channel order `R=t-1, G=t, B=t+1`.
-- `*.zip`: ROI contours scaled into the same 480x480 coordinate space.
-- `nnunet_data_80/`: bundled target MRI image case and groundtruth contours used by the apps.
-- versioned shared release assets can be generated from this folder with `scripts/run/run_build_vtln_release_bundle.py --version <x.y.z>`.
-- `lower_incisor_update_manifest.json`: provenance and hashes for the 2026-08-16 speaker-specific lower-incisor geometry update. P2 remains unchanged because no corrected prototype exists.
-- `selection_manifest.csv` and `build_summary.json` are build-time provenance metadata. They may contain absolute local source paths for traceability; use the local files in this folder as the portable bundle contract.
-
-All grayscale computations should use the center channel `G=t`.
-The legacy folder/tag prefix `VTLN`/`vtln-data-*` is retained for compatibility; the release display name is `Grid Transform Geometry Reference Data`.
+- Ten top-level references P1-P10 use the midpoint frame of S5 `pourri #2 /u/`.
+- RGB triplets are `R=t-1, G=t, B=t+1`, cropped from the matching review AVI and resized to 480x480.
+- Dynamic contours are the latest available native 136x136 inference annotations, scaled directly to 480x480.
+- For P1 and P3-P10, `lower-incisor` is the exact manually reviewed ImageJ prototype from the S5 pourri #2 review workspace. This deliberately takes precedence over the later all-frame propagated copy, which preserves placement but not the exact reviewed 50-point prototype.
+- P2 has no manually reviewed lower-incisor prototype, so its observed inference contour is retained.
+- `upper-incisor` and `lower-incisor` are stored under the historical canonical labels `incisior-hard-palate` and `mandible-incisior`.
+- C1-C6 remain the fixed speaker-specific auxiliary contours from the preceding canonical geometry release.
+- P2 has ten observed dynamic contours; `vocal-folds` is absent at its selected interval and is not imputed.
+- All dynamic ROIs are stored as open ImageJ polylines; C1-C6 retain closed FREEHAND topology.

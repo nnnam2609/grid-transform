@@ -14,7 +14,7 @@ DEFAULT_TARGET = "main"
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Build a versioned shared VTLN/data release bundle with a deterministic zip asset, "
+            "Build a versioned shared GTGRD release bundle with a deterministic zip asset, "
             "manifest, checksum, and optional GitHub release publication."
         )
     )
@@ -33,7 +33,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--output-dir",
         type=Path,
         default=None,
-        help="Optional artifact output directory. Defaults to outputs/release_assets/vtln_data/<version>/.",
+        help="Optional artifact output directory. Defaults to outputs/release_assets/gtgrd/<version>/.",
     )
     parser.add_argument(
         "--archive-root",
@@ -43,12 +43,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--tag",
         default=None,
-        help="Optional GitHub release tag. Defaults to vtln-data-v<version>.",
+        help="Optional GitHub release tag. Defaults to gtgrd-v<version>.",
     )
     parser.add_argument(
         "--title",
         default=None,
-        help="Optional GitHub release title. Defaults to 'Grid Transform Geometry Reference Data v<version>'.",
+        help="Optional GitHub release title. Defaults to 'GTGRD v<version>'.",
     )
     parser.add_argument(
         "--overwrite",

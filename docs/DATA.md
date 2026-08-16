@@ -47,6 +47,12 @@ Current behavior:
 
 The current canonical contour source for bundled examples is therefore the zip next to the image in `VTLN/data/`.
 
+GTGRD v0.1.18 uses ten top-level P1-P10 reference pairs from the midpoint of
+the S5 `pourri #2 /u/`. Each pair supplies both the 480x480 RGB triplet and the
+same-frame geometry used to build the grid. P10/S5/F0859 is the reference.
+P1/P3-P10 use the exact ImageJ-reviewed lower-incisor prototype; P2 retains its
+observed contour and records the absent `vocal-folds` without imputation.
+
 ## Bundle Metadata
 
 `VTLN/data/selection_manifest.csv` and `VTLN/data/build_summary.json` describe the current bundled rows and their build-time origins. They include absolute provenance paths from the local machine that created the bundle, so they are useful for traceability but should not be treated as portable input paths.

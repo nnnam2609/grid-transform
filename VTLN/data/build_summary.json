@@ -1,173 +1,1066 @@
 {
-  "output_dir": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data",
-  "triplet_dir": "C:\\Users\\nhnguyen\\PhD_A2A\\backup\\grid_transform_cleanup_20260402\\u_curated_selection_20260330_rgb480_triplets",
-  "curated_dir": "C:\\Users\\nhnguyen\\PhD_A2A\\backup\\grid_transform_cleanup_20260402\\u_curated_selection_20260330",
-  "target_case": "2008-003^01-1791/test",
-  "speaker_rows": 10,
-  "zip_rows": 10,
-  "missing_annotation_rows": 0,
-  "nnunet_data_dst": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\nnunet_data_80\\2008-003^01-1791\\test",
-  "nnunet_groundtruth_dir": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\nnunet_data_80\\2008-003^01-1791\\test\\contours",
-  "rows": [
+  "schema_version": "s5-pourri2-geometry-reference-candidate-v1",
+  "version": "0.1.18",
+  "created_at_utc": "2026-08-16T01:32:55.749151+00:00",
+  "status": "PASS",
+  "scope": "validated candidate; canonical when promoted into VTLN/data",
+  "reference_speaker": "P10",
+  "speaker_order": [
+    "P1",
+    "P2",
+    "P3",
+    "P4",
+    "P5",
+    "P6",
+    "P7",
+    "P8",
+    "P9",
+    "P10"
+  ],
+  "phone_selection": "S5 pourri repetition 2, sole /u/, midpoint frame",
+  "dynamic_roi_topology": "open POLYLINE",
+  "cervical_roi_topology": "closed FREEHAND",
+  "cervical_policy": "copy current fixed speaker-specific C1-C6 without modification",
+  "lower_incisor_policy": "exact ImageJ-reviewed pourri #2 prototype for P1/P3-P10; observed current inference for P2 because no reviewed prototype exists",
+  "tps_lower_incisor_shape_controls": {
+    "enabled": false,
+    "labels": [],
+    "definition": "disabled; canonical TPS uses only M1 and L6 for the lower incisor",
+    "scope": "canonical candidate validation and release transform"
+  },
+  "p2_missing_policy": "vocal-folds absent and not imputed; empty only in visualization payload",
+  "source": {
+    "selection_csv": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\s5_pourri_repetitions_p1_p10_20260814\\pourri_three_repetitions_p1_p10.csv",
+    "selection_csv_sha256": "ae530a731b1686fc02b0a07d24e6a83c8f28fddfb7f8ad8fc5196be9cc678cf0",
+    "inference_root": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference",
+    "video_root": "C:\\Users\\nhnguyen\\PhD_A2A\\Data\\Need-to-verify-alignment",
+    "review_root": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\review_s5_pourri2",
+    "current_vtln_dir": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data"
+  },
+  "cases": [
     {
-      "output_basename": "1612_P1_S16_F0952",
-      "png_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\1612_P1_S16_F0952.png",
-      "zip_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\1612_P1_S16_F0952.zip",
-      "annotation_status": "scaled_latest_annotation",
-      "annotation_origin_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\annotation_to_grid_transform\\1612_P1_S16_F0952__nnunet_2008-003_01-1791_test_143020\\source_annotation.latest.json",
-      "source_shape": [
-        136,
-        136
-      ],
-      "target_shape": [
-        480,
-        480
-      ],
-      "scaled_contour_count": 18
+      "speaker": "P1",
+      "basename": "1612_P1_S5_F0970",
+      "session": "S5",
+      "selected_frame": 970,
+      "phone_selection": "pourri/r2/sole_u/midpoint",
+      "alignment_source": "incoming_*_c",
+      "dynamic_contour_count": 11,
+      "canonical_contour_count": 17,
+      "missing_dynamic_labels": [],
+      "missing_policy": "none",
+      "lower_incisor_source_policy": "exact_imagej_reviewed_pourri2_prototype",
+      "lower_incisor_source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\review_s5_pourri2\\cases\\P1_S5_F0970\\contours_npy\\lower-incisor.npy",
+      "propagated_vs_reviewed_lower_incisor_rms_px": 0.3245965353327108,
+      "propagated_vs_reviewed_lower_incisor_max_px": 0.6254950981645968,
+      "source_annotation_sha256": {
+        "arytenoid-cartilage": "f9ef42b48a07211a18a1ce12c0abba4ae947a066f1f56a7b91fc3aad8f014338",
+        "epiglottis": "ac26026ce7eadb4e0d4c9d0edd98cd4fa95dff40fd57b16904e3e5b6a93dc602",
+        "lower-incisor": "d57eb195dabc43fb97f3dd3a95410823e02ace8ba8afee5ee22f730b44e46c7f",
+        "lower-lip": "f01054b0f61b992bc6cb6e60ebb2c18f3326dca182e72c450b792fb59c22f6f8",
+        "pharynx": "a43da64c80b70dffaeca3fc566b2fa06fea674b40c1a97da2443a3ec588600a0",
+        "soft-palate-midline": "4ed771dddb0d29c3dee02b86ab4657aa68e0af240d8307663449a1bc888e48c6",
+        "thyroid-cartilage": "ec42bc3314ecb64286629adb18701ff90dc8a61c5e002dc6c75947496a5de2e8",
+        "tongue": "53ac727ef454d373eab8e24ded61d12ddafa06518c3680c688b26dbaf2ae90bc",
+        "upper-incisor": "b768f4040ba82636f5ac53375491f37875cc7b404c251a210187803c1f2b0e03",
+        "upper-lip": "c8c4f473260dda0d98a2353d32500e3db631b6551b0c562047007a86c8bc612b",
+        "vocal-folds": "3a9ce1f1acc674c9b67a3a5e4fca2004feaa402b75d499fa9c111c896f1fd47b"
+      },
+      "png_sha256": "159de501fb364a1c1e372299f6bde2a48ec85b226fee615b75d5757f3695d101",
+      "zip_sha256": "55205d5ada99ddb9eddec0f20e073108ad0da1879afced5aed796d2e1d583536",
+      "grid_horiz_count": 6,
+      "grid_vert_count": 9,
+      "grid_warnings": []
     },
     {
-      "output_basename": "1617_P2_S9_F1478",
-      "png_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\1617_P2_S9_F1478.png",
-      "zip_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\1617_P2_S9_F1478.zip",
-      "annotation_status": "scaled_latest_annotation",
-      "annotation_origin_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\source_annotation_edits\\curated_u_batch\\1617_P2_S9_F1478\\edited_annotation.json",
-      "source_shape": [
-        136,
-        136
+      "speaker": "P2",
+      "basename": "1617_P2_S5_F0657",
+      "session": "S5",
+      "selected_frame": 657,
+      "phone_selection": "pourri/r2/sole_u/midpoint",
+      "alignment_source": "incoming_*_c",
+      "dynamic_contour_count": 10,
+      "canonical_contour_count": 16,
+      "missing_dynamic_labels": [
+        "vocal-folds"
       ],
-      "target_shape": [
-        480,
-        480
-      ],
-      "scaled_contour_count": 14
+      "missing_policy": "observed absence; no imputation",
+      "lower_incisor_source_policy": "observed_inference_no_manual_review",
+      "lower_incisor_source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\Preprocess\\inference\\P2\\S5\\contours\\0657_lower-incisor.npy",
+      "propagated_vs_reviewed_lower_incisor_rms_px": 0.0,
+      "propagated_vs_reviewed_lower_incisor_max_px": 0.0,
+      "source_annotation_sha256": {
+        "arytenoid-cartilage": "eb899b0d438a13a7bfc4da8f2973b47f4a0a3815af400ea5235dcc7a9b217e6e",
+        "epiglottis": "807c23339725cb105a44ed37d7df86cacf471cc2cc5bef60f0a212fb6081f682",
+        "lower-incisor": "2cb18da217af85be7507e161e7c75063241e3e46d922bd9594f107a187921463",
+        "lower-lip": "cacf09ad91b1b7c4f58d90a5fe0ff334a29364b3ba4c1e7cd80dab5ea3c8a4b8",
+        "pharynx": "0aba0b93ca8bdcb91bff266f8d74121b9643af975abae5e6950b6f474383d41e",
+        "soft-palate-midline": "1f2ff41cbb4885c0bd8c8a3d7fd146b95a3731300c8807530c069ef4e44471ae",
+        "thyroid-cartilage": "ed446c4157c74019bf7b614d12928c9c930f84d3eedb55a1a16f4526fbe3abf6",
+        "tongue": "0b95da28c001391727b3517e400ec1774697669a08ab9eb4fcd1be40d6072be1",
+        "upper-incisor": "024462c929c76477a39c4ca8b0e550b5c8e03881b950778c54df39a421a517e3",
+        "upper-lip": "f18ea3ed27f5482192372cbda560c90f4ac9263241f7509d71e5aed0cb903947"
+      },
+      "png_sha256": "202634759d87f4713a4f5a64a1ceb7a888cf70a7996a9c86b4300f9221b239a2",
+      "zip_sha256": "bcec8abf29c1beb6c97bfa25911d72db7c1b45cd781d8d26da9c26ae2712be25",
+      "grid_horiz_count": 6,
+      "grid_vert_count": 9,
+      "grid_warnings": []
     },
     {
-      "output_basename": "1618_P3_S14_F1556",
-      "png_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\1618_P3_S14_F1556.png",
-      "zip_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\1618_P3_S14_F1556.zip",
-      "annotation_status": "scaled_latest_annotation",
-      "annotation_origin_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\source_annotation_edits\\curated_u_batch\\1618_P3_S14_F1556\\edited_annotation.json",
-      "source_shape": [
-        136,
-        136
-      ],
-      "target_shape": [
-        480,
-        480
-      ],
-      "scaled_contour_count": 18
+      "speaker": "P3",
+      "basename": "1618_P3_S5_F0769",
+      "session": "S5",
+      "selected_frame": 769,
+      "phone_selection": "pourri/r2/sole_u/midpoint",
+      "alignment_source": "incoming_*_c",
+      "dynamic_contour_count": 11,
+      "canonical_contour_count": 17,
+      "missing_dynamic_labels": [],
+      "missing_policy": "none",
+      "lower_incisor_source_policy": "exact_imagej_reviewed_pourri2_prototype",
+      "lower_incisor_source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\review_s5_pourri2\\cases\\P3_S5_F0769\\contours_npy\\lower-incisor.npy",
+      "propagated_vs_reviewed_lower_incisor_rms_px": 0.6743010656256238,
+      "propagated_vs_reviewed_lower_incisor_max_px": 0.9640745199941141,
+      "source_annotation_sha256": {
+        "arytenoid-cartilage": "26c6659d2e8ecece63855f032faf0fbf766830a6a01c54a04ad2209f94614d95",
+        "epiglottis": "24e1675832988b2c03d9c3111de26b67781084878376cf9f7022b904c283fbef",
+        "lower-incisor": "e0ab58d68bbffcc1b9f57847b6878179225b469bbc7fcf8a21ba5a593f57e0ee",
+        "lower-lip": "490bad6f699018b0459ef1ae8a2e5a3ef6299d17a81a9ea6676ea0813b3be37e",
+        "pharynx": "4557ee3ec52401065ed966ca14734a21d1eafbaf15ea2bc8d1f49e2e9f5e1529",
+        "soft-palate-midline": "2d123855c14b8942dd6e3bc998e314736f666a35923c22da0d4c3aa2eb8d9d86",
+        "thyroid-cartilage": "04e6ff85dcdb857a6678822c4e1ab2cd858caffd6fd0fafe571ed43383991ac3",
+        "tongue": "bb5190c6ee0407c17fcff8588da9cb8ac2f770d0d83175352f8b25617835b588",
+        "upper-incisor": "e1f463749b3728e6932b90928efff1be87ccceb2a58b6875a62afea23cb44504",
+        "upper-lip": "0d95cef06c295be5d2ed9e4791f4f3371e51efa47395cdc8421ab14e8aab3259",
+        "vocal-folds": "600c7b647f61f51bee1e6d965ec312627e0a95c26f69f0056da70c2ef8e5e2b7"
+      },
+      "png_sha256": "bcc260922446d59005e3c2587b5da9c256979d006833cbe01d743a53fa1b0fbc",
+      "zip_sha256": "1bf1ab6b022e32a33336e0b1ea7e5cd25407fb31067b18a3f322c2450c685b12",
+      "grid_horiz_count": 6,
+      "grid_vert_count": 9,
+      "grid_warnings": []
     },
     {
-      "output_basename": "1628_P4_S4_F0196",
-      "png_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\1628_P4_S4_F0196.png",
-      "zip_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\1628_P4_S4_F0196.zip",
-      "annotation_status": "scaled_latest_annotation",
-      "annotation_origin_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\source_annotation_edits\\curated_u_batch\\1628_P4_S4_F0196\\edited_annotation.json",
-      "source_shape": [
-        136,
-        136
-      ],
-      "target_shape": [
-        480,
-        480
-      ],
-      "scaled_contour_count": 14
+      "speaker": "P4",
+      "basename": "1628_P4_S5_F0787",
+      "session": "S5",
+      "selected_frame": 787,
+      "phone_selection": "pourri/r2/sole_u/midpoint",
+      "alignment_source": "incoming_*_c",
+      "dynamic_contour_count": 11,
+      "canonical_contour_count": 17,
+      "missing_dynamic_labels": [],
+      "missing_policy": "none",
+      "lower_incisor_source_policy": "exact_imagej_reviewed_pourri2_prototype",
+      "lower_incisor_source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\review_s5_pourri2\\cases\\P4_S5_F0787\\contours_npy\\lower-incisor.npy",
+      "propagated_vs_reviewed_lower_incisor_rms_px": 0.15705956305569296,
+      "propagated_vs_reviewed_lower_incisor_max_px": 0.2334941880935682,
+      "source_annotation_sha256": {
+        "arytenoid-cartilage": "18a5b5da0dbd8606ab7e4632bd1f06db1258a9fdf541d681f2e7d49e95d9d646",
+        "epiglottis": "b9e1671fd0d7b933e2919fe8fda99d2cb773969ce037b6984c202cefe4cab200",
+        "lower-incisor": "5c40b6b6c4d74ebdcd0551fa2c97f1c07d64d6ac43319b0a185914497fe611a7",
+        "lower-lip": "70ba0a73d65377d39b69f31211858b6aa043ef5367a8f417476d642e662054ec",
+        "pharynx": "815e9a681befa13340302366af967ecd3ed66620690c123804a6aa2d0648d0bd",
+        "soft-palate-midline": "d8e8a490d7ce2391d021c1872b9c36bdb603b16263b22d9c1595e5acb9a626ca",
+        "thyroid-cartilage": "e8d5db97e68fc9cd4e6dbc0eb290275e4be1970eec780c125cad2e6439b34160",
+        "tongue": "ba2ddd7a978a409bc0764f5e92ce639b9587dfaab510ae9c178c12d40d8fb517",
+        "upper-incisor": "9e9e98d684a091229d735ff145508dbd103e0cc6cd025b4d24ecd0f42564d5a6",
+        "upper-lip": "22b88a9d477758da9ade479813e16b60d43d1ad2e255176d87229d4014ab9834",
+        "vocal-folds": "3c560b25851eff0eba8ea90936d8665e726cef9ed1c940a4e17e27c97e08360e"
+      },
+      "png_sha256": "62405389a3abfa2f2d3538680f09d3fcf33cec7c7c9dba4adb6cdb6eb8bf51bc",
+      "zip_sha256": "daede69b9fc932d624a1f9f6b0e6b7286b47b19ccc43ff704040f336c6c852f0",
+      "grid_horiz_count": 6,
+      "grid_vert_count": 9,
+      "grid_warnings": []
     },
     {
-      "output_basename": "1635_P5_S6_F0324",
-      "png_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\1635_P5_S6_F0324.png",
-      "zip_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\1635_P5_S6_F0324.zip",
-      "annotation_status": "scaled_latest_annotation",
-      "annotation_origin_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\source_annotation_edits\\curated_u_batch\\1635_P5_S6_F0324\\edited_annotation.json",
-      "source_shape": [
-        136,
-        136
-      ],
-      "target_shape": [
-        480,
-        480
-      ],
-      "scaled_contour_count": 18
+      "speaker": "P5",
+      "basename": "1635_P5_S5_F0809",
+      "session": "S5",
+      "selected_frame": 809,
+      "phone_selection": "pourri/r2/sole_u/midpoint",
+      "alignment_source": "incoming_*_c",
+      "dynamic_contour_count": 11,
+      "canonical_contour_count": 17,
+      "missing_dynamic_labels": [],
+      "missing_policy": "none",
+      "lower_incisor_source_policy": "exact_imagej_reviewed_pourri2_prototype",
+      "lower_incisor_source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\review_s5_pourri2\\cases\\P5_S5_F0809\\contours_npy\\lower-incisor.npy",
+      "propagated_vs_reviewed_lower_incisor_rms_px": 0.061985348754793834,
+      "propagated_vs_reviewed_lower_incisor_max_px": 0.06980546751318883,
+      "source_annotation_sha256": {
+        "arytenoid-cartilage": "78f6771e34190804bf774215bd1fdc0ed0d8f1008b8e4290d27ec5c11d832fcb",
+        "epiglottis": "bb4b658fad9136c4a4d3452d32a04091e0a93ec0a4593463baf07daa274deecf",
+        "lower-incisor": "b2c6ecbd169a9327728281213d7467b27b29f896ae56d95c9e0673c1bc226199",
+        "lower-lip": "81df1d398929c5ac914b6eaa45d033e294bd35d1fee24448a037cab218a70554",
+        "pharynx": "99e6633be53d921b434019af308daca1cb8e45ed892b6b6a4b8cb00e4a654062",
+        "soft-palate-midline": "aaa810d5f2cf7e74ad0975389ed4a1b2ad3629dd31996e8410d8c409257c1a80",
+        "thyroid-cartilage": "079d6b292618a78cac2978052af39a11941fbdd678d43cb1d90c2edc33809d9d",
+        "tongue": "2d19ceccd95dc7e919f6568e48fc827b271d910dfeed7d5ffee23557a38368b8",
+        "upper-incisor": "1ab226ad6feb200106bf4c6c51b219ce3303067bf9d49178b807de1390d72b10",
+        "upper-lip": "e01f125557eddba254775610cabb1ce0aa8dfaa6dd1347e203d0bdeb5bcd176f",
+        "vocal-folds": "3b5ffaff95a9fc984577adefa28aa1ac79e2002a1084f368c67216dd3d78843f"
+      },
+      "png_sha256": "3cd1ae730d46c15e7a19da4bcd28cf460cc387da21a673ce849b9f882e148d69",
+      "zip_sha256": "3f951f3b8f97ea66422411e416f18cd954ce4a7a705fa544e5d362d95905e6cd",
+      "grid_horiz_count": 6,
+      "grid_vert_count": 9,
+      "grid_warnings": []
     },
     {
-      "output_basename": "1638_P6_S8_F0138",
-      "png_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\1638_P6_S8_F0138.png",
-      "zip_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\1638_P6_S8_F0138.zip",
-      "annotation_status": "scaled_latest_annotation",
-      "annotation_origin_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\source_annotation_edits\\curated_u_batch\\1638_P6_S8_F0138\\edited_annotation.json",
-      "source_shape": [
-        136,
-        136
-      ],
-      "target_shape": [
-        480,
-        480
-      ],
-      "scaled_contour_count": 18
+      "speaker": "P6",
+      "basename": "1638_P6_S5_F1117",
+      "session": "S5",
+      "selected_frame": 1117,
+      "phone_selection": "pourri/r2/sole_u/midpoint",
+      "alignment_source": "incoming_*_c",
+      "dynamic_contour_count": 11,
+      "canonical_contour_count": 17,
+      "missing_dynamic_labels": [],
+      "missing_policy": "none",
+      "lower_incisor_source_policy": "exact_imagej_reviewed_pourri2_prototype",
+      "lower_incisor_source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\review_s5_pourri2\\cases\\P6_S5_F1117\\contours_npy\\lower-incisor.npy",
+      "propagated_vs_reviewed_lower_incisor_rms_px": 0.9573851633125021,
+      "propagated_vs_reviewed_lower_incisor_max_px": 0.9756011650278767,
+      "source_annotation_sha256": {
+        "arytenoid-cartilage": "54dcf7a3e85e7c619e50015849943c2732a1ad9761e47583416dd93470749287",
+        "epiglottis": "2fd1489c19fdd8a28af33188b7c32a952d8c1864de8e61d6fe98f5f612cb1dea",
+        "lower-incisor": "10f1acf287322fdb1d32f157bc83821fbffae6c4c917c9d233d0d33fca2914b4",
+        "lower-lip": "5a5f03b1892be61d64568bb4f17094f93e1c66c19b5f926ad2c36c6842cf4c10",
+        "pharynx": "749b2b7697c51f7bb336419b0a4b68e4717e04f8b3a6d68437a0c76b6e6ec30a",
+        "soft-palate-midline": "c98de57c4bdc5b17dbdd321956d485667aaddbcd0263fb3cd599fbfb79bec0d2",
+        "thyroid-cartilage": "9ef5b56b62a700f1cf0ff0607735c80f2ec71a8893e49ad059e66cd224cd5f79",
+        "tongue": "af1ccd07dd70c2e20aa5d55749359e03e953cca2c919ada151eceeb53539a5d4",
+        "upper-incisor": "0a0116c3a5a623ee77027578cbd6b86f2735635837062b0f01b40eb20255e01a",
+        "upper-lip": "dad9f33d5705f5c08d8eda10555dabf8a839d531be1c70dbce167856ea77c10e",
+        "vocal-folds": "32010666fa74ced391be9aed4f1086c38e1956e10c15549fe214ba2cefc0b18d"
+      },
+      "png_sha256": "c77f3f4fa3870289a5609b6bdfdddca9be5be63e12baf5e3780fdb233466012a",
+      "zip_sha256": "445782a624e44de09ad0ba701facd5e15e2ea0add7a96a0a7d089c4127cc28c6",
+      "grid_horiz_count": 6,
+      "grid_vert_count": 9,
+      "grid_warnings": []
     },
     {
-      "output_basename": "1640_P7_S2_F0829",
-      "png_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\1640_P7_S2_F0829.png",
-      "zip_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\1640_P7_S2_F0829.zip",
-      "annotation_status": "scaled_latest_annotation",
-      "annotation_origin_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\annotation_to_grid_transform\\1640_P7_S2_F0829__nnunet_2008-003_01-1791_test_143020\\source_annotation.latest.json",
-      "source_shape": [
-        136,
-        136
-      ],
-      "target_shape": [
-        480,
-        480
-      ],
-      "scaled_contour_count": 11
+      "speaker": "P7",
+      "basename": "1640_P7_S5_F0864",
+      "session": "S5",
+      "selected_frame": 864,
+      "phone_selection": "pourri/r2/sole_u/midpoint",
+      "alignment_source": "incoming_*_c",
+      "dynamic_contour_count": 11,
+      "canonical_contour_count": 17,
+      "missing_dynamic_labels": [],
+      "missing_policy": "none",
+      "lower_incisor_source_policy": "exact_imagej_reviewed_pourri2_prototype",
+      "lower_incisor_source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\review_s5_pourri2\\cases\\P7_S5_F0864\\contours_npy\\lower-incisor.npy",
+      "propagated_vs_reviewed_lower_incisor_rms_px": 0.3168237171397057,
+      "propagated_vs_reviewed_lower_incisor_max_px": 0.5913403294393892,
+      "source_annotation_sha256": {
+        "arytenoid-cartilage": "8e8e5fb9391e9057a03507d7c01beae17e866ac4f7493c56a6183da7c576672b",
+        "epiglottis": "f9c8a8573b31896555e069401cc48a08da5a884248b221276e4418af070ad176",
+        "lower-incisor": "dfc483583830ee62005849c82d1e063bb9a98a0c3d3d966ff278287e32456c81",
+        "lower-lip": "277cb9f7e1084694e0aafa7983706a521d57fa7691a35ee444f091d44b354ecb",
+        "pharynx": "e5be2215900890cf4881eb7d1a7f3c0b464ee36116051fa04c67df3b5f37ba93",
+        "soft-palate-midline": "a65a9a55263b41d352f1dce7cb43fe6977d03e23f229e585cf61af1d2dd8610f",
+        "thyroid-cartilage": "7560b19fa89489a42b0c94554d0bcca9267a322009c5c138ddefdf1fc03d52a9",
+        "tongue": "0a18696bc67c6fa8542a51b6384c6af4516037bae771060504a4ef9dc820e48c",
+        "upper-incisor": "a519e6e635e660fc13045c814c31329648b509bf55b3b3c9bc132c8a7c09e761",
+        "upper-lip": "e6c1bca3f5710234c80113bec439cacb28a17f52bd8724521d2fc03d9abfc08d",
+        "vocal-folds": "069216336c51548d32c21e7a8e64534fef8a8058d1b28124d16e8b5abaf62d03"
+      },
+      "png_sha256": "ba9ffb93a795a4d25a33a23759adeeb1302b1d66563288357923d49d84a9a628",
+      "zip_sha256": "efcecff4e92745b62822ea4fa277628114a9c81c288abcea7ee435d9e8579d0c",
+      "grid_horiz_count": 6,
+      "grid_vert_count": 9,
+      "grid_warnings": []
     },
     {
-      "output_basename": "1653_P8_S2_F0159",
-      "png_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\1653_P8_S2_F0159.png",
-      "zip_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\1653_P8_S2_F0159.zip",
-      "annotation_status": "scaled_existing_canonical_zip",
-      "annotation_origin_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\1653_P8_S2_F0159.zip",
-      "source_shape": [
-        480,
-        480
-      ],
-      "target_shape": [
-        480,
-        480
-      ],
-      "scaled_contour_count": 14
+      "speaker": "P8",
+      "basename": "1653_P8_S5_F0792",
+      "session": "S5",
+      "selected_frame": 792,
+      "phone_selection": "pourri/r2/sole_u/midpoint",
+      "alignment_source": "incoming_*_c",
+      "dynamic_contour_count": 11,
+      "canonical_contour_count": 17,
+      "missing_dynamic_labels": [],
+      "missing_policy": "none",
+      "lower_incisor_source_policy": "exact_imagej_reviewed_pourri2_prototype",
+      "lower_incisor_source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\review_s5_pourri2\\cases\\P8_S5_F0792\\contours_npy\\lower-incisor.npy",
+      "propagated_vs_reviewed_lower_incisor_rms_px": 1.920729662619444,
+      "propagated_vs_reviewed_lower_incisor_max_px": 2.593909762973379,
+      "source_annotation_sha256": {
+        "arytenoid-cartilage": "2a26e65de589f0420847891493fbfbdb146971aefb8ca1e2ef71d85d6665d5df",
+        "epiglottis": "a4230acb62ff3dac0af5b4857ef140af92f123e6f35324823e1e9a4e5091a5b9",
+        "lower-incisor": "2b9fe3368df16a8f625601b800db4f281c5e86ece0585a56cd357378aa4ced6a",
+        "lower-lip": "ebf373d6af59e3ba1c75e5a67712f21db46eae1ffdcfcf798df7543e5da8ce78",
+        "pharynx": "55f596d451b31f042ad5e6a157abfffde454891553b4e7019ab38e1d4c23976a",
+        "soft-palate-midline": "4e268673602abb55159204f9acd60534539fa486052bbab5de50f9ae794f5dca",
+        "thyroid-cartilage": "06ae0b3f6065798345a66d209f01b008c556b2d3e239b434062984a23857add5",
+        "tongue": "8339b386eec076c958721555fcaf464cc430521b57e39df10c69f4cf756cc4f4",
+        "upper-incisor": "968ab5810c225d075fa23a5f10dd2d1a3b2c3506f9545f6940f1817cc1f50af8",
+        "upper-lip": "20fafb3e6bce399db4c1e40b422cf4aecc0f83324fd9d704dad7c59620454544",
+        "vocal-folds": "7f9d9cb98aa8fc5ffe4d2f2aca2923b9beeb71b0703de5fd450f0e661b4e7f65"
+      },
+      "png_sha256": "9b83185953e9ef591ef2068cbd85d89a0c9da9612bc1fc27f11e903eb45dab3a",
+      "zip_sha256": "c16987552a38bf5e90d3df319c77da0b0b16d8d903c1984e54a44b188251d1f1",
+      "grid_horiz_count": 6,
+      "grid_vert_count": 9,
+      "grid_warnings": []
     },
     {
-      "output_basename": "1659_P9_S5_F0196",
-      "png_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\1659_P9_S5_F0196.png",
-      "zip_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\1659_P9_S5_F0196.zip",
-      "annotation_status": "scaled_latest_annotation",
-      "annotation_origin_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\source_annotation_edits\\curated_u_batch\\1659_P9_S5_F0196\\edited_annotation.json",
-      "source_shape": [
-        136,
-        136
-      ],
-      "target_shape": [
-        480,
-        480
-      ],
-      "scaled_contour_count": 18
+      "speaker": "P9",
+      "basename": "1659_P9_S5_F0704",
+      "session": "S5",
+      "selected_frame": 704,
+      "phone_selection": "pourri/r2/sole_u/midpoint",
+      "alignment_source": "incoming_*_c",
+      "dynamic_contour_count": 11,
+      "canonical_contour_count": 17,
+      "missing_dynamic_labels": [],
+      "missing_policy": "none",
+      "lower_incisor_source_policy": "exact_imagej_reviewed_pourri2_prototype",
+      "lower_incisor_source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\review_s5_pourri2\\cases\\P9_S5_F0704\\contours_npy\\lower-incisor.npy",
+      "propagated_vs_reviewed_lower_incisor_rms_px": 1.0876821062664372,
+      "propagated_vs_reviewed_lower_incisor_max_px": 1.2412059569919465,
+      "source_annotation_sha256": {
+        "arytenoid-cartilage": "2836799d0b1c93060ecd81ead2aa6f1ca5169d6a75c57bdf6ae585015f35b1a5",
+        "epiglottis": "1c88c5486dca3b2a59171ab054f5de33b2c6c034fe40d0d1e1e9b3832fe12f63",
+        "lower-incisor": "bed42e28657dc66f8fb140b58ad96c7f34d75327799aecf6bb1e88c7a9ae2b14",
+        "lower-lip": "955984f2db9eba2924e1554f9141ebe891a160586792f8ccc90985aaa8c5dacf",
+        "pharynx": "b10e01e75dafa7913ca0327a999357c73391a84df3d93a0ec63f6c9c59077bca",
+        "soft-palate-midline": "7344a0d3b6e6193c1ab1c32d365190eeaac5070e32094d850c68e4c58bf4fb9c",
+        "thyroid-cartilage": "ef230bb5aa38b544f0e937343665c06ff2c2f74b505b0addfe2c33e9a63a4387",
+        "tongue": "a2d772e0e4fc7c2a17654084ce7d659c291ed1b5c166ff1e048e5dd5e47ccc2f",
+        "upper-incisor": "a756ced6973c177882e1930ef21b368db89af9850cd0aece65a41149542eb654",
+        "upper-lip": "4721b4f268b02284cf0b8f5529633c48da0927caccb6294fbe6b54ec07513f65",
+        "vocal-folds": "f16f302b468f8bc531b40fddcf858ce3c4e1a8216e7c1adff5dd0c15ab66a03b"
+      },
+      "png_sha256": "75752527ff4321026076546f4723a4f4380962a5027a03679853692c4e09763e",
+      "zip_sha256": "047ee7f814f2920eef1628e08e07c9bdab4fbe5e60f1efc1edba55953ca48bb0",
+      "grid_horiz_count": 6,
+      "grid_vert_count": 9,
+      "grid_warnings": []
     },
     {
-      "output_basename": "1662_P10_S14_F0110",
-      "png_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\1662_P10_S14_F0110.png",
-      "zip_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\1662_P10_S14_F0110.zip",
-      "annotation_status": "scaled_existing_canonical_zip",
-      "annotation_origin_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\1662_P10_S14_F0110.zip",
-      "source_shape": [
-        480,
-        480
-      ],
-      "target_shape": [
-        480,
-        480
-      ],
-      "scaled_contour_count": 18
+      "speaker": "P10",
+      "basename": "1662_P10_S5_F0859",
+      "session": "S5",
+      "selected_frame": 859,
+      "phone_selection": "pourri/r2/sole_u/midpoint",
+      "alignment_source": "old_textgrid_fallback",
+      "dynamic_contour_count": 11,
+      "canonical_contour_count": 17,
+      "missing_dynamic_labels": [],
+      "missing_policy": "none",
+      "lower_incisor_source_policy": "exact_imagej_reviewed_pourri2_prototype",
+      "lower_incisor_source_path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\VTLN\\data\\review_s5_pourri2\\cases\\P10_S5_F0859\\contours_npy\\lower-incisor.npy",
+      "propagated_vs_reviewed_lower_incisor_rms_px": 0.058156717640992915,
+      "propagated_vs_reviewed_lower_incisor_max_px": 0.08549721618138915,
+      "source_annotation_sha256": {
+        "arytenoid-cartilage": "bec1d73435bc8305ca52695575d844f53a6db397663afce6efd3c9bc067eb807",
+        "epiglottis": "c66327707051b8b015ff0cd952148ad952e468e926cf63621c0ece9480ea5869",
+        "lower-incisor": "ec2de92e4225ebad634cd4103ac2e1c4bf4dcc337306df1ac80bb179a62d15a5",
+        "lower-lip": "b6b1ae115b26751133764e98f3d19e58f2fe3a9e0b9f3e45b7c72049663d2096",
+        "pharynx": "b6fe50bbe6215454ba82d60d4d7a1059accd5e149a981a0bc9b939faba4235a1",
+        "soft-palate-midline": "e3e7bdf2a0acbf26b88447b9eebc0e864eec82374f48df130fdbf1e7e2f45801",
+        "thyroid-cartilage": "4a97d12ab395674b8d7fb8a57845f239d603b1a34f4f2ca33e27365dbbb6a906",
+        "tongue": "4e5d1fe2529647b2cb8fbf35fda98c3865cc4cc93b95a22217bb52e18394bf33",
+        "upper-incisor": "541ac2dff7cf1394fd7519316302b1cbcfec800759f6b59e44df378bd11fd548",
+        "upper-lip": "b89371d4812ab5691317fe2b0ce88ac97825a26beaaf6cb6a661aa56b1fe7fa7",
+        "vocal-folds": "52d4f5b42ecfe6129596e772e875b076899b6a92e5fe0654b32a07578d5a2507"
+      },
+      "png_sha256": "8a03364e2d48c0d83a46b762f8766620c52f0274b4fdc44e2540e99c3b0c9218",
+      "zip_sha256": "4c32553c7e5f77bc845c5a952d6bec98447fdb103b47019a108848d87b162a8d",
+      "grid_horiz_count": 6,
+      "grid_vert_count": 9,
+      "grid_warnings": []
     }
-  ]
+  ],
+  "transforms_to_p10": {
+    "P1": {
+      "policy": "fixed_curated_vtln_reference_to_p10",
+      "source_reference": "1612_P1_S5_F0970",
+      "target_reference": "1662_P10_S5_F0859",
+      "affine_matrix": [
+        [
+          0.9973360420921707,
+          -0.050791319094131426
+        ],
+        [
+          -0.07953222413961558,
+          0.9912090796475266
+        ]
+      ],
+      "affine_shift": [
+        -4.61889640492305,
+        55.593500920579395
+      ],
+      "affine_controls": [
+        "I1",
+        "I2",
+        "I3",
+        "I4",
+        "I5",
+        "I6",
+        "I7",
+        "P1",
+        "C1",
+        "C2",
+        "C3",
+        "C4",
+        "C5",
+        "C6"
+      ],
+      "tps_controls": [
+        "I1",
+        "I2",
+        "I3",
+        "I4",
+        "I5",
+        "I6",
+        "I7",
+        "P1",
+        "C1",
+        "C2",
+        "C3",
+        "C4",
+        "C5",
+        "C6",
+        "M1",
+        "L6"
+      ],
+      "tps_smoothing": 0.0,
+      "tps_control_residual_max_px": 1.6900763452347867e-12,
+      "tps_m1_residual_px": 3.6866145396381985e-13,
+      "tps_l6_residual_px": 2.5579538487363607e-13,
+      "tps_mean_increment_mm": 6.724027026744126,
+      "tps_max_increment_mm": 12.81207240934748,
+      "mri_inverse_policy": "numerical inverse of the exact forward affine+TPS map, initialized by a reverse zero-smoothing TPS on the same 16 controls",
+      "mri_inverse_roundtrip_rms_px": 2.1843642756840404e-10,
+      "jacobian_min": 0.5846283819142537,
+      "jacobian_median": 0.8256361675760023,
+      "jacobian_max": 1.389089582308515,
+      "jacobian_nonpositive_fraction": 0.0,
+      "jacobian_sample_count": 625
+    },
+    "P2": {
+      "policy": "fixed_curated_vtln_reference_to_p10",
+      "source_reference": "1617_P2_S5_F0657",
+      "target_reference": "1662_P10_S5_F0859",
+      "affine_matrix": [
+        [
+          0.9898736071123202,
+          0.08034020571660484
+        ],
+        [
+          0.055391575806469265,
+          0.9646454585256898
+        ]
+      ],
+      "affine_shift": [
+        -19.725624029046394,
+        15.573957496446328
+      ],
+      "affine_controls": [
+        "I1",
+        "I2",
+        "I3",
+        "I4",
+        "I5",
+        "I6",
+        "I7",
+        "P1",
+        "C1",
+        "C2",
+        "C3",
+        "C4",
+        "C5",
+        "C6"
+      ],
+      "tps_controls": [
+        "I1",
+        "I2",
+        "I3",
+        "I4",
+        "I5",
+        "I6",
+        "I7",
+        "P1",
+        "C1",
+        "C2",
+        "C3",
+        "C4",
+        "C5",
+        "C6",
+        "M1",
+        "L6"
+      ],
+      "tps_smoothing": 0.0,
+      "tps_control_residual_max_px": 5.712692894303979e-13,
+      "tps_m1_residual_px": 1.449228509952941e-13,
+      "tps_l6_residual_px": 7.105427357601002e-14,
+      "tps_mean_increment_mm": 2.554421512784151,
+      "tps_max_increment_mm": 6.1947235946216725,
+      "mri_inverse_policy": "numerical inverse of the exact forward affine+TPS map, initialized by a reverse zero-smoothing TPS on the same 16 controls",
+      "mri_inverse_roundtrip_rms_px": 8.4227237373616e-08,
+      "jacobian_min": 0.6672251409819164,
+      "jacobian_median": 0.9163208630161161,
+      "jacobian_max": 1.265502625684101,
+      "jacobian_nonpositive_fraction": 0.0,
+      "jacobian_sample_count": 625
+    },
+    "P3": {
+      "policy": "fixed_curated_vtln_reference_to_p10",
+      "source_reference": "1618_P3_S5_F0769",
+      "target_reference": "1662_P10_S5_F0859",
+      "affine_matrix": [
+        [
+          0.936946538815038,
+          0.0036440234779671274
+        ],
+        [
+          0.0586530547196995,
+          0.9668055830025069
+        ]
+      ],
+      "affine_shift": [
+        -11.553646114507226,
+        12.963704527618066
+      ],
+      "affine_controls": [
+        "I1",
+        "I2",
+        "I3",
+        "I4",
+        "I5",
+        "I6",
+        "I7",
+        "P1",
+        "C1",
+        "C2",
+        "C3",
+        "C4",
+        "C5",
+        "C6"
+      ],
+      "tps_controls": [
+        "I1",
+        "I2",
+        "I3",
+        "I4",
+        "I5",
+        "I6",
+        "I7",
+        "P1",
+        "C1",
+        "C2",
+        "C3",
+        "C4",
+        "C5",
+        "C6",
+        "M1",
+        "L6"
+      ],
+      "tps_smoothing": 0.0,
+      "tps_control_residual_max_px": 1.0785280415467626e-12,
+      "tps_m1_residual_px": 2.444927891657081e-13,
+      "tps_l6_residual_px": 1.0785280415467626e-12,
+      "tps_mean_increment_mm": 3.9911002575417673,
+      "tps_max_increment_mm": 10.811927791957006,
+      "mri_inverse_policy": "numerical inverse of the exact forward affine+TPS map, initialized by a reverse zero-smoothing TPS on the same 16 controls",
+      "mri_inverse_roundtrip_rms_px": 4.13760487353517e-08,
+      "jacobian_min": 0.4619522653640024,
+      "jacobian_median": 0.8906301517789942,
+      "jacobian_max": 1.2128457713755296,
+      "jacobian_nonpositive_fraction": 0.0,
+      "jacobian_sample_count": 625
+    },
+    "P4": {
+      "policy": "fixed_curated_vtln_reference_to_p10",
+      "source_reference": "1628_P4_S5_F0787",
+      "target_reference": "1662_P10_S5_F0859",
+      "affine_matrix": [
+        [
+          1.046177441042415,
+          -0.13262295928981516
+        ],
+        [
+          -0.1198024086254411,
+          1.0585523858604193
+        ]
+      ],
+      "affine_shift": [
+        30.570997264594453,
+        36.834797806109904
+      ],
+      "affine_controls": [
+        "I1",
+        "I2",
+        "I3",
+        "I4",
+        "I5",
+        "I6",
+        "I7",
+        "P1",
+        "C1",
+        "C2",
+        "C3",
+        "C4",
+        "C5",
+        "C6"
+      ],
+      "tps_controls": [
+        "I1",
+        "I2",
+        "I3",
+        "I4",
+        "I5",
+        "I6",
+        "I7",
+        "P1",
+        "C1",
+        "C2",
+        "C3",
+        "C4",
+        "C5",
+        "C6",
+        "M1",
+        "L6"
+      ],
+      "tps_smoothing": 0.0,
+      "tps_control_residual_max_px": 9.319894133873167e-12,
+      "tps_m1_residual_px": 9.032560559530057e-13,
+      "tps_l6_residual_px": 6.042538309847401e-13,
+      "tps_mean_increment_mm": 7.182565160908416,
+      "tps_max_increment_mm": 14.472461086045135,
+      "mri_inverse_policy": "numerical inverse of the exact forward affine+TPS map, initialized by a reverse zero-smoothing TPS on the same 16 controls",
+      "mri_inverse_roundtrip_rms_px": 1.0786830944565627e-10,
+      "jacobian_min": 0.19933567357917817,
+      "jacobian_median": 1.0053252030445612,
+      "jacobian_max": 3.03667843855431,
+      "jacobian_nonpositive_fraction": 0.0,
+      "jacobian_sample_count": 625
+    },
+    "P5": {
+      "policy": "fixed_curated_vtln_reference_to_p10",
+      "source_reference": "1635_P5_S5_F0809",
+      "target_reference": "1662_P10_S5_F0859",
+      "affine_matrix": [
+        [
+          1.065471209605893,
+          0.12633929208028885
+        ],
+        [
+          -0.2315478630346833,
+          0.9907602088928068
+        ]
+      ],
+      "affine_shift": [
+        -40.524688817027915,
+        37.35614437502403
+      ],
+      "affine_controls": [
+        "I1",
+        "I2",
+        "I3",
+        "I4",
+        "I5",
+        "I6",
+        "I7",
+        "P1",
+        "C1",
+        "C2",
+        "C3",
+        "C4",
+        "C5",
+        "C6"
+      ],
+      "tps_controls": [
+        "I1",
+        "I2",
+        "I3",
+        "I4",
+        "I5",
+        "I6",
+        "I7",
+        "P1",
+        "C1",
+        "C2",
+        "C3",
+        "C4",
+        "C5",
+        "C6",
+        "M1",
+        "L6"
+      ],
+      "tps_smoothing": 0.0,
+      "tps_control_residual_max_px": 7.958078640513122e-13,
+      "tps_m1_residual_px": 3.8263897345803627e-13,
+      "tps_l6_residual_px": 1.7112135109858138e-13,
+      "tps_mean_increment_mm": 6.611204248129598,
+      "tps_max_increment_mm": 14.262458981250854,
+      "mri_inverse_policy": "numerical inverse of the exact forward affine+TPS map, initialized by a reverse zero-smoothing TPS on the same 16 controls",
+      "mri_inverse_roundtrip_rms_px": 1.084893140934271e-11,
+      "jacobian_min": 0.2308606976967006,
+      "jacobian_median": 0.8819181706185416,
+      "jacobian_max": 1.1048409043415224,
+      "jacobian_nonpositive_fraction": 0.0,
+      "jacobian_sample_count": 625
+    },
+    "P6": {
+      "policy": "fixed_curated_vtln_reference_to_p10",
+      "source_reference": "1638_P6_S5_F1117",
+      "target_reference": "1662_P10_S5_F0859",
+      "affine_matrix": [
+        [
+          1.0196151952390016,
+          0.024959936720355465
+        ],
+        [
+          -0.2274300456361784,
+          1.064442866232782
+        ]
+      ],
+      "affine_shift": [
+        -12.617688652162903,
+        58.88364194084787
+      ],
+      "affine_controls": [
+        "I1",
+        "I2",
+        "I3",
+        "I4",
+        "I5",
+        "I6",
+        "I7",
+        "P1",
+        "C1",
+        "C2",
+        "C3",
+        "C4",
+        "C5",
+        "C6"
+      ],
+      "tps_controls": [
+        "I1",
+        "I2",
+        "I3",
+        "I4",
+        "I5",
+        "I6",
+        "I7",
+        "P1",
+        "C1",
+        "C2",
+        "C3",
+        "C4",
+        "C5",
+        "C6",
+        "M1",
+        "L6"
+      ],
+      "tps_smoothing": 0.0,
+      "tps_control_residual_max_px": 6.070879795542461e-13,
+      "tps_m1_residual_px": 5.684341886080802e-14,
+      "tps_l6_residual_px": 6.070879795542461e-13,
+      "tps_mean_increment_mm": 6.910918842452399,
+      "tps_max_increment_mm": 16.613430166006726,
+      "mri_inverse_policy": "numerical inverse of the exact forward affine+TPS map, initialized by a reverse zero-smoothing TPS on the same 16 controls",
+      "mri_inverse_roundtrip_rms_px": 1.2148241008161796e-07,
+      "jacobian_min": 0.3916576606559199,
+      "jacobian_median": 0.8965204188726075,
+      "jacobian_max": 1.5096696192653576,
+      "jacobian_nonpositive_fraction": 0.0,
+      "jacobian_sample_count": 625
+    },
+    "P7": {
+      "policy": "fixed_curated_vtln_reference_to_p10",
+      "source_reference": "1640_P7_S5_F0864",
+      "target_reference": "1662_P10_S5_F0859",
+      "affine_matrix": [
+        [
+          1.026158443194519,
+          0.19027669475346903
+        ],
+        [
+          -0.22651857333939918,
+          0.8826763096203402
+        ]
+      ],
+      "affine_shift": [
+        -39.63501868902684,
+        83.39999186885325
+      ],
+      "affine_controls": [
+        "I1",
+        "I2",
+        "I3",
+        "I4",
+        "I5",
+        "I6",
+        "I7",
+        "P1",
+        "C1",
+        "C2",
+        "C3",
+        "C4",
+        "C5",
+        "C6"
+      ],
+      "tps_controls": [
+        "I1",
+        "I2",
+        "I3",
+        "I4",
+        "I5",
+        "I6",
+        "I7",
+        "P1",
+        "C1",
+        "C2",
+        "C3",
+        "C4",
+        "C5",
+        "C6",
+        "M1",
+        "L6"
+      ],
+      "tps_smoothing": 0.0,
+      "tps_control_residual_max_px": 6.844854043943255e-13,
+      "tps_m1_residual_px": 3.2061149604142196e-13,
+      "tps_l6_residual_px": 2.6203521364587025e-13,
+      "tps_mean_increment_mm": 2.679495627860506,
+      "tps_max_increment_mm": 6.09736641583261,
+      "mri_inverse_policy": "numerical inverse of the exact forward affine+TPS map, initialized by a reverse zero-smoothing TPS on the same 16 controls",
+      "mri_inverse_roundtrip_rms_px": 7.0223609715992534e-12,
+      "jacobian_min": 0.5317080919475037,
+      "jacobian_median": 0.863154765974634,
+      "jacobian_max": 1.4912041192906067,
+      "jacobian_nonpositive_fraction": 0.0,
+      "jacobian_sample_count": 625
+    },
+    "P8": {
+      "policy": "fixed_curated_vtln_reference_to_p10",
+      "source_reference": "1653_P8_S5_F0792",
+      "target_reference": "1662_P10_S5_F0859",
+      "affine_matrix": [
+        [
+          0.9870741017156749,
+          -0.11724025681555529
+        ],
+        [
+          -0.18285929629094752,
+          1.262617701473495
+        ]
+      ],
+      "affine_shift": [
+        30.82446144897454,
+        21.642368649402815
+      ],
+      "affine_controls": [
+        "I1",
+        "I2",
+        "I3",
+        "I4",
+        "I5",
+        "I6",
+        "I7",
+        "P1",
+        "C1",
+        "C2",
+        "C3",
+        "C4",
+        "C5",
+        "C6"
+      ],
+      "tps_controls": [
+        "I1",
+        "I2",
+        "I3",
+        "I4",
+        "I5",
+        "I6",
+        "I7",
+        "P1",
+        "C1",
+        "C2",
+        "C3",
+        "C4",
+        "C5",
+        "C6",
+        "M1",
+        "L6"
+      ],
+      "tps_smoothing": 0.0,
+      "tps_control_residual_max_px": 2.355403620993077e-12,
+      "tps_m1_residual_px": 1.467232038878627e-12,
+      "tps_l6_residual_px": 5.518497755175417e-13,
+      "tps_mean_increment_mm": 10.01791651752406,
+      "tps_max_increment_mm": 21.001677851639904,
+      "mri_inverse_policy": "numerical inverse of the exact forward affine+TPS map, initialized by a reverse zero-smoothing TPS on the same 16 controls",
+      "mri_inverse_roundtrip_rms_px": 2.0371465299988173e-09,
+      "jacobian_min": 0.25169745048701525,
+      "jacobian_median": 1.0252175766103704,
+      "jacobian_max": 2.174750386168579,
+      "jacobian_nonpositive_fraction": 0.0,
+      "jacobian_sample_count": 625
+    },
+    "P9": {
+      "policy": "fixed_curated_vtln_reference_to_p10",
+      "source_reference": "1659_P9_S5_F0704",
+      "target_reference": "1662_P10_S5_F0859",
+      "affine_matrix": [
+        [
+          1.0145117734240436,
+          0.04594109990046986
+        ],
+        [
+          -0.11510762338808611,
+          1.060116644435561
+        ]
+      ],
+      "affine_shift": [
+        0.3635868197226481,
+        -12.513989579217968
+      ],
+      "affine_controls": [
+        "I1",
+        "I2",
+        "I3",
+        "I4",
+        "I5",
+        "I6",
+        "I7",
+        "P1",
+        "C1",
+        "C2",
+        "C3",
+        "C4",
+        "C5",
+        "C6"
+      ],
+      "tps_controls": [
+        "I1",
+        "I2",
+        "I3",
+        "I4",
+        "I5",
+        "I6",
+        "I7",
+        "P1",
+        "C1",
+        "C2",
+        "C3",
+        "C4",
+        "C5",
+        "C6",
+        "M1",
+        "L6"
+      ],
+      "tps_smoothing": 0.0,
+      "tps_control_residual_max_px": 1.173321007426467e-12,
+      "tps_m1_residual_px": 5.123796534383003e-14,
+      "tps_l6_residual_px": 1.173321007426467e-12,
+      "tps_mean_increment_mm": 2.7611813997954546,
+      "tps_max_increment_mm": 6.3708358268211445,
+      "mri_inverse_policy": "numerical inverse of the exact forward affine+TPS map, initialized by a reverse zero-smoothing TPS on the same 16 controls",
+      "mri_inverse_roundtrip_rms_px": 6.635961368852433e-07,
+      "jacobian_min": 0.579859486251917,
+      "jacobian_median": 1.095257851253607,
+      "jacobian_max": 1.419212941619239,
+      "jacobian_nonpositive_fraction": 0.0,
+      "jacobian_sample_count": 625
+    },
+    "P10": {
+      "policy": "identity",
+      "affine_matrix": [
+        [
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0
+        ]
+      ],
+      "affine_shift": [
+        0.0,
+        0.0
+      ],
+      "affine_controls": [
+        "I1",
+        "I2",
+        "I3",
+        "I4",
+        "I5",
+        "I6",
+        "I7",
+        "P1",
+        "C1",
+        "C2",
+        "C3",
+        "C4",
+        "C5",
+        "C6"
+      ],
+      "tps_controls": [
+        "I1",
+        "I2",
+        "I3",
+        "I4",
+        "I5",
+        "I6",
+        "I7",
+        "P1",
+        "C1",
+        "C2",
+        "C3",
+        "C4",
+        "C5",
+        "C6",
+        "M1",
+        "L6"
+      ],
+      "tps_smoothing": 0.0,
+      "tps_control_residual_max_px": 0.0,
+      "tps_m1_residual_px": 0.0,
+      "tps_l6_residual_px": 0.0,
+      "jacobian_min": 1.0,
+      "jacobian_median": 1.0,
+      "jacobian_max": 1.0,
+      "jacobian_nonpositive_fraction": 0.0,
+      "jacobian_sample_count": 625,
+      "mri_inverse_policy": "identity",
+      "mri_inverse_roundtrip_rms_px": 0.0
+    }
+  },
+  "tps_nonpositive_jacobian_speakers": [],
+  "overlays": {
+    "affine": {
+      "relative_path": "all_affine_contours_overlay.png",
+      "width": 2425,
+      "height": 2685,
+      "bytes": 918363,
+      "sha256": "8ee0f65770bc4ffbad6bd2c01ca6fdd3a1b7d7100fd6b9966c069745d374b770"
+    },
+    "affine_tps": {
+      "relative_path": "all_tps_contours_overlay.png",
+      "width": 2425,
+      "height": 2685,
+      "bytes": 867047,
+      "sha256": "a1ccf76a02ba1964b1dd4c3b7668eb59957d986180873fe20d941020493fa102"
+    },
+    "tps_m1_l6_match": {
+      "relative_path": "tps_m1_l6_match_sheet.png",
+      "width": 2389,
+      "height": 2618,
+      "bytes": 246351,
+      "sha256": "3f583539079939f5c16bca07051a27d20da29b5fb84e8a3a5638eaa7091c3a89"
+    }
+  },
+  "current_top_level_file_hashes_unchanged": true
 }
