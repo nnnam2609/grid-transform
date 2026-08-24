@@ -1,14 +1,13 @@
-# GTGRD v0.1.18
+# GTGRD v0.1.19
 
 GTGRD means Grid Transform Geometry Reference Data. `VTLN/data` remains the
 runtime compatibility path.
 
-- Ten top-level references P1-P10 use the midpoint frame of S5 `pourri #2 /u/`.
-- RGB triplets are `R=t-1, G=t, B=t+1`, cropped from the matching review AVI and resized to 480x480.
-- Dynamic contours are the latest available native 136x136 inference annotations, scaled directly to 480x480.
-- For P1 and P3-P10, `lower-incisor` is the exact manually reviewed ImageJ prototype from the S5 pourri #2 review workspace. This deliberately takes precedence over the later all-frame propagated copy, which preserves placement but not the exact reviewed 50-point prototype.
-- P2 has no manually reviewed lower-incisor prototype, so its observed inference contour is retained.
-- `upper-incisor` and `lower-incisor` are stored under the historical canonical labels `incisior-hard-palate` and `mandible-incisior`.
-- C1-C6 remain the fixed speaker-specific auxiliary contours from the preceding canonical geometry release.
-- P2 has ten observed dynamic contours; `vocal-folds` is absent at its selected interval and is not imputed.
-- All dynamic ROIs are stored as open ImageJ polylines; C1-C6 retain closed FREEHAND topology.
+- The ten ASD1 references P1-P10 are byte-identical to GTGRD v0.1.18 and use the midpoint frame of S5 `pourri #2 /u/`.
+- ASD2 adds `1791/S29/F2812`, the user-selected exact `/u/` shape reference with the final ImageJ-reviewed `RoiSet_update.zip` geometry.
+- RGB triplets use `R=t-1, G=t, B=t+1` and are 480x480. ASD1 triplets retain their original review-AVI conversion. ASD2 uses registered uint16 MRI frames F2811-F2813, one shared linear min/max conversion to uint8, and cubic resize from 136x136 to 480x480.
+- ASD2 contains 11 dynamic contours plus C1-C6. The current server-`bf` incisors and final manually updated cervical contours are retained exactly before the common 136-to-480 resize.
+- Dynamic contours are stored as open ImageJ polylines; C1-C6 retain FREEHAND topology.
+- Historical labels `incisior-hard-palate` and `mandible-incisior` remain the canonical stored names for upper and lower incisors.
+- P2 still has ten observed dynamic contours; `vocal-folds` is absent and is not imputed.
+- GTGRD v0.1.19 changes data only. It does not change affine/TPS controls, transform ordering, landmark definitions, or P2CP metrics.

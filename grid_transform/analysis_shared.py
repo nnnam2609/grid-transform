@@ -22,10 +22,11 @@ CURATED_SPEAKER_GENDER = {
     "P8": "female",
     "P9": "female",
     "P10": "female",
+    "ASD2": "female",
 }
 IMAGE_SUFFIXES = (".png", ".tif", ".tiff")
 CURATED_BASENAME_RE = re.compile(
-    r"^(?P<raw_subject>\d+)_(?P<speaker>P\d+)_(?P<session>S\d+)_F(?P<frame>\d+)$",
+    r"^(?P<raw_subject>\d+)_(?P<speaker>P\d+|ASD2)_(?P<session>S\d+)_F(?P<frame>\d+)$",
     re.IGNORECASE,
 )
 DEFAULT_N_VERT = 9

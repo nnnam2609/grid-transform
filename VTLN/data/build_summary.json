@@ -1,9 +1,9 @@
 {
-  "schema_version": "s5-pourri2-geometry-reference-candidate-v1",
-  "version": "0.1.18",
-  "created_at_utc": "2026-08-16T01:32:55.749151+00:00",
+  "schema_version": "gtgrd-v0.1.19-asd2-extension-v1",
+  "version": "0.1.19",
+  "created_at_utc": "2026-08-24T02:54:42.725344+00:00",
   "status": "PASS",
-  "scope": "validated candidate; canonical when promoted into VTLN/data",
+  "scope": "canonical GTGRD v0.1.18 ASD1 references plus reviewed ASD2 1791/S29/F2812",
   "reference_speaker": "P10",
   "speaker_order": [
     "P1",
@@ -15,7 +15,8 @@
     "P7",
     "P8",
     "P9",
-    "P10"
+    "P10",
+    "ASD2"
   ],
   "phone_selection": "S5 pourri repetition 2, sole /u/, midpoint frame",
   "dynamic_roi_topology": "open POLYLINE",
@@ -375,6 +376,59 @@
       },
       "png_sha256": "8a03364e2d48c0d83a46b762f8766620c52f0274b4fdc44e2540e99c3b0c9218",
       "zip_sha256": "4c32553c7e5f77bc845c5a952d6bec98447fdb103b47019a108848d87b162a8d",
+      "grid_horiz_count": 6,
+      "grid_vert_count": 9,
+      "grid_warnings": []
+    },
+    {
+      "speaker": "ASD2",
+      "raw_subject": "1791",
+      "basename": "1791_ASD2_S29_F2812",
+      "session": "S29",
+      "selected_frame": 2812,
+      "phone_selection": "exact /u/; user-selected shape reference",
+      "image_coordinate_space": "registered 136x136",
+      "image_intensity_policy": "shared F2811-F2813 linear min/max to uint8 before cubic 480x480 resize",
+      "image_intensity_range": {
+        "source_min": 0.0,
+        "source_max": 2205.0,
+        "output_min": 0.0,
+        "output_max": 255.0
+      },
+      "source_mri_sha256": {
+        "F2811": "c42e301fb38fbb4b36e3ac706d13f35449180a164d72ab4438d50dce6be5c97f",
+        "F2812": "344e919a81ce84de4bdcc148df939be161f45446dc502e021472f1886809753d",
+        "F2813": "61c76653d1bcfc594279e4902d50bd5aaeeefc26bd52bbf44b807faaf40834b9"
+      },
+      "source_roi_zip": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\asd2_1791_stable_tongue_search_20260824_v2\\S29_F2812_imagej_manual_edit\\RoiSet_update.zip",
+      "source_roi_zip_sha256": "678834b699dd0a884383bedbdf9b371d754cc4d2839f5592bf5c8010c77f28a1",
+      "source_roi_member_sha256": {
+        "C1": "9e2b26840e2ecfcfb9192bac805c78dcba43a6352c2c979d2c3dad04ccba661e",
+        "C2": "5cdbdc7adf3ebe88a1c4a111f1d5cfee4cc2b143737c7682a41ef1d34f4e18b6",
+        "C3": "53aa63e878cdba16ec8f7771372156e75eafdb906464e069a80759ab1512d79e",
+        "C4": "f0ca956ea41451c1b402e3d378dc1a62f0056787611f034d8c1ebf43dc1aa89b",
+        "C5": "04f688089e96e773b83f758814441f0e3d750e6e144ed02921d7aa86baa6a719",
+        "C6": "53b0c2f9b63a3a97893dbc34bff07c3afa43ca8b88c9c54f543fd6770a8adcee",
+        "arytenoid-cartilage": "d4dd0562eb6bb08bb9a832f116461b265f1337301912ff0b02cfeaeb18f5555e",
+        "epiglottis": "907e859850ad652f97d2a2a9239694e479cdc8e7ee2e30b6538ceda2ad9e4fd4",
+        "lower-incisor": "dbd900b2a2342fb23959541173b91496dd9b705100693e77bd325bc722d0c777",
+        "lower-lip": "29469874891ca8fb7d0bf238dc0222fb6b61e176cc6808811686fdfebbdfd5ad",
+        "pharynx": "6d129202a7599753980882527a94bf32ef4b2249e752b1ddf3b80683b1c6ab0f",
+        "soft-palate-midline": "aae3fca8fa07ea9cfe0bdcd62a246f3d250d65a800a072a40863babf2d914ea9",
+        "thyroid-cartilage": "546c5e6c0fa2bd81a746c9947c1fbc14017e236931106d48ad5be06ad316478d",
+        "tongue": "0f6552ef6baf2450d6f3d97c1ac542b7dd3e862249e881c50a6e4a9edd7ebebc",
+        "upper-incisor": "38da4f6b61946b03f662d7507a085cd454fb784f810fcb83a98af0fe78fca798",
+        "upper-lip": "4927b80c0c4eae7acf79c02885d1ade74efe0f785657c891fad807b2a8b767bb",
+        "vocal-folds": "b41166eca228dc697a48d508ab69e7177c36c155286e7a5d1c0ab8446f1d4bc9"
+      },
+      "dynamic_contour_count": 11,
+      "canonical_contour_count": 17,
+      "missing_dynamic_labels": [],
+      "incisor_policy": "latest server-bf upper/lower incisors retained from reviewed RoiSet_update",
+      "cervical_policy": "final user-reviewed C1-C6 from RoiSet_update",
+      "png_sha256": "ed9f57b12c7d48416cdb5c533673a1fd93c71f8d14cc667658ae4cb81ce84179",
+      "zip_sha256": "8bed4662a406e25a00c6bac01bb7546ebbc3d9bdd67a8a864b77e1b9206e9802",
+      "roi_round_trip_max_px_480": 1.3968771625115338e-05,
       "grid_horiz_count": 6,
       "grid_vert_count": 9,
       "grid_warnings": []
@@ -1062,5 +1116,12 @@
       "sha256": "3f583539079939f5c16bca07051a27d20da29b5fb84e8a3a5638eaa7091c3a89"
     }
   },
-  "current_top_level_file_hashes_unchanged": true
+  "current_top_level_file_hashes_unchanged": true,
+  "asd2_reference_policy": {
+    "role": "additional transform/reference geometry; does not replace P10",
+    "reference_speaker_for_historical_v018_diagnostics": "P10",
+    "transforms_to_p10_recomputed": false,
+    "reason": "v0.1.19 is an additive data release; prior P1-P10 transform diagnostics remain unchanged"
+  },
+  "base_v018_nonmetadata_files_unchanged": true
 }

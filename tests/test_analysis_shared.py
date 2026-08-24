@@ -23,17 +23,23 @@ class AnalysisSharedTests(unittest.TestCase):
             manifest_path.write_text(
                 "speaker,output_basename,raw_subject,selected_source\n"
                 "P7,1640_P7_S2_F0829,1640,1640/S2/F0829\n"
-                "P4,1637_P4_S3_F0123,1637,1637/S3/F0123\n",
+                "P4,1637_P4_S3_F0123,1637,1637/S3/F0123\n"
+                "ASD2,1791_ASD2_S29_F2812,1791,ASD2/S29/F2812\n",
                 encoding="utf-8",
             )
             (tmp_dir / "1640_P7_S2_F0829.png").write_bytes(b"png")
             (tmp_dir / "1637_P4_S3_F0123.png").write_bytes(b"png")
             specs_map = read_curated_specs_map(tmp_dir)
             specs_list = read_curated_specs_list(tmp_dir)
-            self.assertEqual(sorted(specs_map), ["P4", "P7"])
-            self.assertEqual([spec.basename for spec in specs_list], ["1637_P4_S3_F0123", "1640_P7_S2_F0829"])
+            self.assertEqual(sorted(specs_map), ["ASD2", "P4", "P7"])
+            self.assertEqual(
+                [spec.basename for spec in specs_list],
+                ["1637_P4_S3_F0123", "1640_P7_S2_F0829", "1791_ASD2_S29_F2812"],
+            )
             self.assertEqual(specs_map["P7"].session, "S2")
             self.assertEqual(specs_map["P7"].frame, 829)
+            self.assertEqual(specs_map["ASD2"].session, "S29")
+            self.assertEqual(specs_map["ASD2"].frame, 2812)
 
     def test_stack_resampled_contours_and_colors(self) -> None:
         contours = {
