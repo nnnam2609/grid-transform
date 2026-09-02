@@ -1,9 +1,9 @@
 {
-  "schema_version": "gtgrd-v0.1.19-asd2-extension-v1",
-  "version": "0.1.19",
-  "created_at_utc": "2026-08-24T02:54:42.725344+00:00",
+  "schema_version": "gtgrd-v0.1.20-final-imagej-registered-p10-v1",
+  "version": "0.1.20",
+  "created_at_utc": "2026-09-02T16:06:57.755837+00:00",
   "status": "PASS",
-  "scope": "canonical GTGRD v0.1.18 ASD1 references plus reviewed ASD2 1791/S29/F2812",
+  "scope": "GTGRD v0.1.19 plus final ImageJ edits for ASD2/P7/P8/P9/P10; ASD2 uses S29/F2180 and P10 is registered by default",
   "reference_speaker": "P10",
   "speaker_order": [
     "P1",
@@ -273,10 +273,144 @@
         "vocal-folds": "069216336c51548d32c21e7a8e64534fef8a8058d1b28124d16e8b5abaf62d03"
       },
       "png_sha256": "ba9ffb93a795a4d25a33a23759adeeb1302b1d66563288357923d49d84a9a628",
-      "zip_sha256": "efcecff4e92745b62822ea4fa277628114a9c81c288abcea7ee435d9e8579d0c",
+      "zip_sha256": "25266b4b6ececba6d7667a7ffd4db8387facc9b589995ec50bb43d24b7936769",
       "grid_horiz_count": 6,
       "grid_vert_count": 9,
-      "grid_warnings": []
+      "grid_warnings": [],
+      "final_imagej_import": {
+        "user_roi_zip": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\reference-to-target\\asd2-reference-to-target_P10-stage1-registered\\imagej_sequence\\per_slice\\007_P7\\RoiSet.zip",
+        "user_roi_zip_sha256": "e38635e3a8eb267857cbcb56df943b705539b001c41b4f685c87004bfaee2a2e",
+        "full17_vocal_folds_source": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\reference-to-target\\asd2-reference-to-target_P10-stage1-registered\\imagej_sequence\\per_slice\\007_P7\\007_P7_existing_target_full17_RoiSet.zip",
+        "coordinate_policy": "unchanged_GTGRD_480_space",
+        "roi_metadata": {
+          "members": {
+            "arytenoid-cartilage": {
+              "member": "001_P7_arytenoid-cartilage.roi",
+              "sha256": "04b3e92f554a637451c0ae7748e2ed9d9b8956f2aceef1aace6f68dacabbe9ea",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 50
+            },
+            "c1": {
+              "member": "001_P7_c1.roi",
+              "sha256": "8a22dba43f6ece70e7be8ec4c867ba14a00df36460b442e239f7bf4e3968fde4",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 16
+            },
+            "c2": {
+              "member": "001_P7_c2.roi",
+              "sha256": "3bb42949a982e6549cfe18229bb47df30603da0d93f6407010b85f70f991ff73",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 28
+            },
+            "c3": {
+              "member": "001_P7_c3.roi",
+              "sha256": "bd833464c73e8ae8ccd4b7491db2d3b1690e11eefbe21feebbb53123b760550e",
+              "roi_type": "POLYLINE",
+              "position": 0,
+              "point_count": 28
+            },
+            "c4": {
+              "member": "001_P7_c4.roi",
+              "sha256": "30cf8e742a010a4fc5cc11e996208d62a1f6701795350f1d2aea1fb7a243f4b2",
+              "roi_type": "POLYLINE",
+              "position": 0,
+              "point_count": 16
+            },
+            "c5": {
+              "member": "001_P7_c5.roi",
+              "sha256": "021031578c0781d51029f1ec3739fd0d3f228e09f44e50ed15e4afd9fd02e9dc",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 14
+            },
+            "c6": {
+              "member": "001_P7_c6.roi",
+              "sha256": "4c4ce6382d305d8748ec949bef366e6acdcfeb116527f0ed9cb0450a80d10bfe",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 19
+            },
+            "epiglottis": {
+              "member": "001_P7_epiglottis.roi",
+              "sha256": "c673db6a781fb304f053d6655b58fedd56497266ce7636947e81600f0bb82571",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 50
+            },
+            "lower-incisor": {
+              "member": "001_P7_lower-incisor.roi",
+              "sha256": "762f227effb16d94883b61a2eb8c9e10ebca43e8796b17e187ede1235eea79f5",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 50
+            },
+            "lower-lip": {
+              "member": "001_P7_lower-lip.roi",
+              "sha256": "e396783f0b915557ddd673cfdff361bf1cdea7938cca8a34d3a4b39e77b64617",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 50
+            },
+            "pharynx": {
+              "member": "001_P7_pharynx.roi",
+              "sha256": "afcee73412159f5188bcb4d3ba8dbda014203b64e3baa627a422cb4215a48ac8",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 50
+            },
+            "soft-palate-midline": {
+              "member": "001_P7_soft-palate-midline.roi",
+              "sha256": "2dcee5c41a17dcc832cd2d13189c25d1e0f6632b796299ea550cc3e2393bd9ce",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 50
+            },
+            "thyroid-cartilage": {
+              "member": "001_P7_thyroid-cartilage.roi",
+              "sha256": "37740f8ac0da4801c0e68c26230a101bfce74b5d53edac15786f86488b94a274",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 50
+            },
+            "tongue": {
+              "member": "001_P7_tongue.roi",
+              "sha256": "7f27a850f840622c73c34ca992dc0957dcc7c3cadcc02ec3b01bd91da344ac28",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 50
+            },
+            "upper-incisor": {
+              "member": "001_P7_upper-incisor.roi",
+              "sha256": "77cd7d5a3a23a6c3aa2b7a47730e3363f4d2c779f2fa4565357f75dcacd22d66",
+              "roi_type": "POLYLINE",
+              "position": 0,
+              "point_count": 50
+            },
+            "upper-lip": {
+              "member": "001_P7_upper-lip.roi",
+              "sha256": "cfe6443b1731b9e4eeb80ba7a617d8b37d5f005c3916b0caf2a54ad3f8628db9",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 50
+            }
+          },
+          "zip_sha256": "e38635e3a8eb267857cbcb56df943b705539b001c41b4f685c87004bfaee2a2e",
+          "vocal_folds_fallback": {
+            "path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\reference-to-target\\asd2-reference-to-target_P10-stage1-registered\\imagej_sequence\\per_slice\\007_P7\\007_P7_existing_target_full17_RoiSet.zip",
+            "zip_sha256": "1df82a83aa7bdaac84bb4f40a5e1f48ff6be628912b941a8213c479d81f473e3",
+            "member": {
+              "member": "001_P7_vocal-folds.roi",
+              "sha256": "b2afac373fa49f8e9c24478f095a1cd1aad6526f31444a536590c48b7e212740",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 50
+            }
+          }
+        }
+      }
     },
     {
       "speaker": "P8",
@@ -307,10 +441,144 @@
         "vocal-folds": "7f9d9cb98aa8fc5ffe4d2f2aca2923b9beeb71b0703de5fd450f0e661b4e7f65"
       },
       "png_sha256": "9b83185953e9ef591ef2068cbd85d89a0c9da9612bc1fc27f11e903eb45dab3a",
-      "zip_sha256": "c16987552a38bf5e90d3df319c77da0b0b16d8d903c1984e54a44b188251d1f1",
+      "zip_sha256": "2d2edff24630626e454c899ef36867e5de4500c249e55db1a8a92583abdd8a9c",
       "grid_horiz_count": 6,
       "grid_vert_count": 9,
-      "grid_warnings": []
+      "grid_warnings": [],
+      "final_imagej_import": {
+        "user_roi_zip": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\reference-to-target\\asd2-reference-to-target_P10-stage1-registered\\imagej_sequence\\per_slice\\008_P8\\RoiSet.zip",
+        "user_roi_zip_sha256": "e41fbdf9fcbce2390235e2e3013ab6b21c2807fe9479e6ffc15d2e65d91f3dc7",
+        "full17_vocal_folds_source": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\reference-to-target\\asd2-reference-to-target_P10-stage1-registered\\imagej_sequence\\per_slice\\008_P8\\008_P8_existing_target_full17_RoiSet.zip",
+        "coordinate_policy": "unchanged_GTGRD_480_space",
+        "roi_metadata": {
+          "members": {
+            "arytenoid-cartilage": {
+              "member": "001_P8_arytenoid-cartilage.roi",
+              "sha256": "bcb2d8fb859363f13775f70991c86ecdae0172eaeb27719edcc6730fc66fb05b",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 50
+            },
+            "c1": {
+              "member": "001_P8_c1.roi",
+              "sha256": "414d2e32af2dac0692230b49f6f4beba9699bbec50c5402160cc870557e67556",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 17
+            },
+            "c2": {
+              "member": "001_P8_c2.roi",
+              "sha256": "1cf1750f7f1b4afa15e864f3bd6f956c27f5a2af166820cbeab8879bebde6fa7",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 28
+            },
+            "c3": {
+              "member": "001_P8_c3.roi",
+              "sha256": "883536383d8b8a467cd43128b94aba0ef0517683ac226b9f6a170932e2f6a98a",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 23
+            },
+            "c4": {
+              "member": "001_P8_c4.roi",
+              "sha256": "e1c05d9d2cf1995958bf50a1cf2e9585835e2cbdb946136ab86430c63d31c883",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 21
+            },
+            "c5": {
+              "member": "001_P8_c5.roi",
+              "sha256": "8d1a69720a63423a5e7db145a1e0b33684eade177615d67fce7de48d7193b006",
+              "roi_type": "POLYLINE",
+              "position": 0,
+              "point_count": 24
+            },
+            "c6": {
+              "member": "001_P8_c6.roi",
+              "sha256": "6e0fd99f4a57e97528f12f37a00a1e4cdeac67f319d9cdfb5315ccd96c0fab2d",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 25
+            },
+            "epiglottis": {
+              "member": "001_P8_epiglottis.roi",
+              "sha256": "43c22ed7d89986ab5a512ee5c5d148f3ada4dc45238a9ecb3358b634cf7d4fa2",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 50
+            },
+            "lower-incisor": {
+              "member": "001_P8_lower-incisor.roi",
+              "sha256": "319d70512737a6192825196c66d6f69e22cf0f2e78280b28787d67308a9e5686",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 50
+            },
+            "lower-lip": {
+              "member": "001_P8_lower-lip.roi",
+              "sha256": "7139968e7b5f4a53cae8e09a8d747b015288daf6b633f6f444322aa5e440f52d",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 50
+            },
+            "pharynx": {
+              "member": "001_P8_pharynx.roi",
+              "sha256": "1a349e6f9a49ea25bd9085a77e5d1dffbbf739b34e7de7b07f5564389fc65b09",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 50
+            },
+            "soft-palate-midline": {
+              "member": "001_P8_soft-palate-midline.roi",
+              "sha256": "925e04997b9b739fab205d689553aaef80a5240c5a5642d8bf2a8888ec38e060",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 50
+            },
+            "thyroid-cartilage": {
+              "member": "001_P8_thyroid-cartilage.roi",
+              "sha256": "8ca210652c31461505843a125a33e86729f3314a7d13fd18c5c4803828dcda39",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 50
+            },
+            "tongue": {
+              "member": "001_P8_tongue.roi",
+              "sha256": "09a34a9289a7a562b05d33ba5934b998eac41be46485bd5020fec75176061582",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 50
+            },
+            "upper-incisor": {
+              "member": "001_P8_upper-incisor.roi",
+              "sha256": "b3babd553ad9fecda25bf1b5e4a80d591a279f5cdd8e883c28ff248c1180f8b7",
+              "roi_type": "POLYLINE",
+              "position": 0,
+              "point_count": 50
+            },
+            "upper-lip": {
+              "member": "001_P8_upper-lip.roi",
+              "sha256": "e5e257f13ec67d4bc72732be90573d8f650a69363d7567d41bb9fc5bf8b9d889",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 50
+            }
+          },
+          "zip_sha256": "e41fbdf9fcbce2390235e2e3013ab6b21c2807fe9479e6ffc15d2e65d91f3dc7",
+          "vocal_folds_fallback": {
+            "path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\reference-to-target\\asd2-reference-to-target_P10-stage1-registered\\imagej_sequence\\per_slice\\008_P8\\008_P8_existing_target_full17_RoiSet.zip",
+            "zip_sha256": "cc4bb748f1243af43c996649c49aa0b959ee0194f33079809ab2a6eb97584a79",
+            "member": {
+              "member": "001_P8_vocal-folds.roi",
+              "sha256": "99c9e75cdb90dfc09bad845431bc1afd366f1c41a535142838bc105b7777ea4d",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 50
+            }
+          }
+        }
+      }
     },
     {
       "speaker": "P9",
@@ -341,10 +609,144 @@
         "vocal-folds": "f16f302b468f8bc531b40fddcf858ce3c4e1a8216e7c1adff5dd0c15ab66a03b"
       },
       "png_sha256": "75752527ff4321026076546f4723a4f4380962a5027a03679853692c4e09763e",
-      "zip_sha256": "047ee7f814f2920eef1628e08e07c9bdab4fbe5e60f1efc1edba55953ca48bb0",
+      "zip_sha256": "7fc7844ffa73d50d6b8c37b94ed8b5a4f9eb66f11a4a107c5272e69c017301a0",
       "grid_horiz_count": 6,
       "grid_vert_count": 9,
-      "grid_warnings": []
+      "grid_warnings": [],
+      "final_imagej_import": {
+        "user_roi_zip": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\reference-to-target\\asd2-reference-to-target_P10-stage1-registered\\imagej_sequence\\per_slice\\009_P9\\RoiSet.zip",
+        "user_roi_zip_sha256": "05e28137c5d30ab177b1fcec7303edec9ea34e749afd40762d837383a2447db9",
+        "full17_vocal_folds_source": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\reference-to-target\\asd2-reference-to-target_P10-stage1-registered\\imagej_sequence\\per_slice\\009_P9\\009_P9_existing_target_full17_RoiSet.zip",
+        "coordinate_policy": "unchanged_GTGRD_480_space",
+        "roi_metadata": {
+          "members": {
+            "arytenoid-cartilage": {
+              "member": "001_P9_arytenoid-cartilage.roi",
+              "sha256": "0d30e79cf0ca9f59140634dd7e50717097cc737afa30652a31c2a2d308667519",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 50
+            },
+            "c1": {
+              "member": "001_P9_c1.roi",
+              "sha256": "ceca4553a4dd11d561920e95a9ad24e38bcae298749f7ccd6c3902af87067abf",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 24
+            },
+            "c2": {
+              "member": "001_P9_c2.roi",
+              "sha256": "25a764586b154408fb493d99884da066c15c46db48d49ef67bd0a64445a60d09",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 27
+            },
+            "c3": {
+              "member": "001_P9_c3.roi",
+              "sha256": "078474c5544c44b6079971deb75607c755a5946033b54ea312ea3506fa52e4c9",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 26
+            },
+            "c4": {
+              "member": "001_P9_c4.roi",
+              "sha256": "f8e4bb11d654f587095a3812147ccdb5e888f8d6702dddad09d6c6182f88da27",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 16
+            },
+            "c5": {
+              "member": "001_P9_c5.roi",
+              "sha256": "776e6d026bc42bddb848dc7d4a5391287d52875936b4cbe2964ba331b0650800",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 26
+            },
+            "c6": {
+              "member": "001_P9_c6.roi",
+              "sha256": "54d2b8b23a6284209c530a4895757e4c3fcabbbc281e1d14770a18f3fb96ebd6",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 32
+            },
+            "epiglottis": {
+              "member": "001_P9_epiglottis.roi",
+              "sha256": "bab1c98c29696eeb864f3a73db90b8456e38e9525cdd569eb27952c20cd193cd",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 50
+            },
+            "lower-incisor": {
+              "member": "001_P9_lower-incisor.roi",
+              "sha256": "11d17e4ca7eb9287d1499b4edc24b5a4bda8260a2ed191638ef358d21ed8817d",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 50
+            },
+            "lower-lip": {
+              "member": "001_P9_lower-lip.roi",
+              "sha256": "9087ddae406d4a9ff19279e4cfafd35cd9764a6f8db12d8d26b4f79adc42d18d",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 50
+            },
+            "pharynx": {
+              "member": "001_P9_pharynx.roi",
+              "sha256": "7a4b12d1d95b4bd0effabbcb2f15f3cee0949d2bf78f37f9df221786aca7788c",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 50
+            },
+            "soft-palate-midline": {
+              "member": "001_P9_soft-palate-midline.roi",
+              "sha256": "2fc468c0f6f80b1254ed73672f573a19e208170df2b74afd26280f8c0cf45edd",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 50
+            },
+            "thyroid-cartilage": {
+              "member": "001_P9_thyroid-cartilage.roi",
+              "sha256": "e0d496c4f06203013a5a1825e29c125ed8a350c9b57a4776a4a1bedf34dd7d15",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 50
+            },
+            "tongue": {
+              "member": "001_P9_tongue.roi",
+              "sha256": "a3c6933dbb62ae485f507536b34ea4bb5534c316d030a440883084aecce61663",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 50
+            },
+            "upper-incisor": {
+              "member": "001_P9_upper-incisor.roi",
+              "sha256": "29dd2e49e430fdb773581f420a4ac8bf2ef77f01d8b88a3947bc60bd5692050a",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 50
+            },
+            "upper-lip": {
+              "member": "001_P9_upper-lip.roi",
+              "sha256": "4f99cdf03d72078313b60b529504556574083265ef1a8d3918477d0b3fa63c7c",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 50
+            }
+          },
+          "zip_sha256": "05e28137c5d30ab177b1fcec7303edec9ea34e749afd40762d837383a2447db9",
+          "vocal_folds_fallback": {
+            "path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\reference-to-target\\asd2-reference-to-target_P10-stage1-registered\\imagej_sequence\\per_slice\\009_P9\\009_P9_existing_target_full17_RoiSet.zip",
+            "zip_sha256": "27dc1fc91df2f6cb98198827b2eb8c369655d2ba20b27a02146afb2438a43378",
+            "member": {
+              "member": "001_P9_vocal-folds.roi",
+              "sha256": "5512dcb69a44a6cc9dc604fea28ade006ec21b9843c4d88e6aa2d3c13c3d4754",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 50
+            }
+          }
+        }
+      }
     },
     {
       "speaker": "P10",
@@ -374,19 +776,153 @@
         "upper-lip": "b89371d4812ab5691317fe2b0ce88ac97825a26beaaf6cb6a661aa56b1fe7fa7",
         "vocal-folds": "52d4f5b42ecfe6129596e772e875b076899b6a92e5fe0654b32a07578d5a2507"
       },
-      "png_sha256": "8a03364e2d48c0d83a46b762f8766620c52f0274b4fdc44e2540e99c3b0c9218",
-      "zip_sha256": "4c32553c7e5f77bc845c5a952d6bec98447fdb103b47019a108848d87b162a8d",
+      "png_sha256": "9e8051ad25742e78a58cc9b35864ba10fd2c4b694a6a4bc2632838a73140c8db",
+      "zip_sha256": "e791a9de7560cb189bad531f107ad7b93708985b71ea6fce99cfafd870dd5838",
       "grid_horiz_count": 6,
       "grid_vert_count": 9,
-      "grid_warnings": []
+      "grid_warnings": [],
+      "final_imagej_import": {
+        "user_roi_zip": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\reference-to-target\\asd2-reference-to-target_P10-stage1-registered\\imagej_sequence\\per_slice\\010_P10\\RoiSet.zip",
+        "user_roi_zip_sha256": "7a23db92a9db52184cfc01db85cddb292eee560dcb14d00772a45560d1950c3d",
+        "full17_vocal_folds_source": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\reference-to-target\\asd2-reference-to-target_P10-stage1-registered\\imagej_sequence\\per_slice\\010_P10\\010_P10_existing_target_full17_RoiSet.zip",
+        "coordinate_policy": "stage1_registered_default_no_inverse",
+        "roi_metadata": {
+          "members": {
+            "arytenoid-cartilage": {
+              "member": "001_P10_arytenoid-cartilage.roi",
+              "sha256": "12bd54db17305116b39c02f939f5d38bae59e197eb99c564e55b6a8ca87a1dfb",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 50
+            },
+            "c1": {
+              "member": "001_P10_c1.roi",
+              "sha256": "10bc80134f641edef383cc1fcf7a230442224bf731b412c0d3d3a13ee75466a9",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 17
+            },
+            "c2": {
+              "member": "001_P10_c2.roi",
+              "sha256": "960a0affca1f7e80db8e72d50e3528d5e7f5ff996740b25997dea9d3ac686a1f",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 28
+            },
+            "c3": {
+              "member": "001_P10_c3.roi",
+              "sha256": "ba9fea8898755ae4dcdd9aac771102456df46b6243ddc036ccfbdfd58020be2c",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 23
+            },
+            "c4": {
+              "member": "001_P10_c4.roi",
+              "sha256": "bd06f43cd2bee91824aa4ee85b3d35083d976febb2d2d086eba0f3f69d287132",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 21
+            },
+            "c5": {
+              "member": "001_P10_c5.roi",
+              "sha256": "2c6ac5c189419b17318a6630ca7ab0b97c0ba1c6ae3c0e97a68437720389da2a",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 24
+            },
+            "c6": {
+              "member": "001_P10_c6.roi",
+              "sha256": "21412fd48798378197e2aecdd2d5470aa89d3600e898d2dc98001147442d3af9",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 25
+            },
+            "epiglottis": {
+              "member": "001_P10_epiglottis.roi",
+              "sha256": "12a1a30ff670ca245a07e9bf3042cee7daa0c744ca38e3cf957a16e0e3b24b43",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 50
+            },
+            "lower-incisor": {
+              "member": "001_P10_lower-incisor.roi",
+              "sha256": "b44adc3fcdacd03ef37564ad7c000fc130a31316122f1c569ed6754bd5595fd0",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 50
+            },
+            "lower-lip": {
+              "member": "001_P10_lower-lip.roi",
+              "sha256": "e5a034a9aa04ed84afd0df417f121cf12ebfd863b3de5c5b71c398841fae6933",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 50
+            },
+            "pharynx": {
+              "member": "001_P10_pharynx.roi",
+              "sha256": "12ae8d6a34d0a84a9d30b026b529da2a3702edc3b4d48aa4da4bb6d3df2d255a",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 50
+            },
+            "soft-palate-midline": {
+              "member": "001_P10_soft-palate-midline.roi",
+              "sha256": "943bd489c21b18199246e7d1757eafeb241598094a1f3d75890e304d36eb4e7b",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 50
+            },
+            "thyroid-cartilage": {
+              "member": "001_P10_thyroid-cartilage.roi",
+              "sha256": "f85a08bd8e23ae8dc324b7bc110d6c3994f913f57b4e313b04f9e2a8e3799b33",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 50
+            },
+            "tongue": {
+              "member": "001_P10_tongue.roi",
+              "sha256": "f2449873e0bc28132f181e3669950954defb67702b9135cec47de1ce9cf03341",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 50
+            },
+            "upper-incisor": {
+              "member": "001_P10_upper-incisor.roi",
+              "sha256": "33af780ee8ff533bca8bca39d551d19eee63f324054db5b2ac6012db046d8bba",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 50
+            },
+            "upper-lip": {
+              "member": "001_P10_upper-lip.roi",
+              "sha256": "96787f5a2e9fc0a7d5a2b96467b50c6c68b48c28b6da2a47c0273a01856f3f33",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 50
+            }
+          },
+          "zip_sha256": "7a23db92a9db52184cfc01db85cddb292eee560dcb14d00772a45560d1950c3d",
+          "vocal_folds_fallback": {
+            "path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\reference-to-target\\asd2-reference-to-target_P10-stage1-registered\\imagej_sequence\\per_slice\\010_P10\\010_P10_existing_target_full17_RoiSet.zip",
+            "zip_sha256": "8726cf6b5665d1cce9e99ddd30a484376104b0482bb4464a44f34bf22f82d0bd",
+            "member": {
+              "member": "001_P10_vocal-folds.roi",
+              "sha256": "401bd27f6570e853479f63cb0a4f8c0e20f95847083c65048a460e9c82254b9a",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 50
+            }
+          }
+        }
+      }
     },
     {
       "speaker": "ASD2",
       "raw_subject": "1791",
-      "basename": "1791_ASD2_S29_F2812",
+      "basename": "1791_ASD2_S29_F2180",
       "session": "S29",
-      "selected_frame": 2812,
-      "phone_selection": "exact /u/; user-selected shape reference",
+      "selected_frame": 2180,
+      "phone_selection": "exact /u/ in cou; final ImageJ review",
       "image_coordinate_space": "registered 136x136",
       "image_intensity_policy": "shared F2811-F2813 linear min/max to uint8 before cubic 480x480 resize",
       "image_intensity_range": {
@@ -400,8 +936,8 @@
         "F2812": "344e919a81ce84de4bdcc148df939be161f45446dc502e021472f1886809753d",
         "F2813": "61c76653d1bcfc594279e4902d50bd5aaeeefc26bd52bbf44b807faaf40834b9"
       },
-      "source_roi_zip": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\asd2_1791_stable_tongue_search_20260824_v2\\S29_F2812_imagej_manual_edit\\RoiSet_update.zip",
-      "source_roi_zip_sha256": "678834b699dd0a884383bedbdf9b371d754cc4d2839f5592bf5c8010c77f28a1",
+      "source_roi_zip": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\reference-to-target\\asd2-reference-to-target_P10-stage1-registered\\imagej_sequence\\per_slice\\001_ASD2\\RoiSet.zip",
+      "source_roi_zip_sha256": "fbe1f08b4e11915bb678955d5acc390cb03400e76c1cecbe78b03f0893f2c945",
       "source_roi_member_sha256": {
         "C1": "9e2b26840e2ecfcfb9192bac805c78dcba43a6352c2c979d2c3dad04ccba661e",
         "C2": "5cdbdc7adf3ebe88a1c4a111f1d5cfee4cc2b143737c7682a41ef1d34f4e18b6",
@@ -424,14 +960,157 @@
       "dynamic_contour_count": 11,
       "canonical_contour_count": 17,
       "missing_dynamic_labels": [],
-      "incisor_policy": "latest server-bf upper/lower incisors retained from reviewed RoiSet_update",
-      "cervical_policy": "final user-reviewed C1-C6 from RoiSet_update",
-      "png_sha256": "ed9f57b12c7d48416cdb5c533673a1fd93c71f8d14cc667658ae4cb81ce84179",
-      "zip_sha256": "8bed4662a406e25a00c6bac01bb7546ebbc3d9bdd67a8a864b77e1b9206e9802",
+      "incisor_policy": "latest grele-13 BF snapshot plus final lower-incisor ImageJ edit",
+      "cervical_policy": "retained same-session C1-C6 with final ImageJ RoiSet coordinates",
+      "png_sha256": "392a860dc4ec604d823d954e35c541bb564777e13858ebe73df037aa4cb437cc",
+      "zip_sha256": "f3526166269452cc9fb09f7487e3e64d056eb01c71e67c2994da718e6560367e",
       "roi_round_trip_max_px_480": 1.3968771625115338e-05,
       "grid_horiz_count": 6,
       "grid_vert_count": 9,
-      "grid_warnings": []
+      "grid_warnings": [],
+      "final_imagej_import": {
+        "user_roi_zip": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\reference-to-target\\asd2-reference-to-target_P10-stage1-registered\\imagej_sequence\\per_slice\\001_ASD2\\RoiSet.zip",
+        "user_roi_zip_sha256": "fbe1f08b4e11915bb678955d5acc390cb03400e76c1cecbe78b03f0893f2c945",
+        "full17_vocal_folds_source": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\reference-to-target\\asd2-reference-to-target_P10-stage1-registered\\imagej_sequence\\per_slice\\001_ASD2\\001_ASD2_ASD2_adapted_full17_RoiSet.zip",
+        "coordinate_policy": "registered_S29_F2180_480_space",
+        "mri_triplet_frames": [
+          2179,
+          2180,
+          2181
+        ],
+        "mri_intensity": {
+          "source_min": 0.0,
+          "source_max": 2206.0
+        },
+        "roi_metadata": {
+          "members": {
+            "arytenoid-cartilage": {
+              "member": "001_ASD2_arytenoid-cartilage.roi",
+              "sha256": "edf6a8018d425342140ebae5cf4ab11eebdcee285690a3f32ef9d3ee12b8f9db",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 50
+            },
+            "c1": {
+              "member": "001_ASD2_c1.roi",
+              "sha256": "4411c80ca6c8c5b5d243b37086de0ec8a888fecc2444bf86d770aa9fd540e943",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 20
+            },
+            "c2": {
+              "member": "001_ASD2_c2.roi",
+              "sha256": "9a4690dc0cd62a38536c6c216a8e330cd7df179d9c892520ec1f3a07e3ef069a",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 20
+            },
+            "c3": {
+              "member": "001_ASD2_c3.roi",
+              "sha256": "39ec26ba3390ac7c2dcbc3711540dbc66978737b292800d5b707279d7c9b8014",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 20
+            },
+            "c4": {
+              "member": "001_ASD2_c4.roi",
+              "sha256": "f48685c870e93792517010fadb7fc63abfff46e28eb065aec1bc0456a9fb123b",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 20
+            },
+            "c5": {
+              "member": "001_ASD2_c5.roi",
+              "sha256": "3be9565b574741114defe0bbc060f922e38ff9f9a6e13b8f5665b9de049d2f84",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 20
+            },
+            "c6": {
+              "member": "001_ASD2_c6.roi",
+              "sha256": "d1509ef55752b4184a25f3cb8adff58c1f72c093ab08602dbd9e19d25622f19b",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 20
+            },
+            "epiglottis": {
+              "member": "001_ASD2_epiglottis.roi",
+              "sha256": "282cd8f1dc94930fe41128ea7434e11c1b1d20c6cf687c2bec82c4241575d62e",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 50
+            },
+            "lower-incisor": {
+              "member": "001_ASD2_lower-incisor.roi",
+              "sha256": "4fb2927442d7806e734ae11533c598d3a0394ab54950fe06422ad77aa2986d03",
+              "roi_type": "POLYLINE",
+              "position": 0,
+              "point_count": 50
+            },
+            "lower-lip": {
+              "member": "001_ASD2_lower-lip.roi",
+              "sha256": "586ec77d3000dba9ce8a5761eb52e41944bc5d227680a0bdf84438e307c40486",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 50
+            },
+            "pharynx": {
+              "member": "001_ASD2_pharynx.roi",
+              "sha256": "cfc625613aa735f2a270a40dda06b82d1c0945f75d28d16b117378835f80ea9b",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 50
+            },
+            "soft-palate-midline": {
+              "member": "001_ASD2_soft-palate-midline.roi",
+              "sha256": "b5cc9b8238609a145d7e3800fe1992f65145e91d5a85bf53bfbcb0b8367fb137",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 50
+            },
+            "thyroid-cartilage": {
+              "member": "001_ASD2_thyroid-cartilage.roi",
+              "sha256": "09b0d22e963f271e6de1859440e96c7b9f1fd17655eed5a22ce21ac2ae3a29fc",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 50
+            },
+            "tongue": {
+              "member": "001_ASD2_tongue.roi",
+              "sha256": "9f043dbd5e69140a6c7b7b88a7931deca5a2f185dfcaa154bb42a588e12571ea",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 50
+            },
+            "upper-incisor": {
+              "member": "001_ASD2_upper-incisor.roi",
+              "sha256": "c738191f75431fdecf48ceac6a88960c55377f0c3e8d6b3a22e3b9df2d033b79",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 50
+            },
+            "upper-lip": {
+              "member": "001_ASD2_upper-lip.roi",
+              "sha256": "86daf807903b0ccbfab1207dac98566975403897dba21e0e390c973a4dbd06d3",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 50
+            }
+          },
+          "zip_sha256": "fbe1f08b4e11915bb678955d5acc390cb03400e76c1cecbe78b03f0893f2c945",
+          "vocal_folds_fallback": {
+            "path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\reference-to-target\\asd2-reference-to-target_P10-stage1-registered\\imagej_sequence\\per_slice\\001_ASD2\\001_ASD2_ASD2_adapted_full17_RoiSet.zip",
+            "zip_sha256": "1b98c8caa01c4a92c44aa250e56f5883ec36b8b8862a5e06846bdca25990d25c",
+            "member": {
+              "member": "001_ASD2_vocal-folds.roi",
+              "sha256": "3cd98d70b2190afff7bfbfaea18f6d71f165f0c53877f0b77b12d3d242882607",
+              "roi_type": "POLYLINE",
+              "position": 1,
+              "point_count": 50
+            }
+          }
+        }
+      }
     }
   ],
   "transforms_to_p10": {
@@ -1119,9 +1798,712 @@
   "current_top_level_file_hashes_unchanged": true,
   "asd2_reference_policy": {
     "role": "additional transform/reference geometry; does not replace P10",
-    "reference_speaker_for_historical_v018_diagnostics": "P10",
-    "transforms_to_p10_recomputed": false,
-    "reason": "v0.1.19 is an additive data release; prior P1-P10 transform diagnostics remain unchanged"
+    "speaker_session_frame": "1791/S29/F2180",
+    "word_phone": "cou /u/",
+    "matching_mri_triplet": [
+      2179,
+      2180,
+      2181
+    ]
   },
-  "base_v018_nonmetadata_files_unchanged": true
+  "base_v018_nonmetadata_files_unchanged": true,
+  "p10_coordinate_policy": {
+    "default": "stage1_registered",
+    "matrix": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\registration1\\output\\matrices\\01_stage1_mask_rigid_P10_to_1775_2x3.csv",
+    "matrix_sha256": "0ef38e06f02ede934d605883da97e733bd5f25372e60541c572fd4bbd2b79967",
+    "determinant": 1.0000000000000002,
+    "orthogonality_max_abs_error": 2.220446049250313e-16,
+    "scale_max_error_from_one": 2.220446049250313e-16,
+    "rotation_deg_image_xy": 9.249999999999995,
+    "double_registration_forbidden": true
+  },
+  "final_imagej_import": {
+    "P7": {
+      "user_roi_zip": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\reference-to-target\\asd2-reference-to-target_P10-stage1-registered\\imagej_sequence\\per_slice\\007_P7\\RoiSet.zip",
+      "user_roi_zip_sha256": "e38635e3a8eb267857cbcb56df943b705539b001c41b4f685c87004bfaee2a2e",
+      "full17_vocal_folds_source": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\reference-to-target\\asd2-reference-to-target_P10-stage1-registered\\imagej_sequence\\per_slice\\007_P7\\007_P7_existing_target_full17_RoiSet.zip",
+      "coordinate_policy": "unchanged_GTGRD_480_space",
+      "roi_metadata": {
+        "members": {
+          "arytenoid-cartilage": {
+            "member": "001_P7_arytenoid-cartilage.roi",
+            "sha256": "04b3e92f554a637451c0ae7748e2ed9d9b8956f2aceef1aace6f68dacabbe9ea",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 50
+          },
+          "c1": {
+            "member": "001_P7_c1.roi",
+            "sha256": "8a22dba43f6ece70e7be8ec4c867ba14a00df36460b442e239f7bf4e3968fde4",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 16
+          },
+          "c2": {
+            "member": "001_P7_c2.roi",
+            "sha256": "3bb42949a982e6549cfe18229bb47df30603da0d93f6407010b85f70f991ff73",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 28
+          },
+          "c3": {
+            "member": "001_P7_c3.roi",
+            "sha256": "bd833464c73e8ae8ccd4b7491db2d3b1690e11eefbe21feebbb53123b760550e",
+            "roi_type": "POLYLINE",
+            "position": 0,
+            "point_count": 28
+          },
+          "c4": {
+            "member": "001_P7_c4.roi",
+            "sha256": "30cf8e742a010a4fc5cc11e996208d62a1f6701795350f1d2aea1fb7a243f4b2",
+            "roi_type": "POLYLINE",
+            "position": 0,
+            "point_count": 16
+          },
+          "c5": {
+            "member": "001_P7_c5.roi",
+            "sha256": "021031578c0781d51029f1ec3739fd0d3f228e09f44e50ed15e4afd9fd02e9dc",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 14
+          },
+          "c6": {
+            "member": "001_P7_c6.roi",
+            "sha256": "4c4ce6382d305d8748ec949bef366e6acdcfeb116527f0ed9cb0450a80d10bfe",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 19
+          },
+          "epiglottis": {
+            "member": "001_P7_epiglottis.roi",
+            "sha256": "c673db6a781fb304f053d6655b58fedd56497266ce7636947e81600f0bb82571",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 50
+          },
+          "lower-incisor": {
+            "member": "001_P7_lower-incisor.roi",
+            "sha256": "762f227effb16d94883b61a2eb8c9e10ebca43e8796b17e187ede1235eea79f5",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 50
+          },
+          "lower-lip": {
+            "member": "001_P7_lower-lip.roi",
+            "sha256": "e396783f0b915557ddd673cfdff361bf1cdea7938cca8a34d3a4b39e77b64617",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 50
+          },
+          "pharynx": {
+            "member": "001_P7_pharynx.roi",
+            "sha256": "afcee73412159f5188bcb4d3ba8dbda014203b64e3baa627a422cb4215a48ac8",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 50
+          },
+          "soft-palate-midline": {
+            "member": "001_P7_soft-palate-midline.roi",
+            "sha256": "2dcee5c41a17dcc832cd2d13189c25d1e0f6632b796299ea550cc3e2393bd9ce",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 50
+          },
+          "thyroid-cartilage": {
+            "member": "001_P7_thyroid-cartilage.roi",
+            "sha256": "37740f8ac0da4801c0e68c26230a101bfce74b5d53edac15786f86488b94a274",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 50
+          },
+          "tongue": {
+            "member": "001_P7_tongue.roi",
+            "sha256": "7f27a850f840622c73c34ca992dc0957dcc7c3cadcc02ec3b01bd91da344ac28",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 50
+          },
+          "upper-incisor": {
+            "member": "001_P7_upper-incisor.roi",
+            "sha256": "77cd7d5a3a23a6c3aa2b7a47730e3363f4d2c779f2fa4565357f75dcacd22d66",
+            "roi_type": "POLYLINE",
+            "position": 0,
+            "point_count": 50
+          },
+          "upper-lip": {
+            "member": "001_P7_upper-lip.roi",
+            "sha256": "cfe6443b1731b9e4eeb80ba7a617d8b37d5f005c3916b0caf2a54ad3f8628db9",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 50
+          }
+        },
+        "zip_sha256": "e38635e3a8eb267857cbcb56df943b705539b001c41b4f685c87004bfaee2a2e",
+        "vocal_folds_fallback": {
+          "path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\reference-to-target\\asd2-reference-to-target_P10-stage1-registered\\imagej_sequence\\per_slice\\007_P7\\007_P7_existing_target_full17_RoiSet.zip",
+          "zip_sha256": "1df82a83aa7bdaac84bb4f40a5e1f48ff6be628912b941a8213c479d81f473e3",
+          "member": {
+            "member": "001_P7_vocal-folds.roi",
+            "sha256": "b2afac373fa49f8e9c24478f095a1cd1aad6526f31444a536590c48b7e212740",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 50
+          }
+        }
+      }
+    },
+    "P8": {
+      "user_roi_zip": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\reference-to-target\\asd2-reference-to-target_P10-stage1-registered\\imagej_sequence\\per_slice\\008_P8\\RoiSet.zip",
+      "user_roi_zip_sha256": "e41fbdf9fcbce2390235e2e3013ab6b21c2807fe9479e6ffc15d2e65d91f3dc7",
+      "full17_vocal_folds_source": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\reference-to-target\\asd2-reference-to-target_P10-stage1-registered\\imagej_sequence\\per_slice\\008_P8\\008_P8_existing_target_full17_RoiSet.zip",
+      "coordinate_policy": "unchanged_GTGRD_480_space",
+      "roi_metadata": {
+        "members": {
+          "arytenoid-cartilage": {
+            "member": "001_P8_arytenoid-cartilage.roi",
+            "sha256": "bcb2d8fb859363f13775f70991c86ecdae0172eaeb27719edcc6730fc66fb05b",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 50
+          },
+          "c1": {
+            "member": "001_P8_c1.roi",
+            "sha256": "414d2e32af2dac0692230b49f6f4beba9699bbec50c5402160cc870557e67556",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 17
+          },
+          "c2": {
+            "member": "001_P8_c2.roi",
+            "sha256": "1cf1750f7f1b4afa15e864f3bd6f956c27f5a2af166820cbeab8879bebde6fa7",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 28
+          },
+          "c3": {
+            "member": "001_P8_c3.roi",
+            "sha256": "883536383d8b8a467cd43128b94aba0ef0517683ac226b9f6a170932e2f6a98a",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 23
+          },
+          "c4": {
+            "member": "001_P8_c4.roi",
+            "sha256": "e1c05d9d2cf1995958bf50a1cf2e9585835e2cbdb946136ab86430c63d31c883",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 21
+          },
+          "c5": {
+            "member": "001_P8_c5.roi",
+            "sha256": "8d1a69720a63423a5e7db145a1e0b33684eade177615d67fce7de48d7193b006",
+            "roi_type": "POLYLINE",
+            "position": 0,
+            "point_count": 24
+          },
+          "c6": {
+            "member": "001_P8_c6.roi",
+            "sha256": "6e0fd99f4a57e97528f12f37a00a1e4cdeac67f319d9cdfb5315ccd96c0fab2d",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 25
+          },
+          "epiglottis": {
+            "member": "001_P8_epiglottis.roi",
+            "sha256": "43c22ed7d89986ab5a512ee5c5d148f3ada4dc45238a9ecb3358b634cf7d4fa2",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 50
+          },
+          "lower-incisor": {
+            "member": "001_P8_lower-incisor.roi",
+            "sha256": "319d70512737a6192825196c66d6f69e22cf0f2e78280b28787d67308a9e5686",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 50
+          },
+          "lower-lip": {
+            "member": "001_P8_lower-lip.roi",
+            "sha256": "7139968e7b5f4a53cae8e09a8d747b015288daf6b633f6f444322aa5e440f52d",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 50
+          },
+          "pharynx": {
+            "member": "001_P8_pharynx.roi",
+            "sha256": "1a349e6f9a49ea25bd9085a77e5d1dffbbf739b34e7de7b07f5564389fc65b09",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 50
+          },
+          "soft-palate-midline": {
+            "member": "001_P8_soft-palate-midline.roi",
+            "sha256": "925e04997b9b739fab205d689553aaef80a5240c5a5642d8bf2a8888ec38e060",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 50
+          },
+          "thyroid-cartilage": {
+            "member": "001_P8_thyroid-cartilage.roi",
+            "sha256": "8ca210652c31461505843a125a33e86729f3314a7d13fd18c5c4803828dcda39",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 50
+          },
+          "tongue": {
+            "member": "001_P8_tongue.roi",
+            "sha256": "09a34a9289a7a562b05d33ba5934b998eac41be46485bd5020fec75176061582",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 50
+          },
+          "upper-incisor": {
+            "member": "001_P8_upper-incisor.roi",
+            "sha256": "b3babd553ad9fecda25bf1b5e4a80d591a279f5cdd8e883c28ff248c1180f8b7",
+            "roi_type": "POLYLINE",
+            "position": 0,
+            "point_count": 50
+          },
+          "upper-lip": {
+            "member": "001_P8_upper-lip.roi",
+            "sha256": "e5e257f13ec67d4bc72732be90573d8f650a69363d7567d41bb9fc5bf8b9d889",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 50
+          }
+        },
+        "zip_sha256": "e41fbdf9fcbce2390235e2e3013ab6b21c2807fe9479e6ffc15d2e65d91f3dc7",
+        "vocal_folds_fallback": {
+          "path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\reference-to-target\\asd2-reference-to-target_P10-stage1-registered\\imagej_sequence\\per_slice\\008_P8\\008_P8_existing_target_full17_RoiSet.zip",
+          "zip_sha256": "cc4bb748f1243af43c996649c49aa0b959ee0194f33079809ab2a6eb97584a79",
+          "member": {
+            "member": "001_P8_vocal-folds.roi",
+            "sha256": "99c9e75cdb90dfc09bad845431bc1afd366f1c41a535142838bc105b7777ea4d",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 50
+          }
+        }
+      }
+    },
+    "P9": {
+      "user_roi_zip": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\reference-to-target\\asd2-reference-to-target_P10-stage1-registered\\imagej_sequence\\per_slice\\009_P9\\RoiSet.zip",
+      "user_roi_zip_sha256": "05e28137c5d30ab177b1fcec7303edec9ea34e749afd40762d837383a2447db9",
+      "full17_vocal_folds_source": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\reference-to-target\\asd2-reference-to-target_P10-stage1-registered\\imagej_sequence\\per_slice\\009_P9\\009_P9_existing_target_full17_RoiSet.zip",
+      "coordinate_policy": "unchanged_GTGRD_480_space",
+      "roi_metadata": {
+        "members": {
+          "arytenoid-cartilage": {
+            "member": "001_P9_arytenoid-cartilage.roi",
+            "sha256": "0d30e79cf0ca9f59140634dd7e50717097cc737afa30652a31c2a2d308667519",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 50
+          },
+          "c1": {
+            "member": "001_P9_c1.roi",
+            "sha256": "ceca4553a4dd11d561920e95a9ad24e38bcae298749f7ccd6c3902af87067abf",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 24
+          },
+          "c2": {
+            "member": "001_P9_c2.roi",
+            "sha256": "25a764586b154408fb493d99884da066c15c46db48d49ef67bd0a64445a60d09",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 27
+          },
+          "c3": {
+            "member": "001_P9_c3.roi",
+            "sha256": "078474c5544c44b6079971deb75607c755a5946033b54ea312ea3506fa52e4c9",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 26
+          },
+          "c4": {
+            "member": "001_P9_c4.roi",
+            "sha256": "f8e4bb11d654f587095a3812147ccdb5e888f8d6702dddad09d6c6182f88da27",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 16
+          },
+          "c5": {
+            "member": "001_P9_c5.roi",
+            "sha256": "776e6d026bc42bddb848dc7d4a5391287d52875936b4cbe2964ba331b0650800",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 26
+          },
+          "c6": {
+            "member": "001_P9_c6.roi",
+            "sha256": "54d2b8b23a6284209c530a4895757e4c3fcabbbc281e1d14770a18f3fb96ebd6",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 32
+          },
+          "epiglottis": {
+            "member": "001_P9_epiglottis.roi",
+            "sha256": "bab1c98c29696eeb864f3a73db90b8456e38e9525cdd569eb27952c20cd193cd",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 50
+          },
+          "lower-incisor": {
+            "member": "001_P9_lower-incisor.roi",
+            "sha256": "11d17e4ca7eb9287d1499b4edc24b5a4bda8260a2ed191638ef358d21ed8817d",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 50
+          },
+          "lower-lip": {
+            "member": "001_P9_lower-lip.roi",
+            "sha256": "9087ddae406d4a9ff19279e4cfafd35cd9764a6f8db12d8d26b4f79adc42d18d",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 50
+          },
+          "pharynx": {
+            "member": "001_P9_pharynx.roi",
+            "sha256": "7a4b12d1d95b4bd0effabbcb2f15f3cee0949d2bf78f37f9df221786aca7788c",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 50
+          },
+          "soft-palate-midline": {
+            "member": "001_P9_soft-palate-midline.roi",
+            "sha256": "2fc468c0f6f80b1254ed73672f573a19e208170df2b74afd26280f8c0cf45edd",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 50
+          },
+          "thyroid-cartilage": {
+            "member": "001_P9_thyroid-cartilage.roi",
+            "sha256": "e0d496c4f06203013a5a1825e29c125ed8a350c9b57a4776a4a1bedf34dd7d15",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 50
+          },
+          "tongue": {
+            "member": "001_P9_tongue.roi",
+            "sha256": "a3c6933dbb62ae485f507536b34ea4bb5534c316d030a440883084aecce61663",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 50
+          },
+          "upper-incisor": {
+            "member": "001_P9_upper-incisor.roi",
+            "sha256": "29dd2e49e430fdb773581f420a4ac8bf2ef77f01d8b88a3947bc60bd5692050a",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 50
+          },
+          "upper-lip": {
+            "member": "001_P9_upper-lip.roi",
+            "sha256": "4f99cdf03d72078313b60b529504556574083265ef1a8d3918477d0b3fa63c7c",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 50
+          }
+        },
+        "zip_sha256": "05e28137c5d30ab177b1fcec7303edec9ea34e749afd40762d837383a2447db9",
+        "vocal_folds_fallback": {
+          "path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\reference-to-target\\asd2-reference-to-target_P10-stage1-registered\\imagej_sequence\\per_slice\\009_P9\\009_P9_existing_target_full17_RoiSet.zip",
+          "zip_sha256": "27dc1fc91df2f6cb98198827b2eb8c369655d2ba20b27a02146afb2438a43378",
+          "member": {
+            "member": "001_P9_vocal-folds.roi",
+            "sha256": "5512dcb69a44a6cc9dc604fea28ade006ec21b9843c4d88e6aa2d3c13c3d4754",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 50
+          }
+        }
+      }
+    },
+    "P10": {
+      "user_roi_zip": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\reference-to-target\\asd2-reference-to-target_P10-stage1-registered\\imagej_sequence\\per_slice\\010_P10\\RoiSet.zip",
+      "user_roi_zip_sha256": "7a23db92a9db52184cfc01db85cddb292eee560dcb14d00772a45560d1950c3d",
+      "full17_vocal_folds_source": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\reference-to-target\\asd2-reference-to-target_P10-stage1-registered\\imagej_sequence\\per_slice\\010_P10\\010_P10_existing_target_full17_RoiSet.zip",
+      "coordinate_policy": "stage1_registered_default_no_inverse",
+      "roi_metadata": {
+        "members": {
+          "arytenoid-cartilage": {
+            "member": "001_P10_arytenoid-cartilage.roi",
+            "sha256": "12bd54db17305116b39c02f939f5d38bae59e197eb99c564e55b6a8ca87a1dfb",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 50
+          },
+          "c1": {
+            "member": "001_P10_c1.roi",
+            "sha256": "10bc80134f641edef383cc1fcf7a230442224bf731b412c0d3d3a13ee75466a9",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 17
+          },
+          "c2": {
+            "member": "001_P10_c2.roi",
+            "sha256": "960a0affca1f7e80db8e72d50e3528d5e7f5ff996740b25997dea9d3ac686a1f",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 28
+          },
+          "c3": {
+            "member": "001_P10_c3.roi",
+            "sha256": "ba9fea8898755ae4dcdd9aac771102456df46b6243ddc036ccfbdfd58020be2c",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 23
+          },
+          "c4": {
+            "member": "001_P10_c4.roi",
+            "sha256": "bd06f43cd2bee91824aa4ee85b3d35083d976febb2d2d086eba0f3f69d287132",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 21
+          },
+          "c5": {
+            "member": "001_P10_c5.roi",
+            "sha256": "2c6ac5c189419b17318a6630ca7ab0b97c0ba1c6ae3c0e97a68437720389da2a",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 24
+          },
+          "c6": {
+            "member": "001_P10_c6.roi",
+            "sha256": "21412fd48798378197e2aecdd2d5470aa89d3600e898d2dc98001147442d3af9",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 25
+          },
+          "epiglottis": {
+            "member": "001_P10_epiglottis.roi",
+            "sha256": "12a1a30ff670ca245a07e9bf3042cee7daa0c744ca38e3cf957a16e0e3b24b43",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 50
+          },
+          "lower-incisor": {
+            "member": "001_P10_lower-incisor.roi",
+            "sha256": "b44adc3fcdacd03ef37564ad7c000fc130a31316122f1c569ed6754bd5595fd0",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 50
+          },
+          "lower-lip": {
+            "member": "001_P10_lower-lip.roi",
+            "sha256": "e5a034a9aa04ed84afd0df417f121cf12ebfd863b3de5c5b71c398841fae6933",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 50
+          },
+          "pharynx": {
+            "member": "001_P10_pharynx.roi",
+            "sha256": "12ae8d6a34d0a84a9d30b026b529da2a3702edc3b4d48aa4da4bb6d3df2d255a",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 50
+          },
+          "soft-palate-midline": {
+            "member": "001_P10_soft-palate-midline.roi",
+            "sha256": "943bd489c21b18199246e7d1757eafeb241598094a1f3d75890e304d36eb4e7b",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 50
+          },
+          "thyroid-cartilage": {
+            "member": "001_P10_thyroid-cartilage.roi",
+            "sha256": "f85a08bd8e23ae8dc324b7bc110d6c3994f913f57b4e313b04f9e2a8e3799b33",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 50
+          },
+          "tongue": {
+            "member": "001_P10_tongue.roi",
+            "sha256": "f2449873e0bc28132f181e3669950954defb67702b9135cec47de1ce9cf03341",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 50
+          },
+          "upper-incisor": {
+            "member": "001_P10_upper-incisor.roi",
+            "sha256": "33af780ee8ff533bca8bca39d551d19eee63f324054db5b2ac6012db046d8bba",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 50
+          },
+          "upper-lip": {
+            "member": "001_P10_upper-lip.roi",
+            "sha256": "96787f5a2e9fc0a7d5a2b96467b50c6c68b48c28b6da2a47c0273a01856f3f33",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 50
+          }
+        },
+        "zip_sha256": "7a23db92a9db52184cfc01db85cddb292eee560dcb14d00772a45560d1950c3d",
+        "vocal_folds_fallback": {
+          "path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\reference-to-target\\asd2-reference-to-target_P10-stage1-registered\\imagej_sequence\\per_slice\\010_P10\\010_P10_existing_target_full17_RoiSet.zip",
+          "zip_sha256": "8726cf6b5665d1cce9e99ddd30a484376104b0482bb4464a44f34bf22f82d0bd",
+          "member": {
+            "member": "001_P10_vocal-folds.roi",
+            "sha256": "401bd27f6570e853479f63cb0a4f8c0e20f95847083c65048a460e9c82254b9a",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 50
+          }
+        }
+      }
+    },
+    "ASD2": {
+      "user_roi_zip": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\reference-to-target\\asd2-reference-to-target_P10-stage1-registered\\imagej_sequence\\per_slice\\001_ASD2\\RoiSet.zip",
+      "user_roi_zip_sha256": "fbe1f08b4e11915bb678955d5acc390cb03400e76c1cecbe78b03f0893f2c945",
+      "full17_vocal_folds_source": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\reference-to-target\\asd2-reference-to-target_P10-stage1-registered\\imagej_sequence\\per_slice\\001_ASD2\\001_ASD2_ASD2_adapted_full17_RoiSet.zip",
+      "coordinate_policy": "registered_S29_F2180_480_space",
+      "mri_triplet_frames": [
+        2179,
+        2180,
+        2181
+      ],
+      "mri_intensity": {
+        "source_min": 0.0,
+        "source_max": 2206.0
+      },
+      "roi_metadata": {
+        "members": {
+          "arytenoid-cartilage": {
+            "member": "001_ASD2_arytenoid-cartilage.roi",
+            "sha256": "edf6a8018d425342140ebae5cf4ab11eebdcee285690a3f32ef9d3ee12b8f9db",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 50
+          },
+          "c1": {
+            "member": "001_ASD2_c1.roi",
+            "sha256": "4411c80ca6c8c5b5d243b37086de0ec8a888fecc2444bf86d770aa9fd540e943",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 20
+          },
+          "c2": {
+            "member": "001_ASD2_c2.roi",
+            "sha256": "9a4690dc0cd62a38536c6c216a8e330cd7df179d9c892520ec1f3a07e3ef069a",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 20
+          },
+          "c3": {
+            "member": "001_ASD2_c3.roi",
+            "sha256": "39ec26ba3390ac7c2dcbc3711540dbc66978737b292800d5b707279d7c9b8014",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 20
+          },
+          "c4": {
+            "member": "001_ASD2_c4.roi",
+            "sha256": "f48685c870e93792517010fadb7fc63abfff46e28eb065aec1bc0456a9fb123b",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 20
+          },
+          "c5": {
+            "member": "001_ASD2_c5.roi",
+            "sha256": "3be9565b574741114defe0bbc060f922e38ff9f9a6e13b8f5665b9de049d2f84",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 20
+          },
+          "c6": {
+            "member": "001_ASD2_c6.roi",
+            "sha256": "d1509ef55752b4184a25f3cb8adff58c1f72c093ab08602dbd9e19d25622f19b",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 20
+          },
+          "epiglottis": {
+            "member": "001_ASD2_epiglottis.roi",
+            "sha256": "282cd8f1dc94930fe41128ea7434e11c1b1d20c6cf687c2bec82c4241575d62e",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 50
+          },
+          "lower-incisor": {
+            "member": "001_ASD2_lower-incisor.roi",
+            "sha256": "4fb2927442d7806e734ae11533c598d3a0394ab54950fe06422ad77aa2986d03",
+            "roi_type": "POLYLINE",
+            "position": 0,
+            "point_count": 50
+          },
+          "lower-lip": {
+            "member": "001_ASD2_lower-lip.roi",
+            "sha256": "586ec77d3000dba9ce8a5761eb52e41944bc5d227680a0bdf84438e307c40486",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 50
+          },
+          "pharynx": {
+            "member": "001_ASD2_pharynx.roi",
+            "sha256": "cfc625613aa735f2a270a40dda06b82d1c0945f75d28d16b117378835f80ea9b",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 50
+          },
+          "soft-palate-midline": {
+            "member": "001_ASD2_soft-palate-midline.roi",
+            "sha256": "b5cc9b8238609a145d7e3800fe1992f65145e91d5a85bf53bfbcb0b8367fb137",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 50
+          },
+          "thyroid-cartilage": {
+            "member": "001_ASD2_thyroid-cartilage.roi",
+            "sha256": "09b0d22e963f271e6de1859440e96c7b9f1fd17655eed5a22ce21ac2ae3a29fc",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 50
+          },
+          "tongue": {
+            "member": "001_ASD2_tongue.roi",
+            "sha256": "9f043dbd5e69140a6c7b7b88a7931deca5a2f185dfcaa154bb42a588e12571ea",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 50
+          },
+          "upper-incisor": {
+            "member": "001_ASD2_upper-incisor.roi",
+            "sha256": "c738191f75431fdecf48ceac6a88960c55377f0c3e8d6b3a22e3b9df2d033b79",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 50
+          },
+          "upper-lip": {
+            "member": "001_ASD2_upper-lip.roi",
+            "sha256": "86daf807903b0ccbfab1207dac98566975403897dba21e0e390c973a4dbd06d3",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 50
+          }
+        },
+        "zip_sha256": "fbe1f08b4e11915bb678955d5acc390cb03400e76c1cecbe78b03f0893f2c945",
+        "vocal_folds_fallback": {
+          "path": "C:\\Users\\nhnguyen\\PhD_A2A\\grid transform\\outputs\\reference-to-target\\asd2-reference-to-target_P10-stage1-registered\\imagej_sequence\\per_slice\\001_ASD2\\001_ASD2_ASD2_adapted_full17_RoiSet.zip",
+          "zip_sha256": "1b98c8caa01c4a92c44aa250e56f5883ec36b8b8862a5e06846bdca25990d25c",
+          "member": {
+            "member": "001_ASD2_vocal-folds.roi",
+            "sha256": "3cd98d70b2190afff7bfbfaea18f6d71f165f0c53877f0b77b12d3d242882607",
+            "roi_type": "POLYLINE",
+            "position": 1,
+            "point_count": 50
+          }
+        }
+      }
+    }
+  },
+  "base_v019_untouched_speakers": [
+    "P1",
+    "P2",
+    "P3",
+    "P4",
+    "P5",
+    "P6"
+  ]
 }

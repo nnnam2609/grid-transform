@@ -47,15 +47,14 @@ Current behavior:
 
 The current canonical contour source for bundled examples is therefore the zip next to the image in `VTLN/data/`.
 
-GTGRD v0.1.19 preserves the ten v0.1.18 P1-P10 reference pairs byte-for-byte
-and adds `1791_ASD2_S29_F2812`. The ASD1 pairs use the midpoint of the S5
-`pourri #2 /u/`; ASD2 uses the user-selected exact `/u/` in S29/F2812. Each
-pair supplies a 480x480 RGB triplet and same-frame grid geometry. The ASD2
-triplet is built from registered F2811-F2813 MRI, and its 17 ROIs are the final
-ImageJ-reviewed `RoiSet_update.zip` geometry scaled from registered 136-space.
-P10/S5/F0859 remains the historical ASD1 transform reference. P1/P3-P10 retain
-the exact reviewed lower-incisor prototype; P2 still records the absent
-`vocal-folds` without imputation.
+GTGRD v0.1.20 imports the authoritative final ImageJ `RoiSet.zip` edits for
+ASD2, P7, P8, P9, and P10. P1-P6 remain unchanged from v0.1.19. Each reference
+pair supplies a 480x480 RGB triplet and same-frame grid geometry. P10/S5/F0859
+is stored in the accepted stage-1 registered coordinate system by default; its
+reviewed contours are already in that space, so downstream code must not apply
+the rigid matrix again. ASD2 is `1791_ASD2_S29_F2180`, the exact `/u/` in
+`cou`, with registered F2179-F2181 MRI and final reviewed F2180 contours. P2
+still records the absent `vocal-folds` without imputation.
 
 ## Bundle Metadata
 
